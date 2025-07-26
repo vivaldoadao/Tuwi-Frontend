@@ -137,32 +137,52 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
   // Load notifications from localStorage on mount
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedNotifications = localStorage.getItem("wilnara_notifications")
-      const savedSettings = localStorage.getItem("wilnara_notification_settings")
-      
-      if (savedNotifications) {
-        try {
-          setNotifications(JSON.parse(savedNotifications))
-        } catch (error) {
-          console.error("Error loading notifications:", error)
+    const loadNotifications = () => {
+      try {
+        if (typeof window === "undefined") return
+        
+        const savedNotifications = localStorage.getItem("wilnara_notifications")
+        const savedSettings = localStorage.getItem("wilnara_notification_settings")
+        
+        if (savedNotifications) {
+          try {
+            const parsed = JSON.parse(savedNotifications)
+            if (Array.isArray(parsed)) {
+              setNotifications(parsed)
+            } else {
+              setNotifications(mockNotifications)
+            }
+          } catch (error) {
+            console.error("Error parsing notifications:", error)
+            setNotifications(mockNotifications)
+          }
+        } else {
+          // Use mock data for new users
           setNotifications(mockNotifications)
         }
-      } else {
-        // Use mock data for new users
-        setNotifications(mockNotifications)
-      }
-      
-      if (savedSettings) {
-        try {
-          setNotificationSettings(JSON.parse(savedSettings))
-        } catch (error) {
-          console.error("Error loading notification settings:", error)
+        
+        if (savedSettings) {
+          try {
+            const parsed = JSON.parse(savedSettings)
+            if (parsed && typeof parsed === 'object') {
+              setNotificationSettings(parsed)
+            }
+          } catch (error) {
+            console.error("Error parsing notification settings:", error)
+          }
         }
+        
+        setIsInitialized(true)
+      } catch (error) {
+        console.error("Error loading notifications:", error)
+        setNotifications(mockNotifications)
+        setIsInitialized(true)
       }
-      
-      setIsInitialized(true)
     }
+
+    // Delay to ensure proper hydration
+    const timer = setTimeout(loadNotifications, 100)
+    return () => clearTimeout(timer)
   }, [])
 
   // Save notifications to localStorage whenever they change
@@ -335,6 +355,28 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 export function useNotifications() {
   const context = useContext(NotificationsContext)
   if (context === undefined) {
+    // Instead of throwing, return a safe fallback during SSR/hydration issues
+    if (typeof window === "undefined") {
+      return {
+        notifications: [],
+        unreadCount: 0,
+        addNotification: () => {},
+        markAsRead: () => {},
+        markAllAsRead: () => {},
+        deleteNotification: () => {},
+        clearAllNotifications: () => {},
+        toasts: [],
+        showToast: () => {},
+        dismissToast: () => {},
+        notificationSettings: {
+          enableToasts: true,
+          enableSound: true,
+          enableDesktop: false,
+          autoMarkAsRead: false
+        },
+        updateNotificationSettings: () => {}
+      }
+    }
     throw new Error("useNotifications must be used within a NotificationsProvider")
   }
   return context
