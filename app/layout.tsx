@@ -1,16 +1,20 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
+import { SessionProvider } from "next-auth/react"
 import "./globals.css"
 import { CartProvider } from "@/context/cart-context"
 import { AuthProvider } from "@/context/auth-context"
+import { FavoritesProvider } from "@/context/favorites-context"
+import { NotificationsProvider } from "@/context/notifications-context"
+import { ToastContainer } from "@/components/toast-container"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Wilnara Tranças - E-commerce de Postiços Femininos",
   description: "Realce sua beleza natural com nossas tranças e postiços de alta qualidade.",
-    generator: 'v0.dev'
+  generator: 'v0.dev'
 }
 
 export default function RootLayout({
@@ -21,9 +25,18 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={inter.className}>
-        <AuthProvider>
-          <CartProvider>{children}</CartProvider>
-        </AuthProvider>
+        <SessionProvider>
+          <AuthProvider>
+            <NotificationsProvider>
+              <CartProvider>
+                <FavoritesProvider>
+                  {children}
+                  <ToastContainer />
+                </FavoritesProvider>
+              </CartProvider>
+            </NotificationsProvider>
+          </AuthProvider>
+        </SessionProvider>
       </body>
     </html>
   )

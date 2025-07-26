@@ -3,6 +3,7 @@
 import type React from "react"
 import { createContext, useState, useContext, useEffect, useCallback } from "react"
 import type { Product } from "@/lib/data" // Atualizado para lib/data
+import { useNotificationHelpers } from "@/hooks/use-notification-helpers"
 
 export interface CartItem extends Product {
   quantity: number
@@ -22,6 +23,18 @@ const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([])
+  
+  // Try to get notification helpers, but don't fail if not available
+  let notifyProductAddedToCart: ((product: Product, quantity?: number) => void) | undefined
+  let notifyProductRemovedFromCart: ((product: Product) => void) | undefined
+  
+  try {
+    const helpers = useNotificationHelpers()
+    notifyProductAddedToCart = helpers.notifyProductAddedToCart
+    notifyProductRemovedFromCart = helpers.notifyProductRemovedFromCart
+  } catch {
+    // Notifications not available, continue without them
+  }
 
   // Load cart from localStorage on initial mount
   useEffect(() => {
@@ -47,11 +60,30 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return [...prevItems, { ...product, quantity }]
       }
     })
-  }, [])
+    
+    // Trigger notification if available
+    if (notifyProductAddedToCart) {
+      notifyProductAddedToCart(product, quantity)
+    }
+  }, [notifyProductAddedToCart])
 
   const removeFromCart = useCallback((productId: string) => {
-    setCartItems((prevItems) => prevItems.filter((item) => item.id !== productId))
-  }, [])
+    setCartItems((prevItems) => {
+      const itemToRemove = prevItems.find((item) => item.id === productId)
+      if (itemToRemove && notifyProductRemovedFromCart) {
+        // Trigger notification if available
+        notifyProductRemovedFromCart({
+          id: itemToRemove.id,
+          name: itemToRemove.name,
+          price: itemToRemove.price,
+          imageUrl: itemToRemove.imageUrl,
+          description: itemToRemove.description,
+          longDescription: itemToRemove.longDescription
+        })
+      }
+      return prevItems.filter((item) => item.id !== productId)
+    })
+  }, [notifyProductRemovedFromCart])
 
   const updateQuantity = useCallback((productId: string, quantity: number) => {
     setCartItems((prevItems) => {
