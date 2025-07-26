@@ -19,7 +19,7 @@ export function BraiderDashboardClientLayout({
   defaultSidebarOpen,
   braider,
 }: BraiderDashboardClientLayoutProps) {
-  const { user, isLoading, logout } = useAuth()
+  const { user, isLoading } = useAuth()
   const router = useRouter()
 
   React.useEffect(() => {

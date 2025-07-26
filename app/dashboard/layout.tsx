@@ -4,7 +4,7 @@ import { DashboardClientLayout } from "@/components/dashboard-client-layout" // 
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   // Ler o estado do sidebar do cookie no servidor
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   const defaultOpen = cookieStore.get("sidebar:state")?.value === "true"
 
   return <DashboardClientLayout defaultSidebarOpen={defaultOpen}>{children}</DashboardClientLayout>

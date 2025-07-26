@@ -1,7 +1,7 @@
 "use client"
 import Link from "next/link"
 import Image from "next/image"
-import { Home, ShoppingCart, Package, Settings, ChevronDown, User2, Users } from "lucide-react" // Importar Users icon
+import { Home, ShoppingCart, Package, Settings, ChevronDown, User2, Users, UserCheck } from "lucide-react"
 
 import {
   Sidebar,
@@ -22,13 +22,13 @@ import { useAuth } from "@/context/auth-context"
 import { useRouter, usePathname } from "next/navigation"
 
 export function DashboardSidebar() {
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const { isMobile, setOpenMobile } = useSidebar()
 
   const handleLogout = () => {
-    logout()
+    // TODO: Implement logout functionality
     router.push("/login")
   }
 
@@ -49,9 +49,14 @@ export function DashboardSidebar() {
       icon: Package,
     },
     {
-      title: "Trancistas", // Novo item para gerenciar trancistas
+      title: "Trancistas",
       href: "/dashboard/braiders",
-      icon: Users, // Ícone de usuários
+      icon: Users,
+    },
+    {
+      title: "Usuários",
+      href: "/dashboard/users",
+      icon: UserCheck,
     },
     {
       title: "Configurações",
@@ -89,7 +94,7 @@ export function DashboardSidebar() {
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton asChild isActive={pathname === item.href}>
                     <Link
-                      href={item.href}
+                      href={item.href as any}
                       onClick={() => {
                         if (isMobile) {
                           setOpenMobile(false)

@@ -1,7 +1,7 @@
 "use client"
 import Link from "next/link"
 import Image from "next/image"
-import { Home, CalendarCheck, UserCog, ChevronDown, CalendarDays } from "lucide-react" // Importar CalendarDays
+import { Home, CalendarCheck, UserCog, ChevronDown, CalendarDays, Briefcase, MessageSquare } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -17,7 +17,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { useAuth } from "@/context/auth-context"
+// import { useAuth } from "@/context/auth-context" // Not used
 import { useRouter, usePathname } from "next/navigation"
 import type { Braider } from "@/lib/data"
 
@@ -26,35 +26,44 @@ interface BraiderDashboardSidebarProps {
 }
 
 export function BraiderDashboardSidebar({ braider }: BraiderDashboardSidebarProps) {
-  const { logout } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const { isMobile, setOpenMobile } = useSidebar()
 
   const handleLogout = () => {
-    logout()
+    // TODO: Implement logout functionality
     router.push("/login")
   }
 
   const navItems = [
     {
       title: "Visão Geral",
-      href: "/braider-dashboard",
+      href: "/braider-dashboard" as const,
       icon: Home,
     },
     {
       title: "Meus Agendamentos",
-      href: "/braider-dashboard/bookings",
+      href: "/braider-dashboard/bookings" as const,
       icon: CalendarCheck,
     },
     {
-      title: "Minha Disponibilidade", // NOVO ITEM
-      href: "/braider-dashboard/availability",
-      icon: CalendarDays, // Ícone para disponibilidade
+      title: "Mensagens",
+      href: "/braider-dashboard/messages" as const,
+      icon: MessageSquare,
+    },
+    {
+      title: "Minha Disponibilidade",
+      href: "/braider-dashboard/availability" as const,
+      icon: CalendarDays,
+    },
+    {
+      title: "Meus Serviços",
+      href: "/braider-dashboard/services" as const,
+      icon: Briefcase,
     },
     {
       title: "Meu Perfil",
-      href: "/braider-dashboard/profile",
+      href: "/braider-dashboard/profile" as const,
       icon: UserCog,
     },
   ]

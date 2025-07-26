@@ -5,26 +5,18 @@ import { SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sideba
 import { Separator } from "@/components/ui/separator"
 import { PanelLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import { useAuth } from "@/context/auth-context"
+// import { useAuth } from "@/context/auth-context" // Not used
 
 interface DashboardContentWrapperProps {
   children: React.ReactNode
 }
 
 export function DashboardContentWrapper({ children }: DashboardContentWrapperProps) {
-  const { state, toggleSidebar } = useSidebar() // Obter toggleSidebar aqui
-  const { logout } = useAuth()
+  const { toggleSidebar } = useSidebar()
+  // const { logout } = useAuth() // Not available in AuthContext
 
   return (
-    <SidebarInset
-      className={cn(
-        "relative flex min-h-svh flex-1 flex-col bg-background",
-        // Aplicar margem com base no estado da barra lateral para desktop
-        state === "expanded" && "md:ml-sidebar", // Usar a variável Tailwind
-        state === "collapsed" && "md:ml-sidebar-icon", // Usar a variável Tailwind
-      )}
-    >
+    <SidebarInset className="relative flex min-h-svh flex-1 flex-col bg-background">
       <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-white text-gray-900">
         <SidebarTrigger className="-ml-1" onClick={toggleSidebar}>
           {" "}
@@ -35,7 +27,7 @@ export function DashboardContentWrapper({ children }: DashboardContentWrapperPro
         <Separator orientation="vertical" className="mr-2 h-4" />
         <h1 className="text-xl font-bold text-brand-primary">Dashboard</h1>
         <div className="ml-auto flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={logout} className="text-red-500 hover:bg-red-100">
+          <Button variant="ghost" size="sm" onClick={() => {}} className="text-red-500 hover:bg-red-100">
             Sair
           </Button>
         </div>

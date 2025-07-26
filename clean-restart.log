@@ -1,0 +1,614 @@
+
+> my-v0-project@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.2.4
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.1.4:3000
+   - Environments: .env.local
+   - Experiments (use with caution):
+     ✓ typedRoutes
+
+ ✓ Starting...
+ ✓ Ready in 2.7s
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 855ms (101 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 8s (959 modules)
+ ○ Compiling /api/braiders ...
+ ✓ Compiled /api/braiders in 3.5s (1081 modules)
+ GET /api/products?featured=true&limit=4 200 in 4340ms
+ GET /api/braiders?featured=true&limit=2 200 in 4279ms
+ HEAD / 200 in 13032ms
+ ✓ Compiled in 831ms (1095 modules)
+ GET /api/products?featured=true&limit=4 200 in 523ms
+ GET /api/braiders?featured=true&limit=2 200 in 532ms
+ GET / 200 in 884ms
+   Reload env: .env.local
+ ✓ Compiled in 1097ms (510 modules)
+   Reload env: .env.local
+ ✓ Compiled in 465ms (510 modules)
+ ✓ Compiled in 650ms (423 modules)
+ ✓ Compiled in 321ms (423 modules)
+ ✓ Compiled in 578ms (423 modules)
+ ✓ Compiled in 1187ms (426 modules)
+ ✓ Compiled in 962ms (426 modules)
+ ✓ Compiled in 515ms (426 modules)
+ ✓ Compiled in 677ms (426 modules)
+ ✓ Compiled in 522ms (426 modules)
+ ✓ Compiled in 460ms (426 modules)
+ ✓ Compiled in 691ms (426 modules)
+ ○ Compiling /login ...
+ ✓ Compiled /login in 1987ms (928 modules)
+ HEAD /login 200 in 2436ms
+ ○ Compiling /api/braiders ...
+ ✓ Compiled /api/braiders in 513ms (209 modules)
+ ✓ Compiled (211 modules)
+ GET /api/products?featured=true&limit=4 200 in 2251ms
+ GET /api/braiders?featured=true&limit=2 200 in 2284ms
+ ✓ Compiled in 2.4s (435 modules)
+ ✓ Compiled in 909ms (435 modules)
+ ✓ Compiled in 1298ms (435 modules)
+ ✓ Compiled in 1112ms (435 modules)
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 2.3s (753 modules)
+ ⨯ [TypeError: Function.prototype.apply was called on #<Object>, which is an object and not a function]
+ ⨯ [TypeError: Function.prototype.apply was called on #<Object>, which is an object and not a function]
+ HEAD /api/auth/providers 500 in 3824ms
+ ✓ Compiled in 860ms (435 modules)
+ ✓ Compiled in 1577ms (661 modules)
+[31m[auth][error][0m UnknownAction: Only GET and POST requests are supported. Read more at https://errors.authjs.dev#unknownaction
+    at toInternalRequest (webpack-internal:///(rsc)/./node_modules/@auth/core/lib/utils/web.js:34:19)
+    at Auth (webpack-internal:///(rsc)/./node_modules/@auth/core/index.js:87:103)
+    at httpHandler (webpack-internal:///(rsc)/./node_modules/next-auth/index.js:142:82)
+    at AsyncLocalStorage.run (node:async_hooks:335:14)
+    at AppRouteRouteModule.do (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:33970)
+    at /Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:43788
+    at /Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/lib/trace/tracer.js:169:36
+    at NoopContextManager.with (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:7062)
+    at ContextAPI.with (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:518)
+    at NoopTracer.startActiveSpan (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:18093)
+    at ProxyTracer.startActiveSpan (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:18854)
+    at /Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/lib/trace/tracer.js:151:103
+    at NoopContextManager.with (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:7062)
+    at ContextAPI.with (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:518)
+    at NextTracerImpl.trace (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/lib/trace/tracer.js:151:28)
+    at /Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:43649
+    at AsyncLocalStorage.run (node:async_hooks:346:14)
+    at /Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:41373
+    at AsyncLocalStorage.run (node:async_hooks:346:14)
+    at /Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:41330
+    at AsyncLocalStorage.run (node:async_hooks:346:14)
+    at AppRouteRouteModule.handle (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:41284)
+    at doRender (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/base-server.js:1513:60)
+    at responseGenerator (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/base-server.js:1909:20)
+    at ResponseCache.get (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/response-cache/index.js:49:20)
+    at DevServer.renderToResponseWithComponentsImpl (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/base-server.js:1915:53)
+ HEAD /api/auth/providers 400 in 125ms
+ GET /api/auth/providers 200 in 23ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 1075ms (660 modules)
+ GET /login 200 in 1598ms
+ ✓ Compiled /api/braiders in 313ms (209 modules)
+ ✓ Compiled (211 modules)
+ GET /api/products?featured=true&limit=4 200 in 2520ms
+ GET /api/braiders?featured=true&limit=2 200 in 2524ms
+ ✓ Compiled /api/auth/[...nextauth] in 214ms (226 modules)
+ GET /api/auth/callback/google?code=4%2F0AVMBsJhNqVGFJ4eQNAZGiBzhOrJSEbaD8oDuZ5w-2GAO99vBkj4a6D7dyaSdCweeSHUZow&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+openid&authuser=0&prompt=consent 302 in 2716ms
+ ✓ Compiled / in 498ms (685 modules)
+ ✓ Compiled /api/braiders in 154ms (804 modules)
+ ✓ Compiled (806 modules)
+ GET /api/braiders?featured=true&limit=2 200 in 1145ms
+ GET /api/products?featured=true&limit=4 200 in 1494ms
+ GET / 200 in 2581ms
+ GET /api/auth/session 200 in 129ms
+ GET /api/auth/session 200 in 19ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 2.2s (1330 modules)
+Error: Route "/dashboard" used `cookies().get('sidebar:state')`. `cookies()` should be awaited before using its value. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at DashboardLayout (app/dashboard/layout.tsx:8:34)
+   6 |   // Ler o estado do sidebar do cookie no servidor
+   7 |   const cookieStore = cookies()
+>  8 |   const defaultOpen = cookieStore.get("sidebar:state")?.value === "true"
+     |                                  ^
+   9 |
+  10 |   return <DashboardClientLayout defaultSidebarOpen={defaultOpen}>{children}</DashboardClientLayout>
+  11 | }
+ GET /dashboard 200 in 2581ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 872ms (1320 modules)
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET /_next/static/webpack/88157a9c224c6ba7.webpack.hot-update.json 404 in 1007ms
+ GET /api/products?featured=true&limit=4 200 in 534ms
+ GET /api/braiders?featured=true&limit=2 200 in 907ms
+ GET / 200 in 1158ms
+ GET /api/auth/session 200 in 83ms
+ GET /api/auth/session 200 in 15ms
+ ○ Compiling /braider-dashboard ...
+ ✓ Compiled /braider-dashboard in 834ms (1345 modules)
+Error: Route "/braider-dashboard" used `cookies().get('sidebar:state')`. `cookies()` should be awaited before using its value. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at BraiderDashboardLayout (app/braider-dashboard/layout.tsx:14:34)
+  12 |   // Ler o estado do sidebar do cookie no servidor
+  13 |   const cookieStore = cookies()
+> 14 |   const defaultOpen = cookieStore.get("sidebar:state")?.value === "true"
+     |                                  ^
+  15 |
+  16 |   // Se o braider não for encontrado (na simulação), ou não estiver autenticado em um cenário real
+  17 |   if (!braider) {
+ GET /braider-dashboard 200 in 950ms
+ GET /braider-dashboard 200 in 41ms
+ ○ Compiling /braider-dashboard/bookings ...
+ ✓ Compiled /braider-dashboard/bookings in 630ms (1362 modules)
+ GET /braider-dashboard/bookings 200 in 692ms
+ ○ Compiling /braider-dashboard/availability ...
+ ✓ Compiled /braider-dashboard/availability in 5.2s (3043 modules)
+ GET /braider-dashboard/availability 200 in 5334ms
+ ✓ Compiled in 4.3s (1927 modules)
+ GET / 200 in 309ms
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 562ms (841 modules)
+ GET /api/auth/session 200 in 879ms
+ GET /api/auth/session 200 in 160ms
+ GET / 200 in 288ms
+ ✓ Compiled in 3.1s (1927 modules)
+ GET / 200 in 240ms
+ ✓ Compiled in 850ms (1324 modules)
+ GET / 200 in 107ms
+ ✓ Compiled in 5.7s (1927 modules)
+ GET / 200 in 141ms
+ ○ Compiling /api/braiders ...
+ ✓ Compiled /api/braiders in 584ms (737 modules)
+ ✓ Compiled (739 modules)
+ GET /api/braiders?featured=true&limit=2 200 in 2182ms
+ GET /api/products?featured=true&limit=4 200 in 2194ms
+ GET / 200 in 2440ms
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 1328ms (869 modules)
+ GET /api/auth/session 200 in 1570ms
+ GET /api/auth/session 200 in 13ms
+ GET /api/auth/csrf 200 in 15ms
+ POST /api/auth/signout 200 in 12ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 565ms (878 modules)
+ GET /login 200 in 858ms
+ GET /api/auth/session 200 in 91ms
+ GET /api/auth/session 200 in 13ms
+ GET /api/auth/providers 200 in 12ms
+ GET /api/auth/csrf 200 in 8ms
+ POST /api/auth/signin/google? 200 in 1227ms
+Error creating user in Supabase: {
+  code: '23503',
+  details: 'Key (id)=(ecec47cc-4eda-4a41-8805-d63d8990e1de) is not present in table "users".',
+  hint: null,
+  message: 'insert or update on table "users" violates foreign key constraint "users_id_fkey"'
+}
+[31m[auth][error][0m AccessDenied: AccessDenied. Read more at https://errors.authjs.dev#accessdenied
+    at handleAuthorized (webpack-internal:///(rsc)/./node_modules/@auth/core/lib/actions/callback/index.js:415:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async Module.callback (webpack-internal:///(rsc)/./node_modules/@auth/core/lib/actions/callback/index.js:73:30)
+    at async AuthInternal (webpack-internal:///(rsc)/./node_modules/@auth/core/lib/index.js:43:24)
+    at async Auth (webpack-internal:///(rsc)/./node_modules/@auth/core/index.js:130:34)
+    at async AppRouteRouteModule.do (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:33891)
+    at async AppRouteRouteModule.handle (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:41254)
+    at async doRender (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/base-server.js:1513:42)
+    at async DevServer.renderToResponseWithComponentsImpl (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/base-server.js:1915:28)
+    at async DevServer.renderPageComponent (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/base-server.js:2393:24)
+    at async DevServer.renderToResponseImpl (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/base-server.js:2430:32)
+    at async DevServer.pipeImpl (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/base-server.js:1003:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/next-server.js:304:17)
+    at async DevServer.handleRequestImpl (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/base-server.js:895:17)
+    at async /Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/dev/next-dev-server.js:371:20
+    at async Span.traceAsyncFn (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/trace/trace.js:157:20)
+    at async DevServer.handleRequest (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/dev/next-dev-server.js:368:24)
+    at async invokeRender (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/lib/router-server.js:235:21)
+    at async handleRequest (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/lib/router-server.js:426:24)
+    at async requestHandlerImpl (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/lib/router-server.js:450:13)
+    at async Server.requestListener (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/lib/start-server.js:158:13)
+ GET /api/auth/callback/google?code=4%2F0AVMBsJiRjcRupN44oZDN-de4ZHMXXEQ5He7oX4tql_h-SgAqRTlRAWfLDnkc-H0MyvfBMA&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+openid&authuser=0&prompt=none 302 in 2384ms
+ GET /api/auth/error?error=AccessDenied 403 in 17ms
+ ✓ Compiled in 2.5s (1936 modules)
+ ✓ Compiled in 1023ms (1324 modules)
+ ✓ Compiled in 766ms (1324 modules)
+ ✓ Compiled in 748ms (1324 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/.next/cache/webpack/client-development/10.pack.gz_' -> '/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/.next/cache/webpack/client-development/10.pack.gz'
+ ○ Compiling /api/braiders ...
+ ✓ Compiled /api/braiders in 558ms (746 modules)
+ ✓ Compiled (748 modules)
+Error fetching braiders: {
+  code: 'PGRST200',
+  details: "Searched for a foreign key relationship between 'braiders' and 'user_id' in the schema 'public', but no matches were found.",
+  hint: "Perhaps you meant 'services' instead of 'user_id'.",
+  message: "Could not find a relationship between 'braiders' and 'user_id' in the schema cache"
+}
+ GET /api/braiders?featured=true&limit=2 500 in 1815ms
+ GET /api/products?featured=true&limit=4 200 in 1831ms
+ GET / 200 in 2259ms
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 638ms (878 modules)
+ GET /api/auth/session 200 in 881ms
+ GET /api/auth/session 200 in 35ms
+ GET / 200 in 135ms
+ GET /login 200 in 22ms
+ GET /api/auth/providers 200 in 12ms
+ GET /api/auth/csrf 200 in 8ms
+ POST /api/auth/signin/google? 200 in 797ms
+User created successfully in Supabase
+ GET /api/auth/callback/google?code=4%2F0AVMBsJiGUwryZktv9arHwarMyotNdrWpgBjhpTJFKhUG0pPg5eqs-Tdy-KQsKsTRYbr4jA&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+openid&authuser=0&prompt=none 302 in 1716ms
+Error fetching braiders: {
+  code: 'PGRST200',
+  details: "Searched for a foreign key relationship between 'braiders' and 'user_id' in the schema 'public', but no matches were found.",
+  hint: "Perhaps you meant 'services' instead of 'user_id'.",
+  message: "Could not find a relationship between 'braiders' and 'user_id' in the schema cache"
+}
+ GET /api/braiders?featured=true&limit=2 500 in 285ms
+ GET /api/products?featured=true&limit=4 200 in 454ms
+ GET / 200 in 667ms
+ GET /api/auth/session 200 in 21ms
+ GET /api/auth/session 200 in 24ms
+ GET /api/auth/session 200 in 38ms
+ GET /api/auth/session 200 in 17ms
+Error fetching braiders: {
+  code: 'PGRST200',
+  details: "Searched for a foreign key relationship between 'braiders' and 'user_id' in the schema 'public', but no matches were found.",
+  hint: "Perhaps you meant 'services' instead of 'user_id'.",
+  message: "Could not find a relationship between 'braiders' and 'user_id' in the schema cache"
+}
+ GET /api/braiders?featured=true&limit=2 500 in 573ms
+ GET /api/products?featured=true&limit=4 200 in 577ms
+ GET / 200 in 704ms
+ GET /api/auth/session 200 in 18ms
+ GET /api/auth/session 200 in 12ms
+ ○ Compiling /profile ...
+ ✓ Compiled /profile in 1952ms (2199 modules)
+ GET /profile 200 in 2052ms
+ ✓ Compiled /dashboard in 377ms (902 modules)
+ GET /dashboard 200 in 474ms
+ GET /dashboard 200 in 36ms
+ GET /api/auth/session 200 in 247ms
+ GET /api/auth/session 200 in 16ms
+ GET /api/auth/session 200 in 43ms
+ GET /api/auth/session 200 in 26ms
+ GET /api/auth/session 200 in 24ms
+ GET /api/auth/session 200 in 20ms
+ GET /api/auth/session 200 in 42ms
+ GET /api/auth/session 200 in 36ms
+ GET /api/auth/csrf 200 in 14ms
+ POST /api/auth/signout 200 in 17ms
+ GET /login 200 in 274ms
+ GET /api/auth/session 200 in 12ms
+ GET /api/auth/session 200 in 17ms
+ ✓ Compiled in 3.2s (1932 modules)
+ GET /login 200 in 371ms
+ ✓ Compiled in 1402ms (1328 modules)
+ GET /login 200 in 77ms
+ ✓ Compiled in 1131ms (1328 modules)
+ GET /login 200 in 406ms
+ ✓ Compiled in 743ms (1328 modules)
+ GET /login 200 in 88ms
+ ✓ Compiled in 3.5s (2033 modules)
+ GET /login 200 in 3014ms
+ GET /login 200 in 28ms
+ GET /login 200 in 712ms
+ ✓ Compiled in 2.7s (2019 modules)
+ GET /login 200 in 141ms
+ ✓ Compiled in 2.2s (2019 modules)
+ GET /login 200 in 87ms
+ ✓ Compiled in 2.1s (2019 modules)
+ GET /login 200 in 1608ms
+ GET /login 200 in 46ms
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/.next/cache/webpack/server-development/1.pack.gz_' -> '/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/.next/cache/webpack/server-development/1.pack.gz'
+ ✓ Compiled in 1388ms (1328 modules)
+ GET /login 200 in 65ms
+ ✓ Compiled in 904ms (1328 modules)
+ GET /login 200 in 89ms
+ ✓ Compiled in 2.2s (2019 modules)
+ GET /login 200 in 166ms
+ ✓ Compiled in 1882ms (2019 modules)
+ GET /login 200 in 1448ms
+ GET /login 200 in 67ms
+ ✓ Compiled in 1930ms (2019 modules)
+ GET /login 200 in 1408ms
+ GET /login 200 in 49ms
+ ✓ Compiled in 879ms (1328 modules)
+ GET /login 200 in 86ms
+ ✓ Compiled in 859ms (1328 modules)
+ GET /login 200 in 48ms
+ ✓ Compiled in 1930ms (1328 modules)
+ GET /login 200 in 41ms
+ ✓ Compiled in 1388ms (1328 modules)
+ GET /login 200 in 172ms
+ ✓ Compiled in 490ms (1328 modules)
+ GET /login 200 in 30ms
+ ✓ Compiled in 539ms (1328 modules)
+ GET /login 200 in 57ms
+ ✓ Compiled in 807ms (1328 modules)
+ GET /login 200 in 62ms
+   Reload env: .env.local
+ ✓ Compiled in 2.1s (2033 modules)
+ GET /login 200 in 118ms
+ ✓ Compiled in 774ms (1328 modules)
+ GET /login 200 in 135ms
+ ✓ Compiled in 1319ms (1328 modules)
+ GET /login 200 in 90ms
+ ✓ Compiled in 1255ms (1328 modules)
+ GET /login 200 in 177ms
+ ✓ Compiled in 895ms (1328 modules)
+ GET /login 200 in 108ms
+   Reload env: .env.local
+ ✓ Compiled in 1842ms (2019 modules)
+ GET /login 200 in 107ms
+ ✓ Compiled in 2.1s (2019 modules)
+ GET /login 200 in 1765ms
+ GET /login 200 in 30ms
+ GET /login 200 in 224ms
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 1877ms (855 modules)
+ GET /api/auth/session 200 in 2765ms
+ GET /api/auth/session 200 in 77ms
+ GET /login 200 in 96ms
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/.next/cache/webpack/client-development/3.pack.gz_' -> '/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/.next/cache/webpack/client-development/3.pack.gz'
+ ○ Compiling /register ...
+ ✓ Compiled /register in 783ms (2182 modules)
+ GET /register 200 in 887ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 639ms (2186 modules)
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET /_next/static/webpack/8584700ae91d7ed1.webpack.hot-update.json 404 in 767ms
+ GET /login 200 in 185ms
+ GET /api/auth/session 200 in 128ms
+ GET /api/auth/session 200 in 8ms
+ GET /register 200 in 35ms
+ ○ Compiling /api/auth/register ...
+ ✓ Compiled /api/auth/register in 953ms (2225 modules)
+ ⨯ TypeError: nodemailer__WEBPACK_IMPORTED_MODULE_0__.createTransporter is not a function
+    at eval (lib/email-service.ts:5:31)
+    at <unknown> (rsc)/./lib/email-service.ts (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/.next/server/app/api/auth/register/route.js:33:1)
+    at __webpack_require__ (.next/server/webpack-runtime.js:33:43)
+    at eval (webpack-internal:///(rsc)/./app/api/auth/register/route.ts:10:76)
+    at <unknown> (rsc)/./app/api/auth/register/route.ts (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/.next/server/app/api/auth/register/route.js:22:1)
+    at __webpack_require__ (.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (.next/server/webpack-runtime.js:33:43)
+    at __webpack_exec__ (.next/server/app/api/auth/register/route.js:347:39)
+    at <unknown> (.next/server/app/api/auth/register/route.js:348:305)
+    at __webpack_require__.X (.next/server/webpack-runtime.js:168:21)
+    at <unknown> (.next/server/app/api/auth/register/route.js:348:47)
+    at Object.<anonymous> (.next/server/app/api/auth/register/route.js:351:3)
+  3 |
+  4 | // Email configuration
+> 5 | const transporter = nodemailer.createTransporter({
+    |                               ^
+  6 |   host: process.env.EMAIL_SERVER_HOST,
+  7 |   port: Number(process.env.EMAIL_SERVER_PORT) || 587,
+  8 |   secure: false, // true for 465, false for other ports {
+  page: '/api/auth/register'
+}
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 5.4s (2554 modules)
+ GET /register 200 in 3165ms
+ GET /register 200 in 34ms
+ POST /api/auth/register 500 in 7506ms
+ ✓ Compiled in 3.1s (2432 modules)
+ GET /register 200 in 237ms
+ POST /api/auth/register 200 in 2794ms
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 809ms (947 modules)
+ GET /api/auth/providers 200 in 1182ms
+ GET /api/auth/csrf 200 in 28ms
+ POST /api/auth/callback/credentials? 200 in 828ms
+ GET /api/auth/session 200 in 18ms
+ ○ Compiling / ...
+ ✓ Compiled / in 911ms (979 modules)
+ ○ Compiling /api/braiders ...
+ ✓ Compiled /api/braiders in 592ms (995 modules)
+✅ Welcome email sent successfully: <7dc6d2f2-a885-5bb6-f20c-c756c21ffe8d@wilnaratracas.com>
+ ✓ Compiled (997 modules)
+Error fetching braiders: {
+  code: 'PGRST200',
+  details: "Searched for a foreign key relationship between 'braiders' and 'user_id' in the schema 'public', but no matches were found.",
+  hint: "Perhaps you meant 'services' instead of 'user_id'.",
+  message: "Could not find a relationship between 'braiders' and 'user_id' in the schema cache"
+}
+ GET /api/braiders?featured=true&limit=2 500 in 1946ms
+ GET /api/products?featured=true&limit=4 200 in 2274ms
+ GET / 200 in 3422ms
+ ✓ Compiled in 2.9s (2238 modules)
+ GET / 200 in 216ms
+ ✓ Compiled in 782ms (1574 modules)
+ GET / 200 in 186ms
+ ✓ Compiled in 4s (2238 modules)
+ GET / 200 in 209ms
+ ✓ Compiled in 3.8s (2339 modules)
+ GET / 200 in 164ms
+ GET / 200 in 1559ms
+ ✓ Compiled in 3.5s (2339 modules)
+ GET / 200 in 131ms
+ ✓ Compiled in 3.6s (2339 modules)
+ GET / 200 in 2877ms
+ GET / 200 in 54ms
+ ✓ Compiled in 724ms (1574 modules)
+ GET / 200 in 86ms
+ ✓ Compiled in 1973ms (1574 modules)
+ GET / 200 in 109ms
+ ✓ Compiled in 2.2s (1574 modules)
+ ○ Compiling /api/auth/register ...
+ ✓ Compiled /api/auth/register in 1864ms (827 modules)
+✅ Email verification sent successfully: <bdc9216a-0901-4528-1da1-5b2ed62dc493@wilnaratracas.com>
+Verification code for test@example.com: 133708
+Code expires at: 7/23/2025, 12:12:49 AM
+ POST /api/auth/register 200 in 8303ms
+ ○ Compiling /api/auth/verify-email ...
+ ✓ Compiled /api/auth/verify-email in 1136ms (2389 modules)
+ POST /api/auth/verify-email 200 in 2857ms
+✅ Welcome email sent successfully: <ff6aaf77-2550-fd57-f674-b15a5c9f58e9@wilnaratracas.com>
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 736ms (961 modules)
+[31m[auth][error][0m MissingCSRF: CSRF token was missing during an action callback. Read more at https://errors.authjs.dev#missingcsrf
+    at validateCSRF (webpack-internal:///(rsc)/./node_modules/@auth/core/lib/actions/callback/oauth/csrf-token.js:45:11)
+    at AuthInternal (webpack-internal:///(rsc)/./node_modules/@auth/core/lib/index.js:69:104)
+    at async Auth (webpack-internal:///(rsc)/./node_modules/@auth/core/index.js:130:34)
+    at async AppRouteRouteModule.do (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:33891)
+    at async AppRouteRouteModule.handle (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:41254)
+    at async doRender (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/base-server.js:1513:42)
+    at async DevServer.renderToResponseWithComponentsImpl (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/base-server.js:1915:28)
+    at async DevServer.renderPageComponent (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/base-server.js:2393:24)
+    at async DevServer.renderToResponseImpl (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/base-server.js:2430:32)
+    at async DevServer.pipeImpl (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/base-server.js:1003:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/next-server.js:304:17)
+    at async DevServer.handleRequestImpl (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/base-server.js:895:17)
+    at async /Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/dev/next-dev-server.js:371:20
+    at async Span.traceAsyncFn (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/trace/trace.js:157:20)
+    at async DevServer.handleRequest (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/dev/next-dev-server.js:368:24)
+    at async invokeRender (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/lib/router-server.js:235:21)
+    at async handleRequest (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/lib/router-server.js:426:24)
+    at async requestHandlerImpl (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/lib/router-server.js:450:13)
+    at async Server.requestListener (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/lib/start-server.js:158:13)
+ POST /api/auth/callback/credentials 302 in 1170ms
+✅ Email verification sent successfully: <20f7b665-7565-841a-75be-741b0bf7ecdf@wilnaratracas.com>
+Verification code for test2@example.com: 870239
+Code expires at: 7/23/2025, 12:13:24 AM
+ POST /api/auth/register 200 in 4878ms
+ ○ Compiling /api/auth/resend-verification ...
+ ✓ Compiled /api/auth/resend-verification in 631ms (2523 modules)
+✅ Email verification sent successfully: <ccd49473-c82d-3ddf-d34a-32c1407bd638@wilnaratracas.com>
+New verification code for test2@example.com: 335903
+Code expires at: 7/23/2025, 12:13:37 AM
+ POST /api/auth/resend-verification 200 in 4981ms
+ POST /api/auth/verify-email 200 in 708ms
+✅ Welcome email sent successfully: <3b0585ba-bd91-78a2-9b1c-4d295131cf4a@wilnaratracas.com>
+✅ Email verification sent successfully: <0337de62-c49c-7e70-77eb-b9bf7311e600@wilnaratracas.com>
+Verification code for unverified@example.com: 450934
+Code expires at: 7/23/2025, 12:13:59 AM
+ POST /api/auth/register 200 in 4492ms
+[31m[auth][error][0m MissingCSRF: CSRF token was missing during an action callback. Read more at https://errors.authjs.dev#missingcsrf
+    at validateCSRF (webpack-internal:///(rsc)/./node_modules/@auth/core/lib/actions/callback/oauth/csrf-token.js:45:11)
+    at AuthInternal (webpack-internal:///(rsc)/./node_modules/@auth/core/lib/index.js:69:104)
+    at async Auth (webpack-internal:///(rsc)/./node_modules/@auth/core/index.js:130:34)
+    at async AppRouteRouteModule.do (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:33891)
+    at async AppRouteRouteModule.handle (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:41254)
+    at async doRender (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/base-server.js:1513:42)
+    at async DevServer.renderToResponseWithComponentsImpl (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/base-server.js:1915:28)
+    at async DevServer.renderPageComponent (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/base-server.js:2393:24)
+    at async DevServer.renderToResponseImpl (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/base-server.js:2430:32)
+    at async DevServer.pipeImpl (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/base-server.js:1003:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/next-server.js:304:17)
+    at async DevServer.handleRequestImpl (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/base-server.js:895:17)
+    at async /Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/dev/next-dev-server.js:371:20
+    at async Span.traceAsyncFn (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/trace/trace.js:157:20)
+    at async DevServer.handleRequest (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/dev/next-dev-server.js:368:24)
+    at async invokeRender (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/lib/router-server.js:235:21)
+    at async handleRequest (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/lib/router-server.js:426:24)
+    at async requestHandlerImpl (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/lib/router-server.js:450:13)
+    at async Server.requestListener (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/node_modules/next/dist/server/lib/start-server.js:158:13)
+ POST /api/auth/callback/credentials 302 in 78ms
+ GET /api/auth/session 200 in 215ms
+ GET /api/auth/session 200 in 25ms
+ ○ Compiling /api/braiders ...
+ ✓ Compiled /api/braiders in 1305ms (931 modules)
+ ✓ Compiled (933 modules)
+ GET /api/braiders?featured=true&limit=2 200 in 3688ms
+ GET /api/products?featured=true&limit=4 200 in 3691ms
+ GET / 200 in 4248ms
+ GET /api/auth/session 200 in 93ms
+ GET /api/auth/session 200 in 15ms
+ GET /api/auth/csrf 200 in 12ms
+ POST /api/auth/signout 200 in 11ms
+ GET /login 200 in 213ms
+ GET /api/auth/session 200 in 25ms
+ GET /api/auth/session 200 in 16ms
+ GET /register 200 in 24ms
+ ○ Compiling /api/auth/register ...
+ ✓ Compiled /api/auth/register in 707ms (977 modules)
+✅ Email verification sent successfully: <6d135e41-fe0e-55e6-be5e-f0a225abb4ce@wilnaratracas.com>
+Verification code for vivaldo.adao2019@gmail.com: 208349
+Code expires at: 7/23/2025, 11:00:08 AM
+ POST /api/auth/register 200 in 6337ms
+ ○ Compiling /verify-email ...
+ ✓ Compiled /verify-email in 2.4s (2550 modules)
+ GET /verify-email?email=vivaldo.adao2019%40gmail.com 200 in 2512ms
+ ○ Compiling /api/auth/verify-email ...
+ ✓ Compiled /api/auth/verify-email in 935ms (828 modules)
+ POST /api/auth/verify-email 200 in 2391ms
+ ✓ Compiled /login in 283ms (834 modules)
+ GET /login?message=Email+verificado+com+sucesso%21+Voc%C3%AA+pode+fazer+login+agora. 200 in 387ms
+✅ Welcome email sent successfully: <dbc62752-d86c-f213-6a40-8560f679ff6c@wilnaratracas.com>
+ ✓ Compiled /api/auth/[...nextauth] in 332ms (958 modules)
+ GET /api/auth/providers 200 in 573ms
+ GET /api/auth/csrf 200 in 9ms
+ POST /api/auth/callback/credentials? 200 in 797ms
+ GET /api/auth/session 200 in 23ms
+ GET /api/auth/session 200 in 11ms
+ ✓ Compiled /api/braiders in 430ms (974 modules)
+ ✓ Compiled (976 modules)
+ GET /api/auth/session 200 in 2243ms
+ GET /api/products?featured=true&limit=4 200 in 2403ms
+ GET /api/braiders?featured=true&limit=2 200 in 2905ms
+ GET / 200 in 3146ms
+ ✓ Compiled /profile in 419ms (941 modules)
+ GET /profile 200 in 524ms
+ GET /api/auth/csrf 200 in 87ms
+ POST /api/auth/signout 200 in 19ms
+ GET /login 200 in 213ms
+ GET /api/auth/session 200 in 15ms
+ GET /api/auth/session 200 in 12ms
+ ✓ Compiled in 12.7s (2194 modules)
+ GET /login 200 in 733ms
+ ✓ Compiled in 5.5s (1579 modules)
+ GET /login 200 in 179ms
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/.next/cache/webpack/client-development/5.pack.gz_' -> '/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/.next/cache/webpack/client-development/5.pack.gz'
+ ✓ Compiled in 4.7s (1579 modules)
+ GET /login 200 in 59ms
+ ✓ Compiled in 5s (1579 modules)
+ GET /login 200 in 262ms
+
+warn - The class `duration-[5000ms]` is ambiguous and matches multiple utilities.
+warn - If this is content and not a class, replace it with `duration-&lsqb;5000ms&rsqb;` to silence this warning.
+
+warn - The class `duration-[7000ms]` is ambiguous and matches multiple utilities.
+warn - If this is content and not a class, replace it with `duration-&lsqb;7000ms&rsqb;` to silence this warning.
+ ✓ Compiled in 2.6s (1579 modules)
+ GET /login 200 in 679ms
+ ✓ Compiled in 912ms (1579 modules)
+ GET /login 200 in 34ms
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/.next/cache/webpack/client-development/0.pack.gz_' -> '/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/.next/cache/webpack/client-development/0.pack.gz'
+ ✓ Compiled in 7.3s (2194 modules)
+ GET /login 200 in 128ms
+ ✓ Compiled in 6.6s (2209 modules)
+ GET /login 200 in 253ms
+ ✓ Compiled in 4.5s (2209 modules)
+ GET /login 200 in 419ms
+ ✓ Compiled in 2.4s (2209 modules)
+ GET /login 200 in 159ms
+ ✓ Compiled in 2.6s (2209 modules)
+ GET /login 200 in 257ms
+ ○ Compiling /api/braiders ...
+ GET / 200 in 21899ms
+ GET / 200 in 264248ms
+Error fetching featured data: TypeError: fetch failed
+    at async getFeaturedData (app/page.tsx:12:39)
+    at async HomePage (app/page.tsx:34:49)
+  10 | async function getFeaturedData(): Promise<{ featuredProducts: Product[], featuredBraiders: Braider[] }> {
+  11 |   try {
+> 12 |     const [productsRes, braidersRes] = await Promise.all([
+     |                                       ^
+  13 |       fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/products?featured=true&limit=4`),
+  14 |       fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/braiders?featured=true&limit=2`)
+  15 |     ]) {
+  [cause]: [Error [HeadersTimeoutError]: Headers Timeout Error] {
+    code: 'UND_ERR_HEADERS_TIMEOUT'
+  }
+}
+Error fetching featured data: TypeError: fetch failed
+    at async getFeaturedData (app/page.tsx:12:39)
+    at async HomePage (app/page.tsx:34:49)
+  10 | async function getFeaturedData(): Promise<{ featuredProducts: Product[], featuredBraiders: Braider[] }> {
+  11 |   try {
+> 12 |     const [productsRes, braidersRes] = await Promise.all([
+     |                                       ^
+  13 |       fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/products?featured=true&limit=4`),
+  14 |       fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/braiders?featured=true&limit=2`)
+  15 |     ]) {
+  [cause]: [Error [HeadersTimeoutError]: Headers Timeout Error] {
+    code: 'UND_ERR_HEADERS_TIMEOUT'
+  }
+}
+[?25h

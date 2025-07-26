@@ -10,7 +10,7 @@ export default async function BraiderDashboardLayout({ children }: { children: R
   const braider = getBraiderById(braiderId)
 
   // Ler o estado do sidebar do cookie no servidor
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   const defaultOpen = cookieStore.get("sidebar:state")?.value === "true"
 
   // Se o braider não for encontrado (na simulação), ou não estiver autenticado em um cenário real

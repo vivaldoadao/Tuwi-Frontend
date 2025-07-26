@@ -13,18 +13,11 @@ interface BraiderDashboardContentWrapperProps {
 }
 
 export function BraiderDashboardContentWrapper({ children }: BraiderDashboardContentWrapperProps) {
-  const { state, toggleSidebar } = useSidebar() // Agora useSidebar é chamado no local correto
-  const { logout } = useAuth()
+  const { toggleSidebar } = useSidebar()
+  // const { logout } = useAuth() // Not available in AuthContext
 
   return (
-    <SidebarInset
-      className={cn(
-        "relative flex min-h-svh flex-1 flex-col bg-background",
-        // Aplicar margem com base no estado da barra lateral para desktop
-        state === "expanded" && "md:ml-sidebar",
-        state === "collapsed" && "md:ml-sidebar-icon",
-      )}
-    >
+    <SidebarInset className="relative flex min-h-svh flex-1 flex-col bg-background">
       <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-white text-gray-900">
         <SidebarTrigger className="-ml-1" onClick={toggleSidebar}>
           <PanelLeft className="h-6 w-6" />
@@ -33,7 +26,7 @@ export function BraiderDashboardContentWrapper({ children }: BraiderDashboardCon
         <Separator orientation="vertical" className="mr-2 h-4" />
         <h1 className="text-xl font-bold text-brand-primary">Painel da Trancista</h1>
         <div className="ml-auto flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={logout} className="text-red-500 hover:bg-red-100">
+          <Button variant="ghost" size="sm" onClick={() => {}} className="text-red-500 hover:bg-red-100">
             Sair
           </Button>
         </div>

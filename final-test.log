@@ -1,0 +1,97 @@
+
+> my-v0-project@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.2.4
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.1.4:3000
+   - Environments: .env.local
+   - Experiments (use with caution):
+     ✓ typedRoutes
+
+ ✓ Starting...
+ ✓ Ready in 2.7s
+ ○ Compiling /api/products ...
+ ✓ Compiled /api/products in 4.2s (625 modules)
+ ⨯ Error: supabaseUrl is required.
+    at eval (lib/auth.config.ts:26:27)
+    at <unknown> (rsc)/./lib/auth.config.ts (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/.next/server/app/api/products/route.js:33:1)
+    at __webpack_require__ (.next/server/webpack-runtime.js:33:43)
+    at eval (webpack-internal:///(rsc)/./lib/auth.ts:9:70)
+    at <unknown> (rsc)/./lib/auth.ts (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/.next/server/app/api/products/route.js:44:1)
+    at __webpack_require__ (.next/server/webpack-runtime.js:33:43)
+    at eval (webpack-internal:///(rsc)/./app/api/products/route.ts:7:67)
+    at <unknown> (rsc)/./app/api/products/route.ts (/Users/user/Documents/Projectos_Next/Marketplace/Marketplace-wilnara/.next/server/app/api/products/route.js:22:1)
+    at __webpack_require__ (.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (.next/server/webpack-runtime.js:33:43)
+    at __webpack_exec__ (.next/server/app/api/products/route.js:314:39)
+    at <unknown> (.next/server/app/api/products/route.js:315:460)
+    at __webpack_require__.X (.next/server/webpack-runtime.js:151:21)
+    at <unknown> (.next/server/app/api/products/route.js:315:47)
+    at Object.<anonymous> (.next/server/app/api/products/route.js:318:3)
+  24 |
+  25 | export default {
+> 26 |   adapter: SupabaseAdapter(createSupabaseClient()),
+     |                           ^
+  27 |   providers: [
+  28 |     Google({
+  29 |       clientId: process.env.GOOGLE_CLIENT_ID, {
+  page: '/api/products'
+}
+ ○ Compiling /_error ...
+<w> [webpack.cache.PackFileCacheStrategy] Restoring failed for Compilation/modules|external commonjs2 "path" from pack: Error: invalid distance code
+<w> [webpack.cache.PackFileCacheStrategy] Restoring failed for Compilation/codeGeneration|external commonjs2 "path"|webpack-runtime from pack: Error: invalid distance code
+ ✓ Compiled /_error in 1915ms (955 modules)
+Could not find files for /_error in .next/build-manifest.json
+Could not find files for /_error in .next/build-manifest.json
+ GET /api/products 500 in 7154ms
+ ✓ Compiled in 372ms (297 modules)
+ ✓ Compiled in 337ms (297 modules)
+ GET /api/products 200 in 802ms
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 1304ms (312 modules)
+ ⨯ Error: supabaseUrl is required.
+    at eval (lib/auth.config.ts:26:27)
+    at (middleware)/./lib/auth.config.ts (.next/server/middleware.js:18:1)
+    at __webpack_require__ (.next/server/edge-runtime-webpack.js:37:33)
+    at fn (.next/server/edge-runtime-webpack.js:273:21)
+    at eval (webpack-internal:///(middleware)/./lib/auth.ts:9:70)
+    at (middleware)/./lib/auth.ts (.next/server/middleware.js:29:1)
+    at __webpack_require__ (.next/server/edge-runtime-webpack.js:37:33)
+  24 |
+  25 | export default {
+> 26 |   adapter: SupabaseAdapter(createSupabaseClient()),
+     |                           ^
+  27 |   providers: [
+  28 |     Google({
+  29 |       clientId: process.env.GOOGLE_CLIENT_ID,
+Could not find files for /_error in .next/build-manifest.json
+Could not find files for /_error in .next/build-manifest.json
+<w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (108kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: invalid distance code
+ ✓ Compiled in 565ms (101 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 6.4s (1302 modules)
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 2.2s (1425 modules)
+ GET /api/braiders?featured=true&limit=2 404 in 1916ms
+ GET /api/products?featured=true&limit=4 200 in 3123ms
+ ⨯ TypeError: Cannot read properties of undefined (reading 'call')
+    at Object.__webpack_require__ [as require] (.next/server/webpack-runtime.js:33:43) {
+  digest: '1464290186'
+}
+ GET / 500 in 10714ms
+ ✓ Compiled in 1392ms (774 modules)
+ ✓ Compiled in 2.7s (1483 modules)
+ ✓ Compiled in 1314ms (771 modules)
+ ✓ Compiled /api/braiders in 298ms (900 modules)
+ GET /api/braiders 200 in 1688ms
+ ○ Compiling / ...
+ ✓ Compiled / in 636ms (711 modules)
+ ✓ Compiled /api/products in 289ms (724 modules)
+ GET /api/products?featured=true&limit=4 200 in 1083ms
+ GET /api/braiders?featured=true&limit=2 200 in 1098ms
+ HEAD / 200 in 2309ms
+<w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (128kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)
+<w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (108kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)
+[?25h

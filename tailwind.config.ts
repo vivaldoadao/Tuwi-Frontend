@@ -18,6 +18,11 @@ const config = {
         "2xl": "1400px",
       },
     },
+    fontFamily: {
+      sans: ['var(--font-primary)', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+      heading: ['var(--font-heading)', 'Playfair Display', 'Georgia', 'serif'],
+      primary: ['var(--font-primary)', 'Inter', 'sans-serif'],
+    },
     extend: {
       colors: {
         border: "hsl(var(--border))",
@@ -41,7 +46,7 @@ const config = {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
         },
-        accent: {
+        accentDefault: {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
         },
@@ -53,10 +58,37 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Custom colors based on the logo
-        "brand-background": "#A0522D", // Sienna-like reddish-brown
-        "brand-primary": "#5A2D2D", // Darker reddish-brown/maroon
-        "brand-accent": "#DAA520", // Goldenrod/gold
+        // Enhanced brand color system
+        brand: {
+          50: '#fdf8f6',
+          100: '#f2e8e5',
+          200: '#eaddd7',
+          300: '#e0cec7',
+          400: '#d2bab0',
+          500: '#c69c7e',
+          600: '#A0522D', // Current brand-background
+          700: '#8b4513',
+          800: '#5A2D2D', // Current brand-primary
+          900: '#3d1a1a',
+          950: '#2a1212',
+        },
+        accent: {
+          50: '#fefce8',
+          100: '#fef9c3',
+          200: '#fef08a',
+          300: '#fde047',
+          400: '#facc15',
+          500: '#DAA520', // Current brand-accent
+          600: '#ca8a04',
+          700: '#a16207',
+          800: '#854d0e',
+          900: '#713f12',
+          950: '#422006',
+        },
+        // Keep legacy colors for backward compatibility
+        "brand-background": "#A0522D",
+        "brand-primary": "#5A2D2D", 
+        "brand-accent": "#DAA520"
       },
       borderRadius: {
         lg: "var(--radius)",
