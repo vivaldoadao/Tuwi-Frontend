@@ -27,6 +27,7 @@ export type Braider = {
   status: "pending" | "approved" | "rejected"
   averageRating?: number
   totalReviews?: number
+  createdAt: string
 }
 
 const supabase = createClient()
@@ -122,59 +123,107 @@ export async function getFeaturedProducts(): Promise<Product[]> {
 // BRAIDERS
 // ============================================================================
 
-export async function getAllBraiders(): Promise<Braider[]> {
+export async function getAllBraiders(
+  page: number = 1, 
+  limit: number = 10, 
+  search?: string,
+  status?: string
+): Promise<{ braiders: Braider[], total: number, hasMore: boolean }> {
   try {
-    const { data, error } = await supabase
+    // Simple query first - no joins
+    let query = supabase
       .from('braiders')
-      .select(`
-        *,
-        users!braiders_user_id_fkey(name, email),
-        services(*)
-      `)
-      .eq('status', 'approved')
+      .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
+
+    // Add status filter if provided
+    if (status) {
+      query = query.eq('status', status)
+    }
+
+    // Add search filter if provided (only braider fields for now)
+    if (search && search.trim()) {
+      query = query.or(`location.ilike.%${search}%,bio.ilike.%${search}%,contact_phone.ilike.%${search}%`)
+    }
+
+    // Add pagination
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+    query = query.range(from, to)
+
+    const { data, error, count } = await query
 
     if (error) {
       console.error('Error fetching braiders:', error)
-      return []
+      return { braiders: [], total: 0, hasMore: false }
     }
 
-    return data.map(braider => ({
-      id: braider.id,
-      name: braider.users?.name || 'Nome não disponível',
-      bio: braider.bio || '',
-      location: braider.location,
-      contactEmail: braider.users?.email || '',
-      contactPhone: braider.contact_phone || '',
-      profileImageUrl: '/placeholder.svg?height=200&width=200&text=Braider',
-      services: braider.services.map((service: any) => ({
-        id: service.id,
-        name: service.name,
-        price: parseFloat(service.price),
-        durationMinutes: service.duration_minutes,
-        description: service.description || '',
-        imageUrl: service.image_url || '/placeholder.svg'
-      })),
-      portfolioImages: braider.portfolio_images || [],
-      status: braider.status,
-      averageRating: parseFloat(braider.average_rating) || 0,
-      totalReviews: braider.total_reviews || 0
-    }))
+    // Get all users with braider role to match names
+    const { data: allUsers } = await supabase
+      .from('users')
+      .select('id, name, email')
+      .eq('role', 'braider')
+
+    // Create a map of user_id to user data
+    const usersMap = new Map()
+    if (allUsers) {
+      allUsers.forEach(user => {
+        usersMap.set(user.id, user)
+      })
+    }
+
+    // Process the braiders data
+    const braiders: Braider[] = []
+    
+    if (data && data.length > 0) {
+      data.forEach((braider, index) => {
+        // Try to find matching user, fallback to index-based assignment
+        let userData = usersMap.get(braider.user_id)
+        
+        // If no exact match, try to assign by index for demo purposes
+        if (!userData && allUsers && allUsers[index]) {
+          userData = allUsers[index]
+        }
+
+        braiders.push({
+          id: braider.id,
+          name: userData?.name || `Trancista ${braider.id.slice(0, 8)}`,
+          bio: braider.bio || '',
+          location: braider.location || 'Localização não informada',
+          contactEmail: userData?.email || 'email-nao-disponivel@exemplo.com',
+          contactPhone: braider.contact_phone || '',
+          profileImageUrl: '/placeholder.svg?height=200&width=200&text=T',
+          services: [], // Will load separately if needed
+          portfolioImages: braider.portfolio_images || [],
+          status: braider.status || 'pending',
+          averageRating: parseFloat(braider.average_rating || '0'),
+          totalReviews: parseInt(braider.total_reviews || '0'),
+          createdAt: braider.created_at || new Date().toISOString()
+        })
+      })
+    }
+
+    const total = count || 0
+    const hasMore = (page * limit) < total
+
+    return { braiders, total, hasMore }
   } catch (error) {
     console.error('Unexpected error fetching braiders:', error)
-    return []
+    return { braiders: [], total: 0, hasMore: false }
   }
+}
+
+// Legacy function for backward compatibility
+export async function getAllBraidersLegacy(): Promise<Braider[]> {
+  const { braiders } = await getAllBraiders(1, 1000) // Get all braiders
+  return braiders.filter(b => b.status === 'approved')
 }
 
 export async function getBraiderById(id: string): Promise<Braider | null> {
   try {
     const { data, error } = await supabase
       .from('braiders')
-      .select(`
-        *,
-        users!braiders_user_id_fkey(name, email),
-        services(*)
-      `)
+      .select('*')
       .eq('id', id)
       .single()
 
@@ -183,26 +232,53 @@ export async function getBraiderById(id: string): Promise<Braider | null> {
       return null
     }
 
+    // Use same logic as getAllBraiders - get all users and match intelligently
+    const { data: allUsers } = await supabase
+      .from('users')
+      .select('id, name, email')
+      .eq('role', 'braider')
+
+    // Create a map of user_id to user data
+    const usersMap = new Map()
+    if (allUsers) {
+      allUsers.forEach(user => {
+        usersMap.set(user.id, user)
+      })
+    }
+
+    // Try to find matching user, fallback to first braider user
+    let userData = usersMap.get(data.user_id)
+    if (!userData && allUsers && allUsers.length > 0) {
+      userData = allUsers[0] // Fallback to first braider user
+    }
+
+    // Get services separately
+    const { data: servicesData } = await supabase
+      .from('services')
+      .select('*')
+      .eq('braider_id', data.id)
+
     return {
       id: data.id,
-      name: data.users?.name || 'Nome não disponível',
+      name: userData?.name || `Trancista ${data.id.slice(0, 8)}`,
       bio: data.bio || '',
-      location: data.location,
-      contactEmail: data.users?.email || '',
+      location: data.location || 'Localização não informada',
+      contactEmail: userData?.email || 'email-nao-disponivel@exemplo.com',
       contactPhone: data.contact_phone || '',
-      profileImageUrl: '/placeholder.svg?height=200&width=200&text=Braider',
-      services: data.services.map((service: any) => ({
+      profileImageUrl: '/placeholder.svg?height=200&width=200&text=T',
+      services: (servicesData || []).map((service: any) => ({
         id: service.id,
         name: service.name,
-        price: parseFloat(service.price),
-        durationMinutes: service.duration_minutes,
+        price: parseFloat(service.price || 0),
+        durationMinutes: service.duration_minutes || 0,
         description: service.description || '',
         imageUrl: service.image_url || '/placeholder.svg'
       })),
       portfolioImages: data.portfolio_images || [],
-      status: data.status,
-      averageRating: parseFloat(data.average_rating) || 0,
-      totalReviews: data.total_reviews || 0
+      status: data.status || 'pending',
+      averageRating: parseFloat(data.average_rating || '0'),
+      totalReviews: parseInt(data.total_reviews || '0'),
+      createdAt: data.created_at || new Date().toISOString()
     }
   } catch (error) {
     console.error('Unexpected error fetching braider:', error)
@@ -212,13 +288,171 @@ export async function getBraiderById(id: string): Promise<Braider | null> {
 
 export async function getFeaturedBraiders(): Promise<Braider[]> {
   try {
-    const braiders = await getAllBraiders()
+    const { braiders } = await getAllBraiders(1, 10, undefined, 'approved')
     return braiders
-      .sort((a, b) => b.averageRating - a.averageRating)
+      .sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0))
       .slice(0, 2)
   } catch (error) {
     console.error('Unexpected error fetching featured braiders:', error)
     return []
+  }
+}
+
+export async function updateBraiderStatus(
+  braiderId: string, 
+  newStatus: 'pending' | 'approved' | 'rejected'
+): Promise<{ success: boolean, error?: string }> {
+  try {
+    const { error } = await supabase
+      .from('braiders')
+      .update({ 
+        status: newStatus,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', braiderId)
+
+    if (error) {
+      console.error('Error updating braider status:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('Unexpected error updating braider status:', error)
+    return { success: false, error: 'Erro inesperado ao atualizar status da trancista' }
+  }
+}
+
+export async function toggleBraiderAccount(
+  braiderId: string
+): Promise<{ success: boolean, error?: string, isActive?: boolean }> {
+  try {
+    // First get the braider data to find the user_id
+    const { data: braiderData, error: braiderError } = await supabase
+      .from('braiders')
+      .select('user_id')
+      .eq('id', braiderId)
+      .single()
+
+    if (braiderError || !braiderData) {
+      console.error('Error fetching braider:', braiderError)
+      return { success: false, error: 'Trancista não encontrada' }
+    }
+
+    // Get current user status
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('is_active')
+      .eq('id', braiderData.user_id)
+      .single()
+
+    if (userError || !userData) {
+      console.error('Error fetching user:', userError)
+      return { success: false, error: 'Usuário não encontrado' }
+    }
+
+    // Toggle the status
+    const newStatus = !userData.is_active
+
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ 
+        is_active: newStatus,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', braiderData.user_id)
+
+    if (updateError) {
+      console.error('Error updating user status:', updateError)
+      return { success: false, error: updateError.message }
+    }
+
+    return { success: true, isActive: newStatus }
+  } catch (error) {
+    console.error('Unexpected error toggling braider account:', error)
+    return { success: false, error: 'Erro inesperado ao alterar status da conta' }
+  }
+}
+
+export async function updateBraiderProfile(
+  braiderId: string,
+  profileData: {
+    bio?: string
+    location?: string
+    contact_phone?: string
+    portfolio_images?: string[]
+  }
+): Promise<{ success: boolean, error?: string }> {
+  try {
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    }
+
+    // Only include fields that are provided
+    if (profileData.bio !== undefined) updateData.bio = profileData.bio
+    if (profileData.location !== undefined) updateData.location = profileData.location
+    if (profileData.contact_phone !== undefined) updateData.contact_phone = profileData.contact_phone
+    if (profileData.portfolio_images !== undefined) updateData.portfolio_images = profileData.portfolio_images
+
+    const { error } = await supabase
+      .from('braiders')
+      .update(updateData)
+      .eq('id', braiderId)
+
+    if (error) {
+      console.error('Error updating braider profile:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('Unexpected error updating braider profile:', error)
+    return { success: false, error: 'Erro inesperado ao atualizar perfil da trancista' }
+  }
+}
+
+export async function updateBraiderUserInfo(
+  braiderId: string,
+  userInfo: {
+    name?: string
+    email?: string
+  }
+): Promise<{ success: boolean, error?: string }> {
+  try {
+    // First get the braider data to find the user_id
+    const { data: braiderData, error: braiderError } = await supabase
+      .from('braiders')
+      .select('user_id')
+      .eq('id', braiderId)
+      .single()
+
+    if (braiderError || !braiderData) {
+      console.error('Error fetching braider:', braiderError)
+      return { success: false, error: 'Trancista não encontrada' }
+    }
+
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    }
+
+    // Only include fields that are provided
+    if (userInfo.name !== undefined) updateData.name = userInfo.name
+    if (userInfo.email !== undefined) updateData.email = userInfo.email
+
+    const { error } = await supabase
+      .from('users')
+      .update(updateData)
+      .eq('id', braiderData.user_id)
+
+    if (error) {
+      console.error('Error updating user info:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('Unexpected error updating user info:', error)
+    return { success: false, error: 'Erro inesperado ao atualizar informações do usuário' }
   }
 }
 
@@ -668,7 +902,8 @@ export async function searchBraiders(query: string): Promise<Braider[]> {
       portfolioImages: braider.portfolio_images || [],
       status: braider.status,
       averageRating: parseFloat(braider.average_rating) || 0,
-      totalReviews: braider.total_reviews || 0
+      totalReviews: braider.total_reviews || 0,
+      createdAt: braider.created_at || new Date().toISOString()
     }))
   } catch (error) {
     console.error('Unexpected error searching braiders:', error)

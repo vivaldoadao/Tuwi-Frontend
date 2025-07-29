@@ -6,7 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { getAllBraiders, updateBraiderStatus, type Braider } from "@/lib/data"
+import { getBraiderById, updateBraiderStatus, toggleBraiderAccount, type Braider } from "@/lib/data-supabase"
+import { EditBraiderForm } from "@/components/edit-braider-form"
+import { toast } from "react-hot-toast"
 import { 
   ArrowLeft, 
   User, 
@@ -46,35 +48,77 @@ export default function BraiderDetailsPage() {
   const [braider, setBraider] = useState<Braider | null>(null)
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
+  const [isAccountActive, setIsAccountActive] = useState(true)
 
   useEffect(() => {
     const fetchBraider = async () => {
+      if (!braiderId) {
+        console.log('No braiderId provided')
+        return
+      }
+      
+      console.log('Fetching braider with ID:', braiderId)
       setLoading(true)
       try {
-        const braiders = await getAllBraiders()
-        const foundBraider = braiders.find(b => b.id === braiderId)
-        setBraider(foundBraider || null)
+        const fetchedBraider = await getBraiderById(braiderId)
+        console.log('Fetched braider:', fetchedBraider)
+        setBraider(fetchedBraider)
+        if (!fetchedBraider) {
+          toast.error('Trancista não encontrada')
+        }
       } catch (error) {
-        console.error("Error fetching braider:", error)
-        setBraider(null)
+        console.error('Error fetching braider:', error)
+        toast.error('Erro ao carregar dados da trancista')
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
 
-    if (braiderId) {
-      fetchBraider()
-    }
+    fetchBraider()
   }, [braiderId])
 
   const handleUpdateStatus = async (newStatus: Braider["status"]) => {
     if (!braider) return
 
     setProcessing(true)
-    const result = await updateBraiderStatus(braider.id, newStatus)
-    if (result.success) {
-      setBraider(prev => prev ? { ...prev, status: newStatus } : null)
+    try {
+      const { success, error } = await updateBraiderStatus(braider.id, newStatus)
+      if (success) {
+        setBraider(prev => prev ? { ...prev, status: newStatus } : null)
+        toast.success('Status da trancista atualizado com sucesso')
+      } else {
+        toast.error(error || 'Erro ao atualizar status da trancista')
+      }
+    } catch (error) {
+      console.error('Error updating braider status:', error)
+      toast.error('Erro inesperado ao atualizar status da trancista')
+    } finally {
+      setProcessing(false)
     }
-    setProcessing(false)
+  }
+
+  const handleToggleAccount = async () => {
+    if (!braider) return
+
+    setProcessing(true)
+    try {
+      const { success, error, isActive } = await toggleBraiderAccount(braider.id)
+      if (success) {
+        setIsAccountActive(isActive!)
+        toast.success(isActive ? 'Conta da trancista ativada com sucesso' : 'Conta da trancista desativada com sucesso')
+      } else {
+        toast.error(error || 'Erro ao alterar status da conta')
+      }
+    } catch (error) {
+      console.error('Error toggling account:', error)
+      toast.error('Erro inesperado ao alterar status da conta')
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  const handleBraiderUpdated = (updatedBraider: Braider) => {
+    setBraider(updatedBraider)
   }
 
   const getStatusIcon = (status: Braider["status"]) => {
@@ -188,7 +232,7 @@ export default function BraiderDetailsPage() {
                   Perfil completo da trancista
                 </p>
                 <p className="text-white/80 text-sm mt-1">
-                  ID: {braider.id.split("-")[1]} • Cadastrada em {new Date().toLocaleDateString()}
+                  ID: {braider.id.split("-")[1]} • Cadastrada em {new Date(braider.createdAt).toLocaleDateString('pt-BR')}
                 </p>
               </div>
             </div>
@@ -206,11 +250,11 @@ export default function BraiderDetailsPage() {
           {/* Quick Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 text-center">
-              <div className="text-2xl font-bold">{braider.services.length}</div>
+              <div className="text-2xl font-bold">{braider.services?.length || 0}</div>
               <div className="text-white/80 text-sm">Serviços</div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 text-center">
-              <div className="text-2xl font-bold">4.8</div>
+              <div className="text-2xl font-bold">{braider.averageRating?.toFixed(1) || '0.0'}</div>
               <div className="text-white/80 text-sm">Avaliação</div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 text-center">
@@ -299,29 +343,36 @@ export default function BraiderDetailsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                {braider.services.map((service, index) => (
-                  <div key={index} className="p-4 bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-xl border border-gray-200">
-                    <div className="flex items-start justify-between mb-2">
-                      <h4 className="font-bold text-gray-900">{service.name}</h4>
-                      <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-purple-200">
-                        €{service.price}
-                      </Badge>
+              {braider.services && braider.services.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {braider.services.map((service, index) => (
+                    <div key={index} className="p-4 bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-xl border border-gray-200">
+                      <div className="flex items-start justify-between mb-2">
+                        <h4 className="font-bold text-gray-900">{service.name}</h4>
+                        <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-purple-200">
+                          R$ {service.price.toFixed(2)}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-2">{service.description}</p>
+                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {service.durationMinutes}min
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Star className="h-3 w-3 text-yellow-500 fill-current" />
+                          4.9
+                        </span>
+                      </div>
                     </div>
-                    <p className="text-sm text-gray-600 mb-2">{service.description}</p>
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {service.durationMinutes}min
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Star className="h-3 w-3 text-yellow-500 fill-current" />
-                        4.9
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Briefcase className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                  <p className="text-gray-500">Nenhum serviço cadastrado</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -337,23 +388,30 @@ export default function BraiderDetailsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-3">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i} className="relative aspect-square rounded-xl overflow-hidden group">
-                    <Image
-                      src={`/placeholder.svg?height=200&width=200&text=Trabalho ${i}`}
-                      alt={`Trabalho ${i}`}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      unoptimized={true}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <div className="absolute bottom-2 left-2 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <p className="text-sm font-semibold">Trança {i}</p>
+              {braider.portfolioImages && braider.portfolioImages.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-3">
+                  {braider.portfolioImages.map((imageUrl, index) => (
+                    <div key={index} className="relative aspect-square rounded-xl overflow-hidden group">
+                      <Image
+                        src={imageUrl}
+                        alt={`Trabalho ${index + 1}`}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        unoptimized={true}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <div className="absolute bottom-2 left-2 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <p className="text-sm font-semibold">Trabalho {index + 1}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Camera className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                  <p className="text-gray-500">Nenhuma imagem no portfólio</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -374,7 +432,7 @@ export default function BraiderDetailsPage() {
                   <Star className="h-4 w-4 text-yellow-500 fill-current" />
                   <span className="font-semibold text-gray-900">Avaliação</span>
                 </div>
-                <span className="text-xl font-bold text-green-600">4.8/5</span>
+                <span className="text-xl font-bold text-green-600">{braider.averageRating?.toFixed(1) || '0.0'}/5</span>
               </div>
 
               <div className="flex items-center justify-between p-3 bg-blue-50 rounded-xl border border-blue-200">
@@ -472,6 +530,44 @@ export default function BraiderDetailsPage() {
                   Desativar Trancista
                 </Button>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Account Management */}
+          <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0">
+            <CardHeader>
+              <CardTitle className="text-lg font-bold font-heading text-gray-900 flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Gestão da Conta
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <EditBraiderForm 
+                braider={braider}
+                onBraiderUpdated={handleBraiderUpdated}
+                trigger={
+                  <Button variant="outline" className="w-full rounded-xl">
+                    <Edit3 className="h-4 w-4 mr-2" />
+                    Editar Perfil
+                  </Button>
+                }
+              />
+              
+              <Button
+                onClick={handleToggleAccount}
+                disabled={processing}
+                variant={isAccountActive ? "destructive" : "default"}
+                className="w-full rounded-xl"
+              >
+                {processing ? (
+                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                ) : isAccountActive ? (
+                  <UserX className="h-4 w-4 mr-2" />
+                ) : (
+                  <UserCheck className="h-4 w-4 mr-2" />
+                )}
+                {isAccountActive ? 'Desativar Conta' : 'Ativar Conta'}
+              </Button>
             </CardContent>
           </Card>
 
