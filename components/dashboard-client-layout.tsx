@@ -36,8 +36,10 @@ export function DashboardClientLayout({ children, defaultSidebarOpen }: Dashboar
 
   return (
     <SidebarProvider defaultOpen={defaultSidebarOpen}>
-      <DashboardSidebar />
-      <DashboardContentWrapper>{children}</DashboardContentWrapper>
+      <div className="flex min-h-screen w-full">
+        <DashboardSidebar />
+        <DashboardContentWrapper>{children}</DashboardContentWrapper>
+      </div>
     </SidebarProvider>
   )
 }

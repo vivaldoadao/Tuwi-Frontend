@@ -8,6 +8,8 @@ import { Package, ShoppingCart, Users, Euro, BarChart3, Bell, Plus, Eye, Setting
 import { useEffect, useState } from "react"
 import { getAllBraiders, allProducts, type Braider } from "@/lib/data"
 import { getUserOrders, type Order } from "@/lib/orders"
+import { AdminGuard } from "@/components/role-guard"
+import { UsersTable } from "@/components/users-table"
 import Link from "next/link"
 
 export default function DashboardOverviewPage() {
@@ -39,7 +41,8 @@ export default function DashboardOverviewPage() {
   const recentOrders = orders.slice(0, 4)
 
   return (
-    <div className="space-y-8">
+    <AdminGuard redirectTo="/login">
+      <div className="space-y-8">
       {/* Enhanced Header Section */}
       <div className="bg-gradient-to-br from-brand-primary via-brand-accent to-purple-600 rounded-3xl p-8 text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-black/10 backdrop-blur-3xl"></div>
@@ -166,6 +169,11 @@ export default function DashboardOverviewPage() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Users Table Section - Full Width */}
+      <div className="w-full">
+        <UsersTable />
       </div>
 
       {/* Dashboard Content Grid */}
@@ -411,6 +419,7 @@ export default function DashboardOverviewPage() {
           </Card>
         </div>
       </div>
-    </div>
+      </div>
+    </AdminGuard>
   )
 }

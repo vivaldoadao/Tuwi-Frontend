@@ -1,32 +1,40 @@
+"use client"
+
 import type React from "react"
-import { cookies } from "next/headers"
 import { BraiderDashboardClientLayout } from "@/components/braider-dashboard-client-layout"
-import { getBraiderById } from "@/lib/data" // Para obter o braider logado se tivéssemos auth real
+import { BraiderGuard } from "@/components/role-guard"
+import { useAuth } from "@/context/auth-context"
+import { getBraiderById } from "@/lib/data"
+import { useState, useEffect } from "react"
 
-export default async function BraiderDashboardLayout({ children }: { children: React.ReactNode }) {
-  // Simular que o braider-1 está logado para o dashboard
-  // Em uma aplicação real, você buscaria o ID do braider logado via autenticação
-  const braiderId = "braider-1"
-  const braider = getBraiderById(braiderId)
+export default function BraiderDashboardLayout({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
+  const [braider, setBraider] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
 
-  // Ler o estado do sidebar do cookie no servidor
-  const cookieStore = await cookies()
-  const defaultOpen = cookieStore.get("sidebar:state")?.value === "true"
+  useEffect(() => {
+    if (user?.id) {
+      // In a real app, we'd fetch braider profile by user ID
+      // For now, use fallback or create mock based on user
+      const braiderProfile = getBraiderById(user.id) || getBraiderById("braider-1")
+      setBraider(braiderProfile)
+    }
+    setLoading(false)
+  }, [user])
 
-  // Se o braider não for encontrado (na simulação), ou não estiver autenticado em um cenário real
-  if (!braider) {
-    // Redirecionaria para login ou mostraria uma mensagem de erro
-    // Por simplicidade, para este exemplo, retornaremos null
+  if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 text-brand-primary">
-        Acesso negado. Por favor, faça login como trancista.
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     )
   }
 
   return (
-    <BraiderDashboardClientLayout defaultSidebarOpen={defaultOpen} braider={braider}>
-      {children}
-    </BraiderDashboardClientLayout>
+    <BraiderGuard redirectTo="/login">
+      <BraiderDashboardClientLayout defaultSidebarOpen={true} braider={braider}>
+        {children}
+      </BraiderDashboardClientLayout>
+    </BraiderGuard>
   )
 }

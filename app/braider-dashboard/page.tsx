@@ -9,12 +9,15 @@ import { getBraiderBookings, getBraiderById, type Booking } from "@/lib/data"
 import { useEffect, useState } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { BraiderGuard } from "@/components/role-guard"
+import { useAuth } from "@/context/auth-context"
 import Link from "next/link"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 
 export default function BraiderDashboardOverviewPage() {
-  const braiderId = "braider-1"
+  const { user } = useAuth()
+  const braiderId = user?.id || "braider-1" // Use actual user ID, fallback for development
   const braider = getBraiderById(braiderId)
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)

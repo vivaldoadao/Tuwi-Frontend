@@ -1,4 +1,5 @@
 "use client"
+import * as React from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Home, ShoppingCart, Package, Settings, ChevronDown, User2, Users, UserCheck } from "lucide-react"
@@ -66,7 +67,7 @@ export function DashboardSidebar() {
   ]
 
   return (
-    <Sidebar collapsible="icon" variant="sidebar">
+    <Sidebar collapsible="offcanvas" variant="sidebar" className="border-r">
       <SidebarHeader>
         <Link href="/dashboard" className="flex items-center gap-2 p-2">
           <Image

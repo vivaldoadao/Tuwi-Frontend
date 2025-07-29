@@ -1,15 +1,45 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { auth } from '@/lib/auth'
+import { canAccessRoute, getDefaultRedirectPath } from '@/lib/roles'
 
-export async function middleware(_request: NextRequest) {
-  // Temporarily disable authentication middleware until NextAuth is fully configured
-  // This allows the site to function while we set up the authentication system
-  
-  // For now, just allow all requests to pass through
-  return NextResponse.next()
-  
-  /* TODO: Re-enable after NextAuth configuration is complete
-  const session = await auth()
+// Public routes that don't require authentication
+const publicRoutes = [
+  '/',
+  '/products',
+  '/braiders',
+  '/login',
+  '/register',
+  '/register-braider',
+  '/auth',
+  '/api/auth',
+  '/api/braiders',
+  '/api/products',
+  '/_next',
+  '/favicon.ico'
+]
+
+// Admin-only routes
+const adminRoutes = [
+  '/dashboard',
+  '/admin'
+]
+
+// Braider-only routes
+const braiderRoutes = [
+  '/braider-dashboard'
+]
+
+// Protected routes that require authentication
+const protectedRoutes = [
+  '/cart',
+  '/checkout',
+  '/profile',
+  '/orders',
+  '/favorites'
+]
+
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Allow public routes
@@ -17,22 +47,44 @@ export async function middleware(_request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Redirect unauthenticated users to login
+  // Get the session
+  const session = await auth()
+
+  // Redirect unauthenticated users to login for protected routes
   if (!session?.user) {
-    const loginUrl = new URL('/login', request.url)
-    loginUrl.searchParams.set('callbackUrl', pathname)
-    return NextResponse.redirect(loginUrl)
+    if (protectedRoutes.some(route => pathname.startsWith(route)) ||
+        adminRoutes.some(route => pathname.startsWith(route)) ||
+        braiderRoutes.some(route => pathname.startsWith(route))) {
+      const loginUrl = new URL('/login', request.url)
+      loginUrl.searchParams.set('callbackUrl', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+    return NextResponse.next()
   }
 
-  // Check role-based access using the new helper functions
+  // Check role-based access for admin routes
+  if (adminRoutes.some(route => pathname.startsWith(route))) {
+    if (session.user.role !== 'admin') {
+      const defaultPath = getDefaultRedirectPath(session)
+      return NextResponse.redirect(new URL(defaultPath, request.url))
+    }
+  }
+
+  // Check role-based access for braider routes
+  if (braiderRoutes.some(route => pathname.startsWith(route))) {
+    if (session.user.role !== 'braider' && session.user.role !== 'admin') {
+      const defaultPath = getDefaultRedirectPath(session)
+      return NextResponse.redirect(new URL(defaultPath, request.url))
+    }
+  }
+
+  // Use the general role-based access check for any other route
   if (!canAccessRoute(session, pathname)) {
-    // User doesn't have access, redirect to their default dashboard
     const defaultPath = getDefaultRedirectPath(session)
     return NextResponse.redirect(new URL(defaultPath, request.url))
   }
 
   return NextResponse.next()
-  */
 }
 
 export const config = {

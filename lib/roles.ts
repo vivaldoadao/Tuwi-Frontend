@@ -18,16 +18,16 @@ export const ROLE_HIERARCHY: Record<UserRole, number> = {
 
 // Route access mapping
 export const ROLE_ROUTES: Record<UserRole, string[]> = {
-  customer: ['/dashboard', '/profile', '/orders', '/cart', '/checkout'],
-  braider: ['/braider-dashboard', '/braider-dashboard/*'],
-  admin: ['/admin', '/admin/*']
+  customer: ['/profile', '/orders', '/cart', '/checkout', '/favorites'],
+  braider: ['/braider-dashboard', '/braider-dashboard/*', '/profile', '/orders'],
+  admin: ['/dashboard', '/admin', '/admin/*', '/profile', '/orders', '/cart', '/checkout']
 }
 
 // Default redirect paths for each role
 export const ROLE_REDIRECT_PATHS: Record<UserRole, string> = {
-  customer: '/dashboard',
+  customer: '/',
   braider: '/braider-dashboard',
-  admin: '/admin'
+  admin: '/dashboard'
 }
 
 /**

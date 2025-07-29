@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useCart } from "@/context/cart-context"
+import { CustomerGuard } from "@/components/role-guard"
 import { 
   Minus, 
   Plus, 
@@ -67,7 +68,8 @@ export default function CartPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
+    <CustomerGuard redirectTo="/login">
+      <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
       <SiteHeader />
       
       {/* Hero Section */}
@@ -399,6 +401,7 @@ export default function CartPage() {
           </p>
         </div>
       </footer>
-    </div>
+      </div>
+    </CustomerGuard>
   )
 }
