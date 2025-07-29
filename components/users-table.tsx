@@ -27,17 +27,23 @@ import {
   ChevronRight, 
   MoreHorizontal,
   UserCheck,
-  UserX,
   Shield,
-  User
+  User,
+  Eye,
+  Ban,
+  CheckCircle,
+  Edit
 } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
 import { getAllUsers, updateUserRole, toggleUserStatus, type User } from "@/lib/data-supabase"
+import { EditUserForm } from "@/components/edit-user-form"
 import { toast } from "react-hot-toast"
 
 export function UsersTable() {
@@ -126,6 +132,19 @@ export function UsersTable() {
     } finally {
       setActionLoading(null)
     }
+  }
+
+  const handleViewDetails = (userId: string) => {
+    // Navigate to user details page
+    window.location.href = `/dashboard/users/${userId}`
+  }
+
+  const handleUserUpdated = (updatedUser: User) => {
+    setUsers(prevUsers => 
+      prevUsers.map(user => 
+        user.id === updatedUser.id ? updatedUser : user
+      )
+    )
   }
 
   const getRoleBadge = (role: string) => {
@@ -239,6 +258,9 @@ export function UsersTable() {
                       <div>
                         <div className="font-medium text-gray-900">{user.name}</div>
                         <div className="text-sm text-gray-500">{user.email}</div>
+                        {user.phone && (
+                          <div className="text-xs text-gray-400">{user.phone}</div>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -264,7 +286,34 @@ export function UsersTable() {
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuContent align="end" className="w-56">
+                          <DropdownMenuLabel>Ações do Usuário</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          
+                          {/* Ver Detalhes */}
+                          <DropdownMenuItem onClick={() => handleViewDetails(user.id)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Ver Detalhes
+                          </DropdownMenuItem>
+                          
+                          {/* Editar Usuario */}
+                          <DropdownMenuItem asChild>
+                            <EditUserForm 
+                              user={user} 
+                              onUserUpdated={handleUserUpdated}
+                              trigger={
+                                <div className="flex items-center w-full px-2 py-1.5 text-sm cursor-pointer">
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Editar Dados
+                                </div>
+                              }
+                            />
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuSeparator />
+                          <DropdownMenuLabel>Alterar Permissões</DropdownMenuLabel>
+                          
+                          {/* Mudança de Papéis */}
                           <DropdownMenuItem 
                             onClick={() => handleRoleChange(user.id, 'customer')}
                             disabled={user.role === 'customer'}
@@ -286,18 +335,23 @@ export function UsersTable() {
                             <Shield className="h-4 w-4 mr-2" />
                             Definir como Admin
                           </DropdownMenuItem>
+                          
+                          <DropdownMenuSeparator />
+                          <DropdownMenuLabel>Status da Conta</DropdownMenuLabel>
+                          
+                          {/* Ativar/Desativar */}
                           <DropdownMenuItem 
                             onClick={() => handleToggleStatus(user.id)}
                             className={user.isActive ? "text-red-600" : "text-green-600"}
                           >
                             {user.isActive ? (
                               <>
-                                <UserX className="h-4 w-4 mr-2" />
+                                <Ban className="h-4 w-4 mr-2" />
                                 Desativar Usuário
                               </>
                             ) : (
                               <>
-                                <UserCheck className="h-4 w-4 mr-2" />
+                                <CheckCircle className="h-4 w-4 mr-2" />
                                 Ativar Usuário
                               </>
                             )}

@@ -415,6 +415,7 @@ export type User = {
   id: string
   name: string
   email: string
+  phone?: string
   role: 'customer' | 'braider' | 'admin'
   createdAt: string
   isActive: boolean
@@ -453,6 +454,7 @@ export async function getAllUsers(
       id: user.id,
       name: user.name || 'Nome não informado',
       email: user.email,
+      phone: user.phone || undefined,
       role: user.role || 'customer',
       createdAt: user.created_at,
       isActive: user.is_active ?? true,
@@ -486,6 +488,7 @@ export async function getUserById(id: string): Promise<User | null> {
       id: data.id,
       name: data.name || 'Nome não informado',
       email: data.email,
+      phone: data.phone || undefined,
       role: data.role || 'customer',
       createdAt: data.created_at,
       isActive: data.is_active ?? true,
@@ -558,6 +561,41 @@ export async function toggleUserStatus(
   } catch (error) {
     console.error('Unexpected error toggling user status:', error)
     return { success: false, error: 'Erro inesperado ao alterar status do usuário' }
+  }
+}
+
+export async function updateUser(
+  userId: string,
+  userData: {
+    name?: string
+    email?: string
+    phone?: string
+  }
+): Promise<{ success: boolean, error?: string }> {
+  try {
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    }
+
+    // Only include fields that are provided
+    if (userData.name !== undefined) updateData.name = userData.name
+    if (userData.email !== undefined) updateData.email = userData.email
+    if (userData.phone !== undefined) updateData.phone = userData.phone
+
+    const { error } = await supabase
+      .from('users')
+      .update(updateData)
+      .eq('id', userId)
+
+    if (error) {
+      console.error('Error updating user:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('Unexpected error updating user:', error)
+    return { success: false, error: 'Erro inesperado ao atualizar usuário' }
   }
 }
 
