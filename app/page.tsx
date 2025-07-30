@@ -5,104 +5,63 @@ import BraiderCard from "@/components/braider-card"
 import HeroCarouselOptimized from "@/components/hero-carousel-optimized"
 import { Section } from "@/components/common/section"
 import { Button } from "@/components/ui/button"
-import type { Product, Braider } from "@/lib/data"
+import { getFeaturedProducts, getFeaturedBraiders } from "@/lib/data-supabase"
+import type { Product } from "@/lib/data"
+import type { Braider } from "@/lib/data-supabase"
 
-function getFeaturedData(): { featuredProducts: Product[], featuredBraiders: Braider[] } {
-  // Dados mock para evitar timeouts - substitua por dados reais quando estiver pronto
-  const mockProducts: Product[] = [
-    {
-      id: "1",
-      name: "Box Braids Premium",
-      description: "Tranças box braids profissionais de alta qualidade",
-      longDescription: "Tranças box braids profissionais de alta qualidade com material premium",
-      price: 45.99,
-      imageUrl: "/placeholder.svg?height=300&width=300&text=Box+Braids"
-    },
-    {
-      id: "2", 
-      name: "Goddess Braids Luxo",
-      description: "Goddess braids elegantes para ocasiões especiais",
-      longDescription: "Goddess braids elegantes para ocasiões especiais com acabamento perfeito",
-      price: 65.99,
-      imageUrl: "/placeholder.svg?height=300&width=300&text=Goddess+Braids"
-    },
-    {
-      id: "3",
-      name: "Twist Braids Modernas", 
-      description: "Twist braids contemporâneas e versáteis",
-      longDescription: "Twist braids contemporâneas e versáteis para todos os estilos",
-      price: 39.99,
-      imageUrl: "/placeholder.svg?height=300&width=300&text=Twist+Braids"
-    },
-    {
-      id: "4",
-      name: "Postiços Naturais",
-      description: "Postiços de cabelo natural para complementar suas tranças",
-      longDescription: "Postiços de cabelo natural de alta qualidade para complementar suas tranças",
-      price: 29.99,
-      imageUrl: "/placeholder.svg?height=300&width=300&text=Postiços"
-    }
-  ]
+async function getFeaturedData(): Promise<{ featuredProducts: Product[], featuredBraiders: Braider[] }> {
+  try {
+    const [featuredProducts, featuredBraiders] = await Promise.all([
+      getFeaturedProducts(),
+      getFeaturedBraiders()
+    ])
+    
+    return { featuredProducts, featuredBraiders }
+  } catch (error) {
+    console.error('Error fetching featured data:', error)
+    
+    // Fallback to mock data if database fails
+    const mockProducts: Product[] = [
+      {
+        id: "1",
+        name: "Box Braids Premium",
+        description: "Tranças box braids profissionais de alta qualidade",
+        longDescription: "Tranças box braids profissionais de alta qualidade com material premium",
+        price: 45.99,
+        imageUrl: "/placeholder.svg?height=300&width=300&text=Box+Braids"
+      },
+      {
+        id: "2", 
+        name: "Goddess Braids Luxo",
+        description: "Goddess braids elegantes para ocasiões especiais",
+        longDescription: "Goddess braids elegantes para ocasiões especiais com acabamento perfeito",
+        price: 65.99,
+        imageUrl: "/placeholder.svg?height=300&width=300&text=Goddess+Braids"
+      }
+    ]
 
-  const mockBraiders: Braider[] = [
-    {
-      id: "mock-1",
-      name: "Maria Silva",
-      bio: "Especialista em tranças africanas com mais de 10 anos de experiência.",
-      location: "São Paulo, SP",
-      contactEmail: "maria@example.com",
-      contactPhone: "(11) 99999-1234",
-      profileImageUrl: "/placeholder.svg?height=200&width=200&text=Maria",
-      services: [],
-      portfolioImages: ["/placeholder.svg?height=300&width=300&text=Portfolio1"],
-      status: "approved"
-    },
-    {
-      id: "mock-2",
-      name: "Ana Costa",
-      bio: "Trancista profissional especializada em box braids e twist braids.",
-      location: "Rio de Janeiro, RJ", 
-      contactEmail: "ana@example.com",
-      contactPhone: "(21) 99999-5678",
-      profileImageUrl: "/placeholder.svg?height=200&width=200&text=Ana",
-      services: [],
-      portfolioImages: ["/placeholder.svg?height=300&width=300&text=Portfolio2"],
-      status: "approved"
-    },
-    {
-      id: "mock-3",
-      name: "Joana Santos",
-      bio: "Especialista em protective styles e tranças Nagô, com técnicas ancestrais.",
-      location: "Salvador, BA",
-      contactEmail: "joana@example.com",
-      contactPhone: "(71) 99999-9012",
-      profileImageUrl: "/placeholder.svg?height=200&width=200&text=Joana",
-      services: [],
-      portfolioImages: ["/placeholder.svg?height=300&width=300&text=Portfolio3"],
-      status: "approved"
-    },
-    {
-      id: "mock-4", 
-      name: "Camila Oliveira",
-      bio: "Criadora de estilos únicos com foco em fulani braids e cornrows artísticas.",
-      location: "Brasília, DF",
-      contactEmail: "camila@example.com", 
-      contactPhone: "(61) 99999-3456",
-      profileImageUrl: "/placeholder.svg?height=200&width=200&text=Camila",
-      services: [],
-      portfolioImages: ["/placeholder.svg?height=300&width=300&text=Portfolio4"],
-      status: "approved"
-    }
-  ]
+    const mockBraiders: Braider[] = [
+      {
+        id: "mock-1",
+        name: "Maria Silva",
+        bio: "Especialista em tranças africanas com mais de 10 anos de experiência.",
+        location: "São Paulo, SP",
+        contactEmail: "maria@example.com",
+        contactPhone: "(11) 99999-1234",
+        profileImageUrl: "/placeholder.svg?height=200&width=200&text=Maria",
+        services: [],
+        portfolioImages: ["/placeholder.svg?height=300&width=300&text=Portfolio1"],
+        status: "approved",
+        createdAt: new Date().toISOString()
+      }
+    ]
 
-  return {
-    featuredProducts: mockProducts,
-    featuredBraiders: mockBraiders
+    return { featuredProducts: mockProducts, featuredBraiders: mockBraiders }
   }
 }
 
-export default function HomePage() {
-  const { featuredProducts, featuredBraiders } = getFeaturedData()
+export default async function HomePage() {
+  const { featuredProducts, featuredBraiders } = await getFeaturedData()
 
   return (
     <SiteLayout>

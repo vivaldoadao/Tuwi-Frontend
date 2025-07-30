@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import type { Product } from "@/lib/data"
+import type { ProductAdmin } from "@/lib/data-supabase"
 import { useCart } from "@/context/cart-context"
 import { useFavorites } from "@/context/favorites-context"
-import { Heart, ShoppingCart, Star, Eye } from "lucide-react"
+import { Heart, ShoppingCart, Star, Eye, Package, AlertTriangle } from "lucide-react"
 
 interface ProductCardProps {
-  product: Product
+  product: Product | ProductAdmin
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
@@ -32,6 +33,12 @@ export default function ProductCard({ product }: ProductCardProps) {
   // Mock rating - você pode substituir por dados reais
   const rating = 4.8
   const reviewCount = 127
+
+  // Check if product has stock information (ProductAdmin type)
+  const hasStockInfo = 'stockQuantity' in product
+  const stockQuantity = hasStockInfo ? (product as ProductAdmin).stockQuantity : undefined
+  const isInStock = stockQuantity === undefined || stockQuantity > 0
+  const isLowStock = stockQuantity !== undefined && stockQuantity > 0 && stockQuantity <= 5
 
   return (
     <Card className="group w-full max-w-sm overflow-hidden bg-white shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-0 rounded-2xl">
@@ -103,22 +110,45 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Description */}
         <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">{product.description}</p>
         
-        {/* Price */}
-        <div className="flex items-center justify-between">
-          <div className="text-2xl font-bold text-brand-600">
-            €{product.price.toFixed(2)}
+        {/* Price and Stock */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="text-2xl font-bold text-brand-600">
+              €{product.price.toFixed(2)}
+            </div>
+            {/* Stock status badge */}
+            {hasStockInfo && (
+              <div>
+                {stockQuantity === 0 ? (
+                  <Badge variant="secondary" className="bg-red-100 text-red-800 text-xs">
+                    <Package className="h-3 w-3 mr-1" />
+                    Sem estoque
+                  </Badge>
+                ) : isLowStock ? (
+                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 text-xs">
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                    Últimas {stockQuantity}
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                    <Package className="h-3 w-3 mr-1" />
+                    Em estoque
+                  </Badge>
+                )}
+              </div>
+            )}
           </div>
-          {/* Could add original price with discount here */}
         </div>
       </CardContent>
 
       <CardFooter className="p-6 pt-0">
         <Button
           onClick={handleAddToCart}
-          className="w-full bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-800 text-white py-3 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5"
+          disabled={hasStockInfo && stockQuantity === 0}
+          className="w-full bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-800 text-white py-3 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
         >
           <ShoppingCart className="mr-2 h-4 w-4" />
-          Adicionar ao Carrinho
+          {hasStockInfo && stockQuantity === 0 ? 'Fora de Estoque' : 'Adicionar ao Carrinho'}
         </Button>
       </CardFooter>
     </Card>

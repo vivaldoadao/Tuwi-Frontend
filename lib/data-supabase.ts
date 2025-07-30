@@ -36,12 +36,23 @@ const supabase = createClient()
 // PRODUCTS
 // ============================================================================
 
+// Extended Product type with additional admin fields
+export type ProductAdmin = Product & {
+  category: string
+  stockQuantity: number
+  isActive: boolean
+  createdAt: string
+  updatedAt?: string
+  images: string[]
+}
+
 export async function getAllProducts(): Promise<Product[]> {
   try {
     const { data, error } = await supabase
       .from('products')
       .select('*')
       .eq('is_active', true)
+      .gt('stock_quantity', 0) // Only show products with stock > 0
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -60,6 +71,65 @@ export async function getAllProducts(): Promise<Product[]> {
   } catch (error) {
     console.error('Unexpected error fetching products:', error)
     return []
+  }
+}
+
+export async function getAllProductsAdmin(
+  page: number = 1,
+  limit: number = 10,
+  search?: string,
+  category?: string
+): Promise<{ products: ProductAdmin[], total: number, hasMore: boolean }> {
+  try {
+    let query = supabase
+      .from('products')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+
+    // Add search filter if provided
+    if (search && search.trim()) {
+      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%,category.ilike.%${search}%`)
+    }
+
+    // Add category filter if provided
+    if (category && category !== 'all') {
+      query = query.eq('category', category)
+    }
+
+    // Add pagination
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+    query = query.range(from, to)
+
+    const { data, error, count } = await query
+
+    if (error) {
+      console.error('Error fetching products admin:', error)
+      return { products: [], total: 0, hasMore: false }
+    }
+
+    const products: ProductAdmin[] = (data || []).map(product => ({
+      id: product.id,
+      name: product.name,
+      price: parseFloat(product.price),
+      imageUrl: product.images[0] || '/placeholder.svg',
+      description: product.description || '',
+      longDescription: product.long_description || '',
+      category: product.category || 'Outros',
+      stockQuantity: product.stock_quantity || 0,
+      isActive: product.is_active ?? true,
+      createdAt: product.created_at,
+      updatedAt: product.updated_at,
+      images: product.images || []
+    }))
+
+    const total = count || 0
+    const hasMore = (page * limit) < total
+
+    return { products, total, hasMore }
+  } catch (error) {
+    console.error('Unexpected error fetching products admin:', error)
+    return { products: [], total: 0, hasMore: false }
   }
 }
 
@@ -91,12 +161,48 @@ export async function getProductById(id: string): Promise<Product | null> {
   }
 }
 
+// New function that returns complete product data including stock
+export async function getProductByIdWithStock(id: string): Promise<ProductAdmin | null> {
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('id', id)
+      .eq('is_active', true) // Still filter by active status on product details
+      .single()
+
+    if (error) {
+      console.error('Error fetching product with stock:', error)
+      return null
+    }
+
+    return {
+      id: data.id,
+      name: data.name,
+      price: parseFloat(data.price),
+      imageUrl: data.images[0] || '/placeholder.svg',
+      description: data.description || '',
+      longDescription: data.long_description || '',
+      category: data.category || 'Outros',
+      stockQuantity: data.stock_quantity || 0,
+      isActive: data.is_active ?? true,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+      images: data.images || []
+    }
+  } catch (error) {
+    console.error('Unexpected error fetching product with stock:', error)
+    return null
+  }
+}
+
 export async function getFeaturedProducts(): Promise<Product[]> {
   try {
     const { data, error } = await supabase
       .from('products')
       .select('*')
       .eq('is_active', true)
+      .gt('stock_quantity', 0) // Only show products with stock > 0
       .order('created_at', { ascending: false })
       .limit(4)
 
@@ -116,6 +222,292 @@ export async function getFeaturedProducts(): Promise<Product[]> {
   } catch (error) {
     console.error('Unexpected error fetching featured products:', error)
     return []
+  }
+}
+
+export async function createProduct(productData: {
+  name: string
+  description: string
+  longDescription?: string
+  price: number
+  category: string
+  stockQuantity: number
+  images?: string[]
+}): Promise<{ success: boolean, error?: string, productId?: string }> {
+  try {
+    const productInsertData = {
+      name: productData.name,
+      description: productData.description,
+      long_description: productData.longDescription || productData.description,
+      price: productData.price.toString(),
+      category: productData.category,
+      stock_quantity: productData.stockQuantity,
+      images: productData.images || [],
+      is_active: true
+    }
+
+    const { data, error } = await supabase
+      .from('products')
+      .insert([productInsertData])
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error creating product:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, productId: data.id }
+  } catch (error) {
+    console.error('Unexpected error creating product:', error)
+    return { success: false, error: 'Erro inesperado ao criar produto' }
+  }
+}
+
+export async function updateProduct(
+  productId: string,
+  productData: {
+    name?: string
+    description?: string
+    longDescription?: string
+    price?: number
+    category?: string
+    stockQuantity?: number
+    images?: string[]
+  }
+): Promise<{ success: boolean, error?: string }> {
+  try {
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    }
+
+    // Only include fields that are provided
+    if (productData.name !== undefined) updateData.name = productData.name
+    if (productData.description !== undefined) updateData.description = productData.description
+    if (productData.longDescription !== undefined) updateData.long_description = productData.longDescription
+    if (productData.price !== undefined) updateData.price = productData.price.toString()
+    if (productData.category !== undefined) updateData.category = productData.category
+    if (productData.stockQuantity !== undefined) updateData.stock_quantity = productData.stockQuantity
+    if (productData.images !== undefined) updateData.images = productData.images
+
+    const { error } = await supabase
+      .from('products')
+      .update(updateData)
+      .eq('id', productId)
+
+    if (error) {
+      console.error('Error updating product:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('Unexpected error updating product:', error)
+    return { success: false, error: 'Erro inesperado ao atualizar produto' }
+  }
+}
+
+export async function toggleProductStatus(
+  productId: string
+): Promise<{ success: boolean, error?: string, isActive?: boolean }> {
+  try {
+    // First get current status
+    const { data: productData, error: fetchError } = await supabase
+      .from('products')
+      .select('is_active')
+      .eq('id', productId)
+      .single()
+
+    if (fetchError) {
+      console.error('Error fetching product status:', fetchError)
+      return { success: false, error: fetchError.message }
+    }
+
+    // Toggle the status
+    const newStatus = !productData.is_active
+
+    const { error } = await supabase
+      .from('products')
+      .update({ 
+        is_active: newStatus,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', productId)
+
+    if (error) {
+      console.error('Error toggling product status:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, isActive: newStatus }
+  } catch (error) {
+    console.error('Unexpected error toggling product status:', error)
+    return { success: false, error: 'Erro inesperado ao alterar status do produto' }
+  }
+}
+
+export async function deleteProduct(
+  productId: string
+): Promise<{ success: boolean, error?: string }> {
+  try {
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', productId)
+
+    if (error) {
+      console.error('Error deleting product:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('Unexpected error deleting product:', error)
+    return { success: false, error: 'Erro inesperado ao excluir produto' }
+  }
+}
+
+export async function updateProductStock(
+  productId: string,
+  stockQuantity: number
+): Promise<{ success: boolean, error?: string }> {
+  try {
+    const { error } = await supabase
+      .from('products')
+      .update({ 
+        stock_quantity: stockQuantity,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', productId)
+
+    if (error) {
+      console.error('Error updating product stock:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('Unexpected error updating product stock:', error)
+    return { success: false, error: 'Erro inesperado ao atualizar estoque' }
+  }
+}
+
+export async function getProductCategories(): Promise<string[]> {
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('category')
+      .not('category', 'is', null)
+
+    if (error) {
+      console.error('Error fetching product categories:', error)
+      return ['Tranças', 'Extensões', 'Acessórios', 'Cuidados', 'Outros']
+    }
+
+    // Get unique categories
+    const categories = [...new Set(data.map(item => item.category))].filter(Boolean)
+    return categories.length > 0 ? categories : ['Tranças', 'Extensões', 'Acessórios', 'Cuidados', 'Outros']
+  } catch (error) {
+    console.error('Unexpected error fetching categories:', error)
+    return ['Tranças', 'Extensões', 'Acessórios', 'Cuidados', 'Outros']
+  }
+}
+
+// ============================================================================
+// IMAGE UPLOAD FUNCTIONS
+// ============================================================================
+
+export async function uploadProductImage(
+  file: File,
+  productId?: string
+): Promise<{ success: boolean, url?: string, error?: string }> {
+  try {
+    // Generate unique filename
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${productId || Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`
+    const filePath = `products/${fileName}`
+
+    // Upload file to Supabase Storage
+    const { error } = await supabase.storage
+      .from('product-images')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      })
+
+    if (error) {
+      console.error('Error uploading image:', error)
+      return { success: false, error: error.message }
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('product-images')
+      .getPublicUrl(filePath)
+
+    return { success: true, url: urlData.publicUrl }
+  } catch (error) {
+    console.error('Unexpected error uploading image:', error)
+    return { success: false, error: 'Erro inesperado ao fazer upload da imagem' }
+  }
+}
+
+export async function uploadMultipleProductImages(
+  files: File[],
+  productId?: string
+): Promise<{ success: boolean, urls?: string[], errors?: string[] }> {
+  try {
+    const uploadPromises = files.map(file => uploadProductImage(file, productId))
+    const results = await Promise.all(uploadPromises)
+    
+    const urls: string[] = []
+    const errors: string[] = []
+    
+    results.forEach((result, index) => {
+      if (result.success && result.url) {
+        urls.push(result.url)
+      } else {
+        errors.push(`Erro no arquivo ${files[index].name}: ${result.error}`)
+      }
+    })
+    
+    return {
+      success: urls.length > 0,
+      urls: urls.length > 0 ? urls : undefined,
+      errors: errors.length > 0 ? errors : undefined
+    }
+  } catch (error) {
+    console.error('Unexpected error uploading multiple images:', error)
+    return { 
+      success: false, 
+      errors: ['Erro inesperado ao fazer upload das imagens'] 
+    }
+  }
+}
+
+export async function deleteProductImage(
+  imageUrl: string
+): Promise<{ success: boolean, error?: string }> {
+  try {
+    // Extract file path from URL
+    const url = new URL(imageUrl)
+    const pathParts = url.pathname.split('/')
+    const fileName = pathParts[pathParts.length - 1]
+    const filePath = `products/${fileName}`
+
+    const { error } = await supabase.storage
+      .from('product-images')
+      .remove([filePath])
+
+    if (error) {
+      console.error('Error deleting image:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('Unexpected error deleting image:', error)
+    return { success: false, error: 'Erro inesperado ao excluir imagem' }
   }
 }
 
