@@ -113,14 +113,33 @@ export const sendWelcomeEmail = async (
   }
 }
 
-// Send order confirmation email
+// Send order confirmation email with detailed order information
 export const sendOrderConfirmationEmail = async (
   email: string,
   userName: string,
-  orderDetails?: any
+  orderDetails: {
+    orderId: string
+    customerName: string
+    items: {
+      productName: string
+      productPrice: number
+      quantity: number
+      subtotal: number
+      productImage?: string
+    }[]
+    subtotal: number
+    shippingCost: number
+    total: number
+    shippingAddress: string
+    shippingCity: string
+    shippingPostalCode: string
+    shippingCountry: string
+    orderDate: string
+    paymentIntentId?: string
+  }
 ): Promise<boolean> => {
   try {
-    const htmlContent = orderConfirmationTemplate({ userName })
+    const htmlContent = orderConfirmationTemplate({ userName, orderDetails })
     
     const mailOptions = {
       from: {
@@ -128,9 +147,9 @@ export const sendOrderConfirmationEmail = async (
         address: process.env.EMAIL_FROM || process.env.EMAIL_SERVER_USER || 'noreply@wilnaratracas.com'
       },
       to: email,
-      subject: '📦 Pedido confirmado - Wilnara Tranças',
+      subject: `📦 Pedido #${orderDetails.orderId.slice(0, 8).toUpperCase()} confirmado - Wilnara Tranças`,
       html: htmlContent,
-      text: `Olá, ${userName}!\n\nSeu pedido foi confirmado com sucesso!\n\nEstamos preparando tudo com muito carinho para você.\n\nWilnara Tranças`
+      text: `Olá, ${userName}!\n\nSeu pedido #${orderDetails.orderId.slice(0, 8).toUpperCase()} foi confirmado com sucesso!\n\nTotal: €${orderDetails.total.toFixed(2)}\nData: ${orderDetails.orderDate}\n\nEstamos preparando tudo com muito carinho para você.\n\nWilnara Tranças`
     }
 
     const result = await transporter.sendMail(mailOptions)

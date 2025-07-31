@@ -1226,6 +1226,222 @@ export async function updateUser(
 }
 
 // ============================================================================
+// ORDERS
+// ============================================================================
+
+export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+
+export type Order = {
+  id: string
+  customerName: string
+  customerEmail: string
+  customerPhone: string
+  shippingAddress: string
+  shippingCity: string
+  shippingPostalCode: string
+  shippingCountry: string
+  items: OrderItem[]
+  subtotal: number
+  shippingCost: number
+  total: number
+  status: OrderStatus
+  paymentIntentId?: string
+  stripeCustomerId?: string
+  notes?: string
+  createdAt: string
+  updatedAt?: string
+}
+
+export type OrderItem = {
+  productId: string
+  productName: string
+  productPrice: number
+  productImage: string
+  quantity: number
+  subtotal: number
+}
+
+export async function createOrder(orderData: {
+  customerName: string
+  customerEmail: string
+  customerPhone: string
+  shippingAddress: string
+  shippingCity: string
+  shippingPostalCode: string
+  shippingCountry: string
+  items: OrderItem[]
+  subtotal: number
+  shippingCost: number
+  total: number
+  paymentIntentId?: string
+  stripeCustomerId?: string
+  notes?: string
+}): Promise<{ success: boolean, error?: string, orderId?: string }> {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .insert([{
+        customer_name: orderData.customerName,
+        customer_email: orderData.customerEmail,
+        customer_phone: orderData.customerPhone,
+        shipping_address: orderData.shippingAddress,
+        shipping_city: orderData.shippingCity,
+        shipping_postal_code: orderData.shippingPostalCode,
+        shipping_country: orderData.shippingCountry,
+        items: orderData.items,
+        subtotal: orderData.subtotal,
+        shipping_cost: orderData.shippingCost,
+        total: orderData.total,
+        status: 'pending',
+        payment_intent_id: orderData.paymentIntentId,
+        stripe_customer_id: orderData.stripeCustomerId,
+        notes: orderData.notes
+      }])
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error creating order:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, orderId: data.id }
+  } catch (error) {
+    console.error('Unexpected error creating order:', error)
+    return { success: false, error: 'Erro inesperado ao criar pedido' }
+  }
+}
+
+export async function updateOrderStatus(
+  orderId: string,
+  status: OrderStatus,
+  paymentIntentId?: string
+): Promise<{ success: boolean, error?: string }> {
+  try {
+    const updateData: any = {
+      status,
+      updated_at: new Date().toISOString()
+    }
+
+    if (paymentIntentId) {
+      updateData.payment_intent_id = paymentIntentId
+    }
+
+    const { error } = await supabase
+      .from('orders')
+      .update(updateData)
+      .eq('id', orderId)
+
+    if (error) {
+      console.error('Error updating order status:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('Unexpected error updating order status:', error)
+    return { success: false, error: 'Erro inesperado ao atualizar status do pedido' }
+  }
+}
+
+export async function getOrderById(orderId: string): Promise<Order | null> {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', orderId)
+      .single()
+
+    if (error) {
+      console.error('Error fetching order:', error)
+      return null
+    }
+
+    return {
+      id: data.id,
+      customerName: data.customer_name,
+      customerEmail: data.customer_email,
+      customerPhone: data.customer_phone,
+      shippingAddress: data.shipping_address,
+      shippingCity: data.shipping_city,
+      shippingPostalCode: data.shipping_postal_code,
+      shippingCountry: data.shipping_country,
+      items: data.items,
+      subtotal: data.subtotal,
+      shippingCost: data.shipping_cost,
+      total: data.total,
+      status: data.status,
+      paymentIntentId: data.payment_intent_id,
+      stripeCustomerId: data.stripe_customer_id,
+      notes: data.notes,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    }
+  } catch (error) {
+    console.error('Unexpected error fetching order:', error)
+    return null
+  }
+}
+
+export async function getAllOrders(
+  page: number = 1,
+  limit: number = 10,
+  status?: OrderStatus
+): Promise<{ orders: Order[], total: number, hasMore: boolean }> {
+  try {
+    let query = supabase
+      .from('orders')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+
+    if (status) {
+      query = query.eq('status', status)
+    }
+
+    // Add pagination
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+    query = query.range(from, to)
+
+    const { data, error, count } = await query
+
+    if (error) {
+      console.error('Error fetching orders:', error)
+      return { orders: [], total: 0, hasMore: false }
+    }
+
+    const orders: Order[] = (data || []).map(order => ({
+      id: order.id,
+      customerName: order.customer_name,
+      customerEmail: order.customer_email,
+      customerPhone: order.customer_phone,
+      shippingAddress: order.shipping_address,
+      shippingCity: order.shipping_city,
+      shippingPostalCode: order.shipping_postal_code,
+      shippingCountry: order.shipping_country,
+      items: order.items,
+      subtotal: order.subtotal,
+      shippingCost: order.shipping_cost,
+      total: order.total,
+      status: order.status,
+      paymentIntentId: order.payment_intent_id,
+      stripeCustomerId: order.stripe_customer_id,
+      notes: order.notes,
+      createdAt: order.created_at,
+      updatedAt: order.updated_at
+    }))
+
+    const total = count || 0
+    const hasMore = (page * limit) < total
+
+    return { orders, total, hasMore }
+  } catch (error) {
+    console.error('Unexpected error fetching orders:', error)
+    return { orders: [], total: 0, hasMore: false }
+  }
+}
+
+// ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
 

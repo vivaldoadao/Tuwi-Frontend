@@ -5,6 +5,32 @@ interface EmailTemplateProps {
   supportEmail?: string
 }
 
+interface OrderDetails {
+  orderId: string
+  customerName: string
+  items: {
+    productName: string
+    productPrice: number
+    quantity: number
+    subtotal: number
+    productImage?: string
+  }[]
+  subtotal: number
+  shippingCost: number
+  total: number
+  shippingAddress: string
+  shippingCity: string
+  shippingPostalCode: string
+  shippingCountry: string
+  orderDate: string
+  paymentIntentId?: string
+}
+
+interface OrderConfirmationProps {
+  userName: string
+  orderDetails: OrderDetails
+}
+
 // Base template wrapper
 const baseTemplate = (content: string, title: string) => `
 <!DOCTYPE html>
@@ -317,37 +343,171 @@ export const welcomeTemplate = ({ userName }: EmailTemplateProps): string => {
 }
 
 // Order Confirmation Template
-export const orderConfirmationTemplate = ({ userName }: EmailTemplateProps): string => {
+export const orderConfirmationTemplate = ({ userName, orderDetails }: OrderConfirmationProps): string => {
+  const formatCurrency = (value: number) => 
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  const itemsHtml = orderDetails.items.map(item => `
+    <tr style="border-bottom: 1px solid #e5e7eb;">
+      <td style="padding: 20px 0; vertical-align: top;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+          <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); 
+                      border-radius: 8px; display: flex; align-items: center; justify-content: center; 
+                      font-size: 12px; color: #6b7280; text-align: center; flex-shrink: 0;">
+            ${item.productImage ? `<img src="${item.productImage}" alt="${item.productName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">` : '📦<br>Produto'}
+          </div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-weight: 600; color: #1f2937; font-size: 16px; margin-bottom: 5px;">
+              ${item.productName}
+            </div>
+            <div style="color: #6b7280; font-size: 14px;">
+              Quantidade: ${item.quantity}
+            </div>
+          </div>
+        </div>
+      </td>
+      <td style="padding: 20px 0; text-align: right; vertical-align: top; white-space: nowrap;">
+        <div style="font-weight: 600; color: #1f2937; font-size: 16px;">
+          ${formatCurrency(item.subtotal)}
+        </div>
+        <div style="color: #6b7280; font-size: 14px;">
+          ${formatCurrency(item.productPrice)} × ${item.quantity}
+        </div>
+      </td>
+    </tr>
+  `).join('')
+
   const content = `
     <div class="content">
-        <div class="greeting">Olá, ${userName}! 📦</div>
+        <div class="greeting">Olá, ${userName}! 🎉</div>
         <div class="message">
-            Seu pedido foi confirmado com sucesso na <strong>Wilnara Tranças</strong>!
-            Estamos preparando tudo com muito carinho para você.
+            Seu pedido foi confirmado com sucesso! Estamos preparando tudo com muito carinho para você.
         </div>
         
+        <!-- Order Status -->
         <div style="text-align: center; margin: 30px 0;">
             <div style="background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); 
-                        border-radius: 12px; padding: 20px; display: inline-block;">
-                <div style="font-size: 48px; margin-bottom: 10px;">✅</div>
-                <div style="font-size: 18px; font-weight: 600; color: #059669;">
+                        border-radius: 12px; padding: 25px; display: inline-block; min-width: 280px;">
+                <div style="font-size: 48px; margin-bottom: 15px;">✅</div>
+                <div style="font-size: 20px; font-weight: 700; color: #059669; margin-bottom: 10px;">
                     Pedido Confirmado!
+                </div>
+                <div style="font-size: 16px; color: #065f46; font-weight: 600;">
+                    Pedido #${orderDetails.orderId}
+                </div>
+                <div style="font-size: 14px; color: #065f46; margin-top: 5px;">
+                    ${formatDate(orderDetails.orderDate)}
                 </div>
             </div>
         </div>
-        
-        <div class="message">
-            Você receberá em breve mais informações sobre o acompanhamento do seu pedido.
-            Enquanto isso, você pode acessar sua conta para verificar o status.
+
+        <!-- Order Summary -->
+        <div style="background: #f9fafb; border-radius: 12px; padding: 25px; margin: 30px 0; border: 1px solid #e5e7eb;">
+            <h3 style="color: #1f2937; font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                📦 Resumo do Pedido
+            </h3>
+            
+            <!-- Items Table -->
+            <div style="background: white; border-radius: 8px; overflow: hidden; margin-bottom: 20px;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #f3f4f6;">
+                            <th style="padding: 15px 20px; text-align: left; font-size: 14px; font-weight: 600; color: #374151;">
+                                Produto
+                            </th>
+                            <th style="padding: 15px 20px; text-align: right; font-size: 14px; font-weight: 600; color: #374151;">
+                                Total
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemsHtml}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Order Totals -->
+            <div style="background: white; border-radius: 8px; padding: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                    <span style="color: #6b7280; font-size: 16px;">Subtotal:</span>
+                    <span style="color: #1f2937; font-size: 16px; font-weight: 500;">${formatCurrency(orderDetails.subtotal)}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                    <span style="color: #6b7280; font-size: 16px;">Frete:</span>
+                    <span style="color: #1f2937; font-size: 16px; font-weight: 500;">${formatCurrency(orderDetails.shippingCost)}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; margin-top: 8px;">
+                    <span style="color: #1f2937; font-size: 18px; font-weight: 700;">Total:</span>
+                    <span style="color: #8B5CF6; font-size: 20px; font-weight: 700;">${formatCurrency(orderDetails.total)}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shipping Information -->
+        <div style="background: #f0f9ff; border-radius: 12px; padding: 25px; margin: 30px 0; border: 1px solid #bae6fd;">
+            <h3 style="color: #0c4a6e; font-size: 18px; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                🚚 Endereço de Entrega
+            </h3>
+            <div style="background: white; border-radius: 8px; padding: 20px;">
+                <div style="color: #1f2937; font-size: 16px; line-height: 1.6;">
+                    <div style="font-weight: 600; margin-bottom: 8px;">${orderDetails.customerName}</div>
+                    <div>${orderDetails.shippingAddress}</div>
+                    <div>${orderDetails.shippingCity}, ${orderDetails.shippingPostalCode}</div>
+                    <div>${orderDetails.shippingCountry}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Confirmation -->
+        ${orderDetails.paymentIntentId ? `
+        <div style="background: #ecfdf5; border-radius: 12px; padding: 25px; margin: 30px 0; border: 1px solid #bbf7d0;">
+            <h3 style="color: #065f46; font-size: 18px; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                💳 Pagamento Confirmado
+            </h3>
+            <div style="background: white; border-radius: 8px; padding: 20px;">
+                <div style="color: #059669; font-size: 16px; font-weight: 600; margin-bottom: 8px;">
+                    ✅ Pagamento processado com sucesso
+                </div>
+                <div style="color: #6b7280; font-size: 14px;">
+                    ID da transação: ${orderDetails.paymentIntentId}
+                </div>
+            </div>
+        </div>
+        ` : ''}
+
+        <!-- Next Steps -->
+        <div style="background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%); border-radius: 12px; padding: 25px; margin: 30px 0;">
+            <h3 style="color: #92400e; font-size: 18px; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                📋 Próximos Passos
+            </h3>
+            <div style="color: #78350f; line-height: 1.7;">
+                <p style="margin-bottom: 10px;">1. <strong>Processamento:</strong> Estamos preparando seus produtos</p>
+                <p style="margin-bottom: 10px;">2. <strong>Envio:</strong> Você receberá o código de rastreamento em breve</p>
+                <p style="margin-bottom: 10px;">3. <strong>Entrega:</strong> Estimativa de 5-7 dias úteis</p>
+            </div>
         </div>
         
-        <div style="text-align: center; margin-top: 30px;">
-            <a href="${process.env.NEXTAUTH_URL}/orders" class="button">
-                📋 Ver Meus Pedidos
+        <div style="text-align: center; margin-top: 40px;">
+            <a href="${process.env.NEXTAUTH_URL}/orders" class="button" style="margin-right: 15px;">
+                📋 Acompanhar Pedido
+            </a>
+            <a href="${process.env.NEXTAUTH_URL}/products" class="button" style="background: linear-gradient(135deg, #06B6D4 0%, #8B5CF6 100%);">
+                🛍️ Continuar Comprando
             </a>
         </div>
     </div>
   `
   
-  return baseTemplate(content, 'Pedido Confirmado - Wilnara Tranças')
+  return baseTemplate(content, `Pedido Confirmado #${orderDetails.orderId} - Wilnara Tranças`)
 }

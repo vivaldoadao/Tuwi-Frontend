@@ -24,15 +24,21 @@ import {
   ArrowLeft,
   Plus,
   Minus,
-  Trash2
+  Trash2,
+  AlertCircle
 } from "lucide-react"
 import { toast } from "react-hot-toast"
+import StripeCheckoutForm from "@/components/stripe-checkout-form"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function CheckoutPage() {
   const { cartItems, updateQuantity, removeFromCart, clearCart, cartTotal } = useCart()
   const router = useRouter()
   const [isProcessing, setIsProcessing] = useState(false)
-  const [step] = useState(1) // 1: Info, 2: Payment, 3: Confirmation
+  const [step, setStep] = useState(1) // 1: Info, 2: Payment, 3: Confirmation
+  const [clientSecret, setClientSecret] = useState<string | null>(null)
+  const [orderId, setOrderId] = useState<string | null>(null)
+  const [paymentError, setPaymentError] = useState<string | null>(null)
   
   // Form states
   const [customerInfo, setCustomerInfo] = useState({
@@ -79,31 +85,84 @@ export default function CheckoutPage() {
   }
 
   const handleProcessOrder = async () => {
+    if (!canProceedToPayment()) {
+      toast.error('Preencha todos os campos obrigatórios')
+      return
+    }
+
     setIsProcessing(true)
+    setPaymentError(null)
     
     try {
-      // Simulate order processing
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // Transform cart items for API
+      const items = cartItems.map(item => ({
+        productId: item.id,
+        productName: item.name,
+        productPrice: item.price,
+        productImage: item.imageUrl,
+        quantity: item.quantity
+      }))
+
+      // Create payment intent
+      const response = await fetch('/api/create-payment-intent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: finalTotal,
+          currency: 'eur',
+          customerInfo,
+          items,
+          shippingCost,
+          notes: orderNotes
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to create payment intent')
+      }
+
+      const { clientSecret, orderId } = await response.json()
       
-      // Clear cart and redirect to success
-      clearCart()
-      toast.success('Pedido realizado com sucesso!')
-      router.push('/')
+      setClientSecret(clientSecret)
+      setOrderId(orderId)
+      setStep(2) // Move to payment step
+      
     } catch (error) {
+      console.error('Error creating payment intent:', error)
+      setPaymentError('Erro ao inicializar pagamento. Tente novamente.')
       toast.error('Erro ao processar pedido. Tente novamente.')
     } finally {
       setIsProcessing(false)
     }
   }
 
+  const handlePaymentSuccess = () => {
+    clearCart()
+    setStep(3) // Move to confirmation step
+    toast.success('🎉 Pedido realizado com sucesso! Email de confirmação enviado.', {
+      duration: 6000,
+      style: {
+        background: '#10b981',
+        color: '#ffffff',
+        fontWeight: '600',
+        fontSize: '16px',
+        padding: '16px 24px',
+        borderRadius: '12px',
+        boxShadow: '0 10px 25px rgba(16, 185, 129, 0.3)'
+      }
+    })
+  }
+
+  const handlePaymentError = (error: string) => {
+    setPaymentError(error)
+    toast.error(error)
+  }
+
   const canProceedToPayment = () => {
     return customerInfo.name && customerInfo.email && customerInfo.phone && 
            customerInfo.address && customerInfo.city && customerInfo.postalCode
-  }
-
-  const canPlaceOrder = () => {
-    return canProceedToPayment() && paymentInfo.cardNumber && 
-           paymentInfo.expiryDate && paymentInfo.cvv && paymentInfo.cardHolder
   }
 
   return (
@@ -311,105 +370,136 @@ export default function CheckoutPage() {
                 </CardContent>
               </Card>
 
-              {/* Payment Information */}
-              <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-3xl border-0">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3 text-2xl font-bold text-gray-900">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      step >= 2 ? 'bg-accent-500 text-white' : 'bg-gray-200 text-gray-600'
-                    }`}>
-                      <CreditCard className="h-4 w-4" />
-                    </div>
-                    Informações de Pagamento
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2 space-y-2">
-                      <Label htmlFor="cardHolder" className="text-sm font-medium text-gray-700">
-                        Nome no Cartão *
-                      </Label>
-                      <Input
-                        id="cardHolder"
-                        value={paymentInfo.cardHolder}
-                        onChange={(e) => handlePaymentInfoChange('cardHolder', e.target.value)}
-                        placeholder="Nome como aparece no cartão"
-                        className="bg-gray-50 border-gray-200 focus:bg-white"
-                        disabled={!canProceedToPayment()}
-                      />
-                    </div>
-                    
-                    <div className="md:col-span-2 space-y-2">
-                      <Label htmlFor="cardNumber" className="text-sm font-medium text-gray-700">
-                        Número do Cartão *
-                      </Label>
-                      <Input
-                        id="cardNumber"
-                        value={paymentInfo.cardNumber}
-                        onChange={(e) => handlePaymentInfoChange('cardNumber', e.target.value)}
-                        placeholder="1234 5678 9012 3456"
-                        className="bg-gray-50 border-gray-200 focus:bg-white"
-                        disabled={!canProceedToPayment()}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="expiryDate" className="text-sm font-medium text-gray-700">
-                        Data de Expiração *
-                      </Label>
-                      <Input
-                        id="expiryDate"
-                        value={paymentInfo.expiryDate}
-                        onChange={(e) => handlePaymentInfoChange('expiryDate', e.target.value)}
-                        placeholder="MM/AA"
-                        className="bg-gray-50 border-gray-200 focus:bg-white"
-                        disabled={!canProceedToPayment()}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="cvv" className="text-sm font-medium text-gray-700">
-                        CVV *
-                      </Label>
-                      <Input
-                        id="cvv"
-                        value={paymentInfo.cvv}
-                        onChange={(e) => handlePaymentInfoChange('cvv', e.target.value)}
-                        placeholder="123"
-                        className="bg-gray-50 border-gray-200 focus:bg-white"
-                        disabled={!canProceedToPayment()}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl">
-                    <div className="flex items-center gap-3">
-                      <Shield className="h-5 w-5 text-blue-600" />
-                      <div className="text-sm text-blue-800">
-                        <div className="font-semibold">Pagamento 100% Seguro</div>
-                        <div>Seus dados são protegidos com criptografia SSL</div>
+              {/* Payment Information - Step 2 */}
+              {step === 2 && clientSecret && orderId && (
+                <StripeCheckoutForm
+                  clientSecret={clientSecret}
+                  orderId={orderId}
+                  onSuccess={handlePaymentSuccess}
+                  onError={handlePaymentError}
+                  amount={finalTotal}
+                />
+              )}
+
+              {/* Payment Error */}
+              {paymentError && (
+                <Alert className="border-red-200 bg-red-50">
+                  <AlertCircle className="h-4 w-4 text-red-600" />
+                  <AlertDescription className="text-red-800">
+                    {paymentError}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Order Confirmation - Step 3 */}
+              {step === 3 && (
+                <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-3xl border-0">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-3 text-2xl font-bold text-green-700">
+                      <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center">
+                        <CheckCircle className="h-4 w-4" />
+                      </div>
+                      Pedido Confirmado!
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="text-center py-8">
+                      <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg animate-pulse">
+                        <CheckCircle className="h-10 w-10 text-white" />
+                      </div>
+                      <h3 className="text-3xl font-bold text-gray-900 mb-3">
+                        🎉 Obrigado pela sua compra!
+                      </h3>
+                      <p className="text-gray-600 mb-6 text-lg">
+                        Seu pedido foi processado com sucesso e um <strong>email de confirmação</strong> foi enviado para <strong>{customerInfo.email}</strong>.
+                      </p>
+                      
+                      {/* Order Details */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                        {orderId && (
+                          <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-6 rounded-2xl border border-purple-100">
+                            <div className="text-sm text-purple-600 font-semibold mb-1">📋 Número do Pedido</div>
+                            <div className="font-mono font-bold text-xl text-purple-800">{orderId.slice(0, 8).toUpperCase()}</div>
+                          </div>
+                        )}
+                        
+                        <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-2xl border border-green-100">
+                          <div className="text-sm text-green-600 font-semibold mb-1">💰 Total Pago</div>
+                          <div className="font-bold text-xl text-green-800">{formatEuro(finalTotal)}</div>
+                        </div>
+                        
+                        <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-6 rounded-2xl border border-blue-100">
+                          <div className="text-sm text-blue-600 font-semibold mb-1">📧 Email</div>
+                          <div className="font-semibold text-blue-800 truncate">{customerInfo.email}</div>
+                        </div>
+                        
+                        <div className="bg-gradient-to-br from-orange-50 to-amber-50 p-6 rounded-2xl border border-orange-100">
+                          <div className="text-sm text-orange-600 font-semibold mb-1">🚚 Entrega</div>
+                          <div className="font-semibold text-orange-800">
+                            {selectedShipping === "express" ? "Express (24-48h)" : 
+                             selectedShipping === "standard" ? "Standard (2-3 dias)" : 
+                             "Gratuita (5-7 dias)"}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Next Steps */}
+                      <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-6 rounded-2xl mb-6 border border-gray-200">
+                        <h4 className="font-bold text-gray-900 mb-3 text-lg">📋 Próximos Passos:</h4>
+                        <div className="text-left space-y-2 text-gray-700">
+                          <div className="flex items-start gap-3">
+                            <span className="bg-accent-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">1</span>
+                            <span>Você receberá um email com todos os detalhes do pedido</span>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <span className="bg-accent-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">2</span>
+                            <span>Preparamos seu pedido com muito carinho</span>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <span className="bg-accent-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">3</span>
+                            <span>Enviamos para o endereço: {customerInfo.address}, {customerInfo.city}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-4 justify-center">
+                        <Button
+                          onClick={() => router.push('/')}
+                          variant="outline"
+                          className="rounded-xl px-6 py-3 font-semibold"
+                        >
+                          🏠 Voltar à Loja
+                        </Button>
+                        <Button
+                          onClick={() => router.push('/products')}
+                          className="bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 rounded-xl px-6 py-3 font-semibold"
+                        >
+                          🛍️ Continuar Comprando
+                        </Button>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )}
 
-              {/* Order Notes */}
-              <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-3xl border-0">
-                <CardHeader>
-                  <CardTitle className="text-xl font-bold text-gray-900">
-                    Observações do Pedido (Opcional)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Textarea
-                    value={orderNotes}
-                    onChange={(e) => setOrderNotes(e.target.value)}
-                    placeholder="Instruções especiais para entrega, preferências, etc."
-                    className="bg-gray-50 border-gray-200 focus:bg-white min-h-24"
-                  />
-                </CardContent>
-              </Card>
+              {/* Order Notes - Only show in step 1 */}
+              {step === 1 && (
+                <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-3xl border-0">
+                  <CardHeader>
+                    <CardTitle className="text-xl font-bold text-gray-900">
+                      Observações do Pedido (Opcional)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Textarea
+                      value={orderNotes}
+                      onChange={(e) => setOrderNotes(e.target.value)}
+                      placeholder="Instruções especiais para entrega, preferências, etc."
+                      className="bg-gray-50 border-gray-200 focus:bg-white min-h-24"
+                    />
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             {/* Order Summary Sidebar */}
@@ -497,27 +587,29 @@ export default function CheckoutPage() {
                     </div>
                   </div>
 
-                  {/* Place Order Button */}
-                  <Button
-                    onClick={handleProcessOrder}
-                    disabled={!canPlaceOrder() || isProcessing}
-                    className="w-full bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white h-14 text-lg font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:hover:scale-100 disabled:opacity-50"
-                  >
-                    {isProcessing ? (
-                      <div className="flex items-center gap-3">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                        <span>Processando...</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        <Lock className="h-5 w-5" />
-                        <span>Finalizar Pedido</span>
-                        <div className="ml-auto bg-white/20 px-3 py-1 rounded-lg">
-                          {formatEuro(finalTotal)}
+                  {/* Place Order Button - Only show in step 1 */}
+                  {step === 1 && (
+                    <Button
+                      onClick={handleProcessOrder}
+                      disabled={!canProceedToPayment() || isProcessing}
+                      className="w-full bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white h-14 text-lg font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:hover:scale-100 disabled:opacity-50"
+                    >
+                      {isProcessing ? (
+                        <div className="flex items-center gap-3">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          <span>Processando...</span>
                         </div>
-                      </div>
-                    )}
-                  </Button>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <Lock className="h-5 w-5" />
+                          <span>Continuar para Pagamento</span>
+                          <div className="ml-auto bg-white/20 px-3 py-1 rounded-lg">
+                            {formatEuro(finalTotal)}
+                          </div>
+                        </div>
+                      )}
+                    </Button>
+                  )}
 
                   {/* Trust Indicators */}
                   <div className="grid grid-cols-2 gap-2 text-center pt-4">
