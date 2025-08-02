@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer'
-import { passwordResetTemplate, emailVerificationTemplate, welcomeTemplate, orderConfirmationTemplate } from './email-templates'
+import { passwordResetTemplate, emailVerificationTemplate, welcomeTemplate, orderConfirmationTemplate, orderTrackingTemplate } from './email-templates'
 
 // Email configuration
 const transporter = nodemailer.createTransport({
@@ -157,6 +157,62 @@ export const sendOrderConfirmationEmail = async (
     return true
   } catch (error) {
     console.error('❌ Failed to send order confirmation email:', error)
+    return false
+  }
+}
+
+// Send order tracking notification email
+export const sendOrderTrackingEmail = async (
+  email: string,
+  userName: string,
+  orderDetails: {
+    orderId: string
+    customerName: string
+    total: number
+    status: string
+  },
+  trackingEvent: {
+    title: string
+    description?: string
+    location?: string
+    trackingNumber?: string
+    eventType: string
+    createdAt: string
+  }
+): Promise<boolean> => {
+  try {
+    const htmlContent = orderTrackingTemplate({ userName, orderDetails, trackingEvent })
+    
+    // Get email subject with appropriate emoji
+    let subjectEmoji = '📋'
+    switch (trackingEvent.eventType) {
+      case 'order_created': subjectEmoji = '📦'; break
+      case 'payment_confirmed': subjectEmoji = '💳'; break
+      case 'processing_started': subjectEmoji = '⚙️'; break
+      case 'shipped': subjectEmoji = '🚚'; break
+      case 'out_for_delivery': subjectEmoji = '🛵'; break
+      case 'delivered': subjectEmoji = '✅'; break
+      case 'cancelled': subjectEmoji = '❌'; break
+      case 'returned': subjectEmoji = '↩️'; break
+      case 'refunded': subjectEmoji = '💰'; break
+    }
+    
+    const mailOptions = {
+      from: {
+        name: 'Wilnara Tranças',
+        address: process.env.EMAIL_FROM || process.env.EMAIL_SERVER_USER || 'noreply@wilnaratracas.com'
+      },
+      to: email,
+      subject: `${subjectEmoji} ${trackingEvent.title} - Pedido #${orderDetails.orderId.slice(0, 8).toUpperCase()} - Wilnara Tranças`,
+      html: htmlContent,
+      text: `Olá, ${userName}!\n\n${trackingEvent.title}\n\nPedido: #${orderDetails.orderId.slice(0, 8).toUpperCase()}\n${trackingEvent.description ? `\n${trackingEvent.description}` : ''}\n${trackingEvent.location ? `\nLocalização: ${trackingEvent.location}` : ''}\n${trackingEvent.trackingNumber ? `\nCódigo de rastreamento: ${trackingEvent.trackingNumber}` : ''}\n\nAcompanhe seu pedido em: ${process.env.NEXTAUTH_URL}/track-order\n\nWilnara Tranças`
+    }
+
+    const result = await transporter.sendMail(mailOptions)
+    console.log('✅ Order tracking email sent successfully:', result.messageId)
+    return true
+  } catch (error) {
+    console.error('❌ Failed to send order tracking email:', error)
     return false
   }
 }

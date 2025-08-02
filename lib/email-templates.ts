@@ -511,3 +511,152 @@ export const orderConfirmationTemplate = ({ userName, orderDetails }: OrderConfi
   
   return baseTemplate(content, `Pedido Confirmado #${orderDetails.orderId} - Wilnara Tranças`)
 }
+
+// Order Tracking Update Template
+interface OrderTrackingProps {
+  userName: string
+  orderDetails: {
+    orderId: string
+    customerName: string
+    total: number
+    status: string
+  }
+  trackingEvent: {
+    title: string
+    description?: string
+    location?: string
+    trackingNumber?: string
+    eventType: string
+    createdAt: string
+  }
+}
+
+export const orderTrackingTemplate = ({ userName, orderDetails, trackingEvent }: OrderTrackingProps): string => {
+  const formatCurrency = (value: number) => 
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+  
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  const getStatusEmoji = (eventType: string) => {
+    switch (eventType) {
+      case 'order_created': return '📦'
+      case 'payment_confirmed': return '💳'
+      case 'processing_started': return '⚙️'
+      case 'shipped': return '🚚'
+      case 'out_for_delivery': return '🛵'
+      case 'delivered': return '✅'
+      case 'cancelled': return '❌'
+      case 'returned': return '↩️'
+      case 'refunded': return '💰'
+      default: return '📋'
+    }
+  }
+
+  const getStatusColor = (eventType: string) => {
+    switch (eventType) {
+      case 'order_created': return '#3b82f6'
+      case 'payment_confirmed': return '#10b981'
+      case 'processing_started': return '#f59e0b'
+      case 'shipped': return '#8b5cf6'
+      case 'out_for_delivery': return '#f97316'
+      case 'delivered': return '#059669'
+      case 'cancelled': return '#dc2626'
+      case 'returned': return '#6b7280'
+      case 'refunded': return '#6366f1'
+      default: return '#6b7280'
+    }
+  }
+
+  const statusColor = getStatusColor(trackingEvent.eventType)
+  const statusEmoji = getStatusEmoji(trackingEvent.eventType)
+
+  const content = `
+    <div class="content">
+        <div class="greeting">Olá, ${userName}! ${statusEmoji}</div>
+        <div class="message">
+            Temos uma atualização sobre seu pedido <strong>#${orderDetails.orderId.slice(0, 8).toUpperCase()}</strong>
+        </div>
+        
+        <!-- Status Update Card -->
+        <div style="background: linear-gradient(135deg, ${statusColor}15 0%, ${statusColor}08 100%); border-radius: 12px; padding: 25px; margin: 30px 0; border: 1px solid ${statusColor}30;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <div style="font-size: 48px; margin-bottom: 10px;">${statusEmoji}</div>
+                <h2 style="color: ${statusColor}; font-size: 24px; font-weight: 700; margin: 0;">
+                    ${trackingEvent.title}
+                </h2>
+                <div style="color: #6b7280; font-size: 14px; margin-top: 8px;">
+                    ${formatDate(trackingEvent.createdAt)}
+                </div>
+            </div>
+            
+            ${trackingEvent.description ? `
+            <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0;">
+                    ${trackingEvent.description}
+                </p>
+            </div>
+            ` : ''}
+            
+            ${trackingEvent.location ? `
+            <div style="background: white; border-radius: 8px; padding: 15px; margin: 15px 0;">
+                <div style="color: #1f2937; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                    <span style="color: ${statusColor};">📍</span>
+                    <strong>Localização:</strong> ${trackingEvent.location}
+                </div>
+            </div>
+            ` : ''}
+            
+            ${trackingEvent.trackingNumber ? `
+            <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0; border: 2px dashed ${statusColor}30;">
+                <div style="color: #1f2937; font-size: 14px; margin-bottom: 8px; font-weight: 600;">
+                    📦 Código de Rastreamento:
+                </div>
+                <div style="font-family: 'Courier New', monospace; font-size: 16px; font-weight: 700; color: ${statusColor}; padding: 10px; background: ${statusColor}10; border-radius: 6px; text-align: center;">
+                    ${trackingEvent.trackingNumber}
+                </div>
+            </div>
+            ` : ''}
+        </div>
+
+        <!-- Order Summary -->
+        <div style="background: #f8fafc; border-radius: 12px; padding: 25px; margin: 30px 0; border: 1px solid #e2e8f0;">
+            <h3 style="color: #1f2937; font-size: 18px; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                📋 Resumo do Pedido
+            </h3>
+            <div style="background: white; border-radius: 8px; padding: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="color: #6b7280; font-size: 14px;">Pedido:</span>
+                    <span style="color: #1f2937; font-weight: 600;">#${orderDetails.orderId.slice(0, 8).toUpperCase()}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="color: #6b7280; font-size: 14px;">Cliente:</span>
+                    <span style="color: #1f2937; font-weight: 600;">${orderDetails.customerName}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 12px; margin-top: 12px; border-top: 1px solid #e5e7eb;">
+                    <span style="color: #1f2937; font-size: 16px; font-weight: 700;">Total:</span>
+                    <span style="color: #8B5CF6; font-size: 18px; font-weight: 700;">${formatCurrency(orderDetails.total)}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 40px;">
+            <a href="${process.env.NEXTAUTH_URL}/track-order" class="button" style="margin-right: 15px;">
+                🔍 Rastrear Pedido
+            </a>
+            <a href="${process.env.NEXTAUTH_URL}/products" class="button" style="background: linear-gradient(135deg, #06B6D4 0%, #8B5CF6 100%);">
+                🛍️ Continuar Comprando
+            </a>
+        </div>
+    </div>
+  `
+  
+  return baseTemplate(content, `${trackingEvent.title} - Pedido #${orderDetails.orderId.slice(0, 8).toUpperCase()} - Wilnara Tranças`)
+}

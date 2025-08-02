@@ -4,41 +4,31 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { Package, ShoppingCart, Users, Euro, BarChart3, Bell, Plus, Eye, Settings, ChevronRight, Clock, ArrowUpRight } from "lucide-react"
+import { Package, ShoppingCart, Users, BarChart3, Bell, Plus, Eye, Settings, ChevronRight, Clock, ArrowUpRight } from "lucide-react"
 import { useEffect, useState } from "react"
-import { getAllBraiders, allProducts, type Braider } from "@/lib/data"
-import { getUserOrders, type Order } from "@/lib/orders"
+import { getDashboardStats, type DashboardStats } from "@/lib/data-supabase"
 import { AdminGuard } from "@/components/role-guard"
-import { UsersTable } from "@/components/users-table"
+import { DashboardCharts } from "@/components/dashboard-charts"
 import Link from "next/link"
 
 export default function DashboardOverviewPage() {
-  const [braiders, setBraiders] = useState<Braider[]>([])
-  const [orders, setOrders] = useState<Order[]>([]) 
+  const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true)
-      const [fetchedBraiders, fetchedOrders] = await Promise.all([
-        getAllBraiders(),
-        getUserOrders("user-1700000000000") // Mock admin orders
-      ])
-      setBraiders(fetchedBraiders)
-      setOrders(fetchedOrders)
-      setLoading(false)
+      try {
+        const dashboardStats = await getDashboardStats()
+        setStats(dashboardStats)
+      } catch (error) {
+        console.error('Error fetching dashboard stats:', error)
+      } finally {
+        setLoading(false)
+      }
     }
     fetchData()
   }, [])
-
-  // Calculate metrics
-  const totalOrders = orders.length
-  const totalProducts = allProducts.length
-  const totalBraiders = braiders.length
-  const pendingBraiders = braiders.filter(b => b.status === 'pending').length
-  const approvedBraiders = braiders.filter(b => b.status === 'approved').length
-  const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0)
-  const recentOrders = orders.slice(0, 4)
 
   return (
     <AdminGuard redirectTo="/login">
@@ -65,7 +55,7 @@ export default function DashboardOverviewPage() {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-3xl font-bold">{totalOrders}</div>
+              <div className="text-3xl font-bold">{stats?.totalOrders || 0}</div>
               <div className="text-white/80 font-medium">Total de Pedidos</div>
             </div>
           </div>
@@ -73,108 +63,27 @@ export default function DashboardOverviewPage() {
           {/* Quick Stats Row */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 text-center">
-              <div className="text-2xl font-bold">€{totalRevenue.toFixed(0)}</div>
+              <div className="text-2xl font-bold">€{stats?.totalRevenue.toFixed(0) || 0}</div>
               <div className="text-white/80 text-sm">Receita Total</div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 text-center">
-              <div className="text-2xl font-bold">{totalBraiders}</div>
+              <div className="text-2xl font-bold">{stats?.totalUsers || 0}</div>
+              <div className="text-white/80 text-sm">Usuários</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 text-center">
+              <div className="text-2xl font-bold">{stats?.totalBraiders || 0}</div>
               <div className="text-white/80 text-sm">Trancistas</div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 text-center">
-              <div className="text-2xl font-bold">{approvedBraiders}</div>
-              <div className="text-white/80 text-sm">Aprovadas</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 text-center">
-              <div className="text-2xl font-bold">{totalProducts}</div>
-              <div className="text-white/80 text-sm">Produtos</div>
+              <div className="text-2xl font-bold">{stats?.totalOrders || 0}</div>
+              <div className="text-white/80 text-sm">Pedidos</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Enhanced Analytics Grid */}
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-        {/* Revenue Card */}
-        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 shadow-xl rounded-2xl overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                <Euro className="h-6 w-6 text-white" />
-              </div>
-              <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">
-                +18%
-              </Badge>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-600">Receita Total</p>
-              <p className="text-3xl font-bold text-gray-900">€{totalRevenue.toFixed(0)}</p>
-              <p className="text-sm text-green-600 font-medium">vs mês anterior</p>
-            </div>
-          </CardContent>
-        </Card>
-        
-        {/* Orders Card */}
-        <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200 shadow-xl rounded-2xl overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                <ShoppingCart className="h-6 w-6 text-white" />
-              </div>
-              <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-200">
-                {Math.round(totalOrders * 0.2)} novos
-              </Badge>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-600">Total de Pedidos</p>
-              <p className="text-3xl font-bold text-gray-900">{totalOrders}</p>
-              <p className="text-sm text-blue-600 font-medium">últimos 30 dias</p>
-            </div>
-          </CardContent>
-        </Card>
-        
-        {/* Braiders Card */}
-        <Card className="bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200 shadow-xl rounded-2xl overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">
-                <Users className="h-6 w-6 text-white" />
-              </div>
-              <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-purple-200">
-                {pendingBraiders} pendentes
-              </Badge>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-600">Trancistas</p>
-              <p className="text-3xl font-bold text-gray-900">{totalBraiders}</p>
-              <p className="text-sm text-purple-600 font-medium">{approvedBraiders} aprovadas</p>
-            </div>
-          </CardContent>
-        </Card>
-        
-        {/* Products Card */}
-        <Card className="bg-gradient-to-br from-orange-50 to-red-50 border-orange-200 shadow-xl rounded-2xl overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
-                <Package className="h-6 w-6 text-white" />
-              </div>
-              <Badge variant="secondary" className="bg-orange-100 text-orange-700 border-orange-200">
-                Estoque OK
-              </Badge>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-600">Produtos Ativos</p>
-              <p className="text-3xl font-bold text-gray-900">{totalProducts}</p>
-              <p className="text-sm text-orange-600 font-medium">todos disponíveis</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Users Table Section - Full Width */}
-      <div className="w-full">
-        <UsersTable />
-      </div>
+      {/* Dashboard Charts Section */}
+      {stats && <DashboardCharts stats={stats} loading={loading} />}
 
       {/* Dashboard Content Grid */}
       <div className="grid gap-8 lg:grid-cols-3">
@@ -242,9 +151,9 @@ export default function DashboardOverviewPage() {
                     </div>
                   ))}
                 </div>
-              ) : recentOrders.length > 0 ? (
+              ) : stats?.recentOrders && stats.recentOrders.length > 0 ? (
                 <div className="space-y-4">
-                  {recentOrders.map((order) => (
+                  {stats.recentOrders.map((order) => (
                     <div
                       key={order.id}
                       className="group flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-xl border border-gray-200 hover:shadow-md transition-all duration-300 cursor-pointer"
@@ -255,19 +164,19 @@ export default function DashboardOverviewPage() {
                         </div>
                         <div>
                           <h4 className="font-bold text-gray-900 group-hover:text-brand-primary transition-colors">
-                            Pedido #{order.id.split("-")[1]}
+                            Pedido #{order.orderNumber}
                           </h4>
                           <div className="flex items-center gap-4 text-sm text-gray-600">
                             <span className="flex items-center gap-1">
                               <Clock className="h-4 w-4" />
-                              {order.date}
+                              {new Date(order.createdAt).toLocaleDateString('pt-BR')}
                             </span>
                             <span className="flex items-center gap-1">
                               <Package className="h-4 w-4" />
                               {order.items.length} itens
                             </span>
                           </div>
-                          <p className="text-sm text-gray-500 mt-1">Status: {order.status}</p>
+                          <p className="text-sm text-gray-500 mt-1">Cliente: {order.customerName}</p>
                         </div>
                       </div>
                       <div className="text-right flex items-center gap-3">
@@ -307,9 +216,9 @@ export default function DashboardOverviewPage() {
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium text-gray-600">Taxa de Aprovação</span>
-                  <span className="text-sm font-bold text-gray-900">{totalBraiders > 0 ? Math.round((approvedBraiders / totalBraiders) * 100) : 0}%</span>
+                  <span className="text-sm font-bold text-gray-900">{(stats?.totalBraiders || 0) > 0 ? Math.round(((stats?.approvedBraiders || 0) / (stats?.totalBraiders || 1)) * 100) : 0}%</span>
                 </div>
-                <Progress value={totalBraiders > 0 ? (approvedBraiders / totalBraiders) * 100 : 0} className="h-2" />
+                <Progress value={(stats?.totalBraiders || 0) > 0 ? ((stats?.approvedBraiders || 0) / (stats?.totalBraiders || 1)) * 100 : 0} className="h-2" />
               </div>
               
               <div className="space-y-2">
@@ -339,12 +248,12 @@ export default function DashboardOverviewPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {pendingBraiders > 0 && (
+              {(stats?.pendingBraiders || 0) > 0 && (
                 <div className="flex items-start gap-3 p-3 bg-yellow-50 rounded-xl border border-yellow-200">
                   <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 flex-shrink-0"></div>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-900">Trancistas pendentes</p>
-                    <p className="text-xs text-gray-600">{pendingBraiders} solicitação(ões) aguardando aprovação</p>
+                    <p className="text-xs text-gray-600">{stats?.pendingBraiders} solicitação(ões) aguardando aprovação</p>
                     <p className="text-xs text-yellow-600 font-medium">Requer atenção</p>
                   </div>
                 </div>
@@ -387,9 +296,9 @@ export default function DashboardOverviewPage() {
                 <Link href="/dashboard/braiders" className="flex items-center gap-3">
                   <Users className="h-4 w-4" />
                   <span>Aprovar Trancistas</span>
-                  {pendingBraiders > 0 && (
+                  {(stats?.pendingBraiders || 0) > 0 && (
                     <Badge variant="secondary" className="ml-auto bg-yellow-100 text-yellow-700">
-                      {pendingBraiders}
+                      {stats?.pendingBraiders}
                     </Badge>
                   )}
                 </Link>

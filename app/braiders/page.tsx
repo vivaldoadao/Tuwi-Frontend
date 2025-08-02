@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useState } from "react"
 import { Search, Users, Star, SlidersHorizontal } from "lucide-react"
+import Link from "next/link"
 
 export default function BraidersPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -244,11 +245,14 @@ export default function BraidersPage() {
                 Cadastre-se agora e faça parte da Wilnara Tranças!
               </p>
               <Button
+                asChild
                 size="lg"
                 className="bg-white text-accent-600 hover:bg-gray-100 px-8 py-4 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
               >
-                <Users className="mr-2 h-5 w-5" />
-                Cadastre-se como Trancista
+                <Link href="/register-braider">
+                  <Users className="mr-2 h-5 w-5" />
+                  Cadastre-se como Trancista
+                </Link>
               </Button>
             </CardContent>
           </Card>

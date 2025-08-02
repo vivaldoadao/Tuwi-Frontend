@@ -11,10 +11,10 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { useAuth } from "@/context/auth-context"
-import { getUserOrders, type Order } from "@/lib/orders"
+import { getUserOrdersByEmail, getUserByEmail, type Order, type User } from "@/lib/data-supabase"
 import { getUserBookings, getBraiderById, type Booking, type Service } from "@/lib/data"
 import { 
-  User, 
+  User as UserIcon, 
   MapPin, 
   Home, 
   ShoppingBag, 
@@ -27,7 +27,6 @@ import {
   Save, 
   Camera,
   Settings,
-  Package,
   Award,
   TrendingUp,
   Activity,
@@ -42,6 +41,8 @@ import {
 import Image from "next/image"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { UserOrdersSummary } from "@/components/user-orders-summary"
+import { toast } from "react-hot-toast"
 
 export default function ProfilePage() {
   const { user } = useAuth()
@@ -50,49 +51,120 @@ export default function ProfilePage() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loadingOrders, setLoadingOrders] = useState(true)
   const [loadingBookings, setLoadingBookings] = useState(true)
+  const [loadingUser, setLoadingUser] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [dbUser, setDbUser] = useState<User | null>(null)
   const [userInfo, setUserInfo] = useState({
     name: "",
     email: "",
-    phone: "+351 900 000 000",
-    address: "Lisboa, Portugal",
-    bio: "Apaixonada por tranças e cuidados capilares afro-brasileiros."
+    phone: "",
+    address: "Lisboa, Portugal", // This will remain static for now
+    bio: "Apaixonada por tranças e cuidados capilares afro-brasileiros." // This will remain static for now
   })
 
   useEffect(() => {
     if (!user) {
       router.push("/login")
     } else {
-      setUserInfo({
-        name: user.name || "",
-        email: user.email || "",
-        phone: "+351 900 000 000",
-        address: "Lisboa, Portugal", 
-        bio: "Apaixonada por tranças e cuidados capilares afro-brasileiros."
-      })
-
       const fetchUserData = async () => {
-        setLoadingOrders(true)
-        const userOrders = await getUserOrders("user-1700000000000")
-        setOrders(userOrders)
-        setLoadingOrders(false)
+        try {
+          // Load user data from database
+          setLoadingUser(true)
+          const dbUserData = await getUserByEmail(user.email)
+          setDbUser(dbUserData)
+          
+          if (dbUserData) {
+            setUserInfo({
+              name: dbUserData.name || "",
+              email: dbUserData.email || "",
+              phone: dbUserData.phone || "",
+              address: "Lisboa, Portugal", // Static for now
+              bio: "Apaixonada por tranças e cuidados capilares afro-brasileiros." // Static for now
+            })
+          } else {
+            // Fallback to auth context data
+            setUserInfo({
+              name: user.name || "",
+              email: user.email || "",
+              phone: "",
+              address: "Lisboa, Portugal",
+              bio: "Apaixonada por tranças e cuidados capilares afro-brasileiros."
+            })
+          }
+          setLoadingUser(false)
 
-        setLoadingBookings(true)
-        const userBookings = await getUserBookings(user.email)
-        setBookings(userBookings)
-        setLoadingBookings(false)
+          // Load orders
+          setLoadingOrders(true)
+          const userOrders = await getUserOrdersByEmail(user.email)
+          setOrders(userOrders)
+          setLoadingOrders(false)
+
+          // Load bookings
+          setLoadingBookings(true)
+          const userBookings = await getUserBookings(user.email)
+          setBookings(userBookings)
+          setLoadingBookings(false)
+        } catch (error) {
+          console.error('Error fetching user data:', error)
+          setLoadingUser(false)
+          setLoadingOrders(false)
+          setLoadingBookings(false)
+        }
       }
+      
       fetchUserData()
     }
   }, [user, router])
 
   const handleSave = async () => {
+    if (!user) return
+    
     setSaving(true)
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setSaving(false)
-    setIsEditing(false)
+    
+    try {
+      console.log('💾 Saving profile changes:', userInfo)
+      
+      const response = await fetch('/api/update-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: user.email,
+          updates: {
+            name: userInfo.name.trim(),
+            phone: userInfo.phone.trim() || null
+          }
+        }),
+      })
+
+      const result = await response.json()
+      
+      if (result.success) {
+        console.log('✅ Profile updated successfully')
+        // Re-fetch user data to ensure we have the latest from the database
+        const updatedUser = await getUserByEmail(user.email)
+        if (updatedUser) {
+          setDbUser(updatedUser)
+          setUserInfo(prev => ({
+            ...prev,
+            name: updatedUser.name || "",
+            phone: updatedUser.phone || ""
+          }))
+        }
+        setIsEditing(false)
+        toast.success('Perfil atualizado com sucesso! 🎉')
+      } else {
+        console.error('❌ Failed to update profile:', result.error)
+        toast.error(`Erro ao atualizar perfil: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('❌ Unexpected error saving profile:', error)
+      toast.error('Erro inesperado ao salvar perfil. Tente novamente.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleLogout = () => {
@@ -102,6 +174,20 @@ export default function ProfilePage() {
 
   if (!user) {
     return null
+  }
+
+  if (loadingUser) {
+    return (
+      <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <SiteHeader />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">Carregando perfil...</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   const getBookingStatusIcon = (status: string) => {
@@ -130,31 +216,6 @@ export default function ProfilePage() {
     }
   }
 
-  const getOrderStatusIcon = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "entregue":
-        return <CheckCircle className="h-4 w-4 text-green-600" />
-      case "pendente":
-        return <Clock className="h-4 w-4 text-yellow-600" />
-      case "processando":
-        return <Activity className="h-4 w-4 text-blue-600" />
-      default:
-        return <AlertCircle className="h-4 w-4 text-gray-600" />
-    }
-  }
-
-  const getOrderStatusBadgeClass = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "entregue":
-        return "bg-green-100 text-green-700 border-green-200"
-      case "pendente":
-        return "bg-yellow-100 text-yellow-700 border-yellow-200"
-      case "processando":
-        return "bg-blue-100 text-blue-700 border-blue-200"
-      default:
-        return "bg-gray-100 text-gray-700 border-gray-200"
-    }
-  }
 
   // Calculate user stats
   const totalSpent = orders.reduce((sum, order) => sum + order.total, 0)
@@ -174,7 +235,7 @@ export default function ProfilePage() {
             <div className="flex items-center gap-6">
               <div className="relative">
                 <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm border-4 border-white/30">
-                  <User className="h-12 w-12" />
+                  <UserIcon className="h-12 w-12" />
                 </div>
                 <Button
                   size="icon"
@@ -236,7 +297,7 @@ export default function ProfilePage() {
               <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0">
                 <CardHeader>
                   <CardTitle className="text-lg font-bold font-heading text-gray-900 flex items-center gap-2">
-                    <User className="h-5 w-5" />
+                    <UserIcon className="h-5 w-5" />
                     Informações Pessoais
                   </CardTitle>
                 </CardHeader>
@@ -426,107 +487,7 @@ export default function ProfilePage() {
             {/* Main Content */}
             <div className="lg:col-span-3 space-y-8">
               {/* Orders Section */}
-              <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-xl font-bold font-heading text-gray-900 flex items-center gap-2">
-                        <Package className="h-5 w-5" />
-                        Meus Pedidos ({totalOrders})
-                      </CardTitle>
-                      <CardDescription>
-                        Acompanhe o status dos seus pedidos
-                      </CardDescription>
-                    </div>
-                    <Button asChild className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl">
-                      <Link href="/products">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Nova Compra
-                      </Link>
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {loadingOrders ? (
-                    <div className="space-y-4">
-                      {[1, 2, 3].map(i => (
-                        <div key={i} className="animate-pulse">
-                          <div className="h-24 bg-gray-200 rounded-xl"></div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : orders.length === 0 ? (
-                    <div className="text-center py-12">
-                      <Package className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                      <p className="text-gray-500 font-medium text-lg mb-2">Nenhum pedido encontrado</p>
-                      <p className="text-gray-400 text-sm mb-6">Você ainda não fez nenhuma compra</p>
-                      <Button asChild className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl">
-                        <Link href="/products">
-                          <ShoppingBag className="h-4 w-4 mr-2" />
-                          Começar a Comprar
-                        </Link>
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {orders.map((order) => (
-                        <div key={order.id} className="p-6 bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-2xl border border-gray-200 hover:shadow-lg transition-all duration-300">
-                          <div className="flex items-start justify-between mb-4">
-                            <div>
-                              <h4 className="font-bold text-lg text-gray-900">
-                                Pedido #{order.id.split("-")[1]}
-                              </h4>
-                              <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
-                                <span className="flex items-center gap-1">
-                                  <Calendar className="h-3 w-3" />
-                                  {order.date}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Package className="h-3 w-3" />
-                                  {order.items.length} {order.items.length === 1 ? 'item' : 'itens'}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="font-bold text-xl text-purple-600 mb-1">€{order.total.toFixed(2)}</div>
-                              <Badge variant="secondary" className={cn("text-xs", getOrderStatusBadgeClass(order.status))}>
-                                <span className="flex items-center gap-1">
-                                  {getOrderStatusIcon(order.status)}
-                                  {order.status}
-                                </span>
-                              </Badge>
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-3">
-                            {order.items.map((item) => (
-                              <div key={item.productId} className="flex items-center gap-4 p-3 bg-white/80 rounded-xl">
-                                <Image
-                                  src={item.imageUrl || "/placeholder.svg?height=50&width=50"}
-                                  alt={item.name}
-                                  width={50}
-                                  height={50}
-                                  className="rounded-lg object-cover"
-                                  unoptimized={true}
-                                />
-                                <div className="flex-1">
-                                  <p className="font-semibold text-gray-900">{item.name}</p>
-                                  <p className="text-sm text-gray-600">
-                                    {item.quantity}x • €{item.price.toFixed(2)} cada
-                                  </p>
-                                </div>
-                                <div className="text-right">
-                                  <p className="font-bold text-gray-900">€{(item.quantity * item.price).toFixed(2)}</p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <UserOrdersSummary orders={orders} loading={loadingOrders} />
 
               {/* Bookings Section */}
               <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0">

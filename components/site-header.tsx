@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { Menu, ShoppingCart, User, LogOut, Heart, Bell } from "lucide-react"
+import { Menu, ShoppingCart, User, LogOut, Heart, Bell, Search } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -69,6 +69,10 @@ export default function SiteHeader() {
           </Link>
           <Link href="/contact" className="relative text-gray-700 hover:text-brand-700 transition-colors group py-2">
             Contato
+            <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-brand-600 group-hover:w-full transition-all duration-300" />
+          </Link>
+          <Link href="/track-order" className="relative text-gray-700 hover:text-brand-700 transition-colors group py-2">
+            Rastrear Pedido
             <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-brand-600 group-hover:w-full transition-all duration-300" />
           </Link>
           {user && (
@@ -182,6 +186,9 @@ export default function SiteHeader() {
                 </Link>
                 <Link href="/contact" className="text-gray-700 hover:text-brand-700 transition-colors py-2 border-b border-gray-100">
                   Contato
+                </Link>
+                <Link href="/track-order" className="text-gray-700 hover:text-brand-700 transition-colors py-2 border-b border-gray-100">
+                  Rastrear Pedido
                 </Link>
                 {user && (
                   <Link href="/dashboard" className="text-gray-700 hover:text-brand-700 transition-colors py-2 border-b border-gray-100">

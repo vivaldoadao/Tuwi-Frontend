@@ -1033,6 +1033,51 @@ export async function getBraiderServices(braiderId: string): Promise<Service[]> 
   }
 }
 
+// Get orders for a specific user by email (for profile page)
+export async function getUserOrdersByEmail(customerEmail: string): Promise<Order[]> {
+  try {
+    console.log('🔍 Getting user orders by email:', customerEmail)
+
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('customer_email', customerEmail.toLowerCase())
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching user orders:', error)
+      return []
+    }
+
+    console.log(`✅ Found ${data?.length || 0} orders for user:`, customerEmail)
+
+    return (data || []).map(order => ({
+      id: order.id,
+      orderNumber: order.order_number || order.id.slice(0, 8).toUpperCase(),
+      customerName: order.customer_name,
+      customerEmail: order.customer_email,
+      customerPhone: order.customer_phone || '',
+      shippingAddress: order.shipping_address,
+      shippingCity: order.shipping_city,
+      shippingPostalCode: order.shipping_postal_code,
+      shippingCountry: order.shipping_country || 'Portugal',
+      items: order.items || [],
+      subtotal: parseFloat(order.subtotal || '0'),
+      shippingCost: parseFloat(order.shipping_cost || '0'),
+      total: parseFloat(order.total),
+      status: order.status,
+      paymentIntentId: order.payment_intent_id,
+      stripeCustomerId: order.stripe_customer_id,
+      notes: order.notes,
+      createdAt: order.created_at,
+      updatedAt: order.updated_at
+    }))
+  } catch (error) {
+    console.error('Unexpected error fetching user orders:', error)
+    return []
+  }
+}
+
 // ============================================================================
 // USERS
 // ============================================================================
@@ -1225,6 +1270,72 @@ export async function updateUser(
   }
 }
 
+// Get user by email (for profile page)
+export async function getUserByEmail(email: string): Promise<User | null> {
+  try {
+    console.log('🔍 Getting user by email:', email)
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email.toLowerCase())
+      .single()
+
+    if (error) {
+      console.error('Error fetching user by email:', error)
+      return null
+    }
+
+    return {
+      id: data.id,
+      name: data.name || 'Nome não informado',
+      email: data.email,
+      phone: data.phone || undefined,
+      role: data.role || 'customer',
+      createdAt: data.created_at,
+      isActive: data.is_active ?? true,
+      lastLogin: data.last_login || undefined
+    }
+  } catch (error) {
+    console.error('Unexpected error fetching user by email:', error)
+    return null
+  }
+}
+
+// Update user profile information
+export async function updateUserProfile(
+  email: string,
+  updates: {
+    name?: string
+    phone?: string
+    // Add other fields as needed, but be careful with sensitive data
+  }
+): Promise<{ success: boolean, error?: string }> {
+  try {
+    console.log('📝 Updating user profile:', { email, updates })
+
+    const { error } = await supabase
+      .from('users')
+      .update({
+        name: updates.name,
+        phone: updates.phone,
+        updated_at: new Date().toISOString()
+      })
+      .eq('email', email.toLowerCase())
+
+    if (error) {
+      console.error('Error updating user profile:', error)
+      return { success: false, error: error.message }
+    }
+
+    console.log('✅ User profile updated successfully')
+    return { success: true }
+  } catch (error) {
+    console.error('Unexpected error updating user profile:', error)
+    return { success: false, error: 'Erro inesperado ao atualizar perfil' }
+  }
+}
+
 // ============================================================================
 // ORDERS
 // ============================================================================
@@ -1233,6 +1344,7 @@ export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | '
 
 export type Order = {
   id: string
+  orderNumber: string
   customerName: string
   customerEmail: string
   customerPhone: string
@@ -1318,6 +1430,8 @@ export async function updateOrderStatus(
   paymentIntentId?: string
 ): Promise<{ success: boolean, error?: string }> {
   try {
+    console.log('🔄 Updating order status:', { orderId, status, paymentIntentId })
+    
     const updateData: any = {
       status,
       updated_at: new Date().toISOString()
@@ -1327,25 +1441,44 @@ export async function updateOrderStatus(
       updateData.payment_intent_id = paymentIntentId
     }
 
-    const { error } = await supabase
+    // Update the order
+    const { data, error } = await supabase
       .from('orders')
       .update(updateData)
       .eq('id', orderId)
+      .select()
 
     if (error) {
-      console.error('Error updating order status:', error)
+      console.error('❌ Error updating order status:', error)
       return { success: false, error: error.message }
+    }
+
+    console.log('✅ Order status updated successfully:', data)
+
+    // Verify the update was successful by fetching the updated order
+    const { data: verifyData, error: verifyError } = await supabase
+      .from('orders')
+      .select('status, updated_at')
+      .eq('id', orderId)
+      .single()
+
+    if (verifyError) {
+      console.error('❌ Error verifying order update:', verifyError)
+    } else {
+      console.log('✅ Verified order status:', verifyData)
     }
 
     return { success: true }
   } catch (error) {
-    console.error('Unexpected error updating order status:', error)
+    console.error('❌ Unexpected error updating order status:', error)
     return { success: false, error: 'Erro inesperado ao atualizar status do pedido' }
   }
 }
 
 export async function getOrderById(orderId: string): Promise<Order | null> {
   try {
+    console.log('🔍 Fetching order by ID:', orderId)
+    
     const { data, error } = await supabase
       .from('orders')
       .select('*')
@@ -1353,12 +1486,26 @@ export async function getOrderById(orderId: string): Promise<Order | null> {
       .single()
 
     if (error) {
-      console.error('Error fetching order:', error)
+      console.error('❌ Error fetching order:', error)
+      
+      // If order not found in database, check if we should return mock data
+      if (error.code === 'PGRST116') { // No rows returned
+        console.log('⚠️  Order not found in database, checking for mock data...')
+        // You might want to fallback to mock data here if needed
+      }
+      
       return null
     }
 
+    console.log('✅ Order fetched successfully:', {
+      id: data.id,
+      status: data.status,
+      updatedAt: data.updated_at
+    })
+
     return {
       id: data.id,
+      orderNumber: data.order_number,
       customerName: data.customer_name,
       customerEmail: data.customer_email,
       customerPhone: data.customer_phone,
@@ -1367,9 +1514,9 @@ export async function getOrderById(orderId: string): Promise<Order | null> {
       shippingPostalCode: data.shipping_postal_code,
       shippingCountry: data.shipping_country,
       items: data.items,
-      subtotal: data.subtotal,
-      shippingCost: data.shipping_cost,
-      total: data.total,
+      subtotal: parseFloat(data.subtotal),
+      shippingCost: parseFloat(data.shipping_cost),
+      total: parseFloat(data.total),
       status: data.status,
       paymentIntentId: data.payment_intent_id,
       stripeCustomerId: data.stripe_customer_id,
@@ -1378,8 +1525,95 @@ export async function getOrderById(orderId: string): Promise<Order | null> {
       updatedAt: data.updated_at
     }
   } catch (error) {
-    console.error('Unexpected error fetching order:', error)
+    console.error('❌ Unexpected error fetching order:', error)
     return null
+  }
+}
+
+// Get all orders with advanced filtering and pagination for admin dashboard
+export async function getAllOrdersAdmin(
+  page: number = 1,
+  limit: number = 10,
+  filters?: {
+    status?: OrderStatus
+    search?: string // Search by customer name or email
+    dateFrom?: string
+    dateTo?: string
+    minAmount?: number
+    maxAmount?: number
+  }
+): Promise<{ orders: Order[], total: number, hasMore: boolean }> {
+  try {
+    let query = supabase
+      .from('orders')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+
+    // Apply filters
+    if (filters?.status) {
+      query = query.eq('status', filters.status)
+    }
+
+    if (filters?.search && filters.search.trim()) {
+      query = query.or(`customer_name.ilike.%${filters.search}%,customer_email.ilike.%${filters.search}%`)
+    }
+
+    if (filters?.dateFrom) {
+      query = query.gte('created_at', filters.dateFrom)
+    }
+
+    if (filters?.dateTo) {
+      query = query.lte('created_at', filters.dateTo)
+    }
+
+    if (filters?.minAmount) {
+      query = query.gte('total', filters.minAmount)
+    }
+
+    if (filters?.maxAmount) {
+      query = query.lte('total', filters.maxAmount)
+    }
+
+    // Apply pagination
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+
+    const { data, error, count } = await query.range(from, to)
+
+    if (error) {
+      console.error('Error fetching orders:', error)
+      return { orders: [], total: 0, hasMore: false }
+    }
+
+    const orders: Order[] = data?.map(order => ({
+      id: order.id,
+      orderNumber: order.order_number,
+      customerName: order.customer_name,
+      customerEmail: order.customer_email,
+      customerPhone: order.customer_phone,
+      shippingAddress: order.shipping_address,
+      shippingCity: order.shipping_city,
+      shippingPostalCode: order.shipping_postal_code,
+      shippingCountry: order.shipping_country,
+      items: order.items,
+      subtotal: parseFloat(order.subtotal),
+      shippingCost: parseFloat(order.shipping_cost),
+      total: parseFloat(order.total),
+      status: order.status,
+      paymentIntentId: order.payment_intent_id,
+      stripeCustomerId: order.stripe_customer_id,
+      notes: order.notes,
+      createdAt: order.created_at,
+      updatedAt: order.updated_at
+    })) || []
+
+    const total = count || 0
+    const hasMore = (from + limit) < total
+
+    return { orders, total, hasMore }
+  } catch (error) {
+    console.error('Unexpected error fetching orders:', error)
+    return { orders: [], total: 0, hasMore: false }
   }
 }
 
@@ -1412,6 +1646,7 @@ export async function getAllOrders(
 
     const orders: Order[] = (data || []).map(order => ({
       id: order.id,
+      orderNumber: order.order_number,
       customerName: order.customer_name,
       customerEmail: order.customer_email,
       customerPhone: order.customer_phone,
@@ -1518,3 +1753,438 @@ export async function searchBraiders(query: string): Promise<Braider[]> {
     return []
   }
 }
+
+// ============================================================================
+// ORDER TRACKING SYSTEM
+// ============================================================================
+
+export type TrackingEventType = 
+  | 'order_created'
+  | 'payment_confirmed'
+  | 'processing_started'
+  | 'shipped'
+  | 'out_for_delivery'
+  | 'delivered'
+  | 'cancelled'
+  | 'returned'
+  | 'refunded'
+  | 'note_added'
+
+export type TrackingEvent = {
+  id: string
+  orderId: string
+  eventType: TrackingEventType
+  status?: OrderStatus
+  title: string
+  description?: string
+  location?: string
+  trackingNumber?: string
+  metadata?: Record<string, any>
+  createdBy: string
+  createdAt: string
+}
+
+// Get tracking events for an order
+export async function getOrderTracking(orderId: string): Promise<TrackingEvent[]> {
+  try {
+    const { data, error } = await supabase
+      .from('order_tracking')
+      .select('*')
+      .eq('order_id', orderId)
+      .order('created_at', { ascending: true })
+
+    if (error) {
+      console.error('Error fetching order tracking:', error)
+      return []
+    }
+
+    return data?.map(event => ({
+      id: event.id,
+      orderId: event.order_id,
+      eventType: event.event_type,
+      status: event.status,
+      title: event.title,
+      description: event.description,
+      location: event.location,
+      trackingNumber: event.tracking_number,
+      metadata: event.metadata,
+      createdBy: event.created_by,
+      createdAt: event.created_at
+    })) || []
+  } catch (error) {
+    console.error('Unexpected error fetching order tracking:', error)
+    return []
+  }
+}
+
+// Add a tracking event manually (for admin use)
+export async function addTrackingEvent(
+  orderId: string,
+  eventData: {
+    eventType: TrackingEventType
+    status?: OrderStatus
+    title: string
+    description?: string
+    location?: string
+    trackingNumber?: string
+    metadata?: Record<string, any>
+    createdBy?: string
+  }
+): Promise<{ success: boolean, error?: string }> {
+  try {
+    const { error } = await supabase
+      .from('order_tracking')
+      .insert([{
+        order_id: orderId,
+        event_type: eventData.eventType,
+        status: eventData.status,
+        title: eventData.title,
+        description: eventData.description,
+        location: eventData.location,
+        tracking_number: eventData.trackingNumber,
+        metadata: eventData.metadata,
+        created_by: eventData.createdBy || 'admin'
+      }])
+
+    if (error) {
+      console.error('Error adding tracking event:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('Unexpected error adding tracking event:', error)
+    return { success: false, error: 'Erro inesperado ao adicionar evento de tracking' }
+  }
+}
+
+// Get order with tracking information
+export async function getOrderWithTracking(orderId: string): Promise<{
+  order: Order | null
+  tracking: TrackingEvent[]
+}> {
+  try {
+    const [order, tracking] = await Promise.all([
+      getOrderById(orderId),
+      getOrderTracking(orderId)
+    ])
+
+    return { order, tracking }
+  } catch (error) {
+    console.error('Error fetching order with tracking:', error)
+    return { order: null, tracking: [] }
+  }
+}
+
+// Get order tracking by order number and customer email (for public tracking)
+export async function getPublicOrderTracking(
+  orderNumber: string, 
+  customerEmail: string
+): Promise<{
+  order: Order | null
+  tracking: TrackingEvent[]
+  success: boolean
+  error?: string
+}> {
+  try {
+    console.log('🔍 Getting public order tracking:', { orderNumber, customerEmail })
+
+    // Clean and validate order number
+    const cleanOrderNumber = orderNumber.replace('#', '').trim().toUpperCase()
+    
+    // First verify the order exists and belongs to the customer
+    const { data: orderData, error: orderError } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('order_number', cleanOrderNumber)
+      .eq('customer_email', customerEmail.toLowerCase())
+      .single()
+
+    if (orderError || !orderData) {
+      console.log('❌ Order not found:', { orderError, orderNumber: cleanOrderNumber, customerEmail })
+      return {
+        order: null,
+        tracking: [],
+        success: false,
+        error: 'Pedido não encontrado. Verifique o número do pedido e email.'
+      }
+    }
+
+    console.log('✅ Order found:', orderData.id)
+
+    // Map order data
+    const order: Order = {
+      id: orderData.id,
+      orderNumber: orderData.order_number || cleanOrderNumber,
+      customerName: orderData.customer_name,
+      customerEmail: orderData.customer_email,
+      customerPhone: orderData.customer_phone || '',
+      shippingAddress: orderData.shipping_address,
+      shippingCity: orderData.shipping_city,
+      shippingPostalCode: orderData.shipping_postal_code,
+      shippingCountry: orderData.shipping_country || 'Portugal',
+      items: orderData.items || [],
+      subtotal: parseFloat(orderData.subtotal || '0'),
+      shippingCost: parseFloat(orderData.shipping_cost || '0'),
+      total: parseFloat(orderData.total),
+      status: orderData.status,
+      paymentIntentId: orderData.payment_intent_id,
+      stripeCustomerId: orderData.stripe_customer_id,
+      notes: orderData.notes,
+      createdAt: orderData.created_at,
+      updatedAt: orderData.updated_at
+    }
+
+    // Get tracking events
+    const { data: trackingData } = await supabase
+      .from('order_tracking')
+      .select('*')
+      .eq('order_id', orderData.id)
+      .order('created_at', { ascending: true })
+
+    const tracking = trackingData?.map(event => ({
+      id: event.id,
+      orderId: event.order_id,
+      eventType: event.event_type,
+      status: event.status,
+      title: event.title,
+      description: event.description || '',
+      location: event.location,
+      trackingNumber: event.tracking_number,
+      metadata: event.metadata,
+      createdBy: event.created_by,
+      createdAt: event.created_at
+    })) || []
+
+    console.log('✅ Public order tracking retrieved successfully:', {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      trackingEvents: tracking.length
+    })
+
+    return {
+      order,
+      tracking,
+      success: true
+    }
+  } catch (error) {
+    console.error('❌ Unexpected error in getPublicOrderTracking:', error)
+    return {
+      order: null,
+      tracking: [],
+      success: false,
+      error: 'Erro interno do servidor'
+    }
+  }
+}
+
+// ============================================================================
+// DASHBOARD ANALYTICS
+// ============================================================================
+
+export type DashboardStats = {
+  totalOrders: number
+  totalRevenue: number
+  totalUsers: number
+  totalBraiders: number
+  pendingBraiders: number
+  approvedBraiders: number
+  recentOrders: Order[]
+  revenueByMonth: { month: string; revenue: number }[]
+  ordersByStatus: { status: string; count: number; color: string }[]
+  userGrowth: { month: string; users: number }[]
+  topProducts: { name: string; sales: number; revenue: number }[]
+  salesByDay: { day: string; sales: number }[]
+}
+
+export async function getDashboardStats(): Promise<DashboardStats> {
+  try {
+    console.log('📊 Fetching dashboard stats...')
+
+    // Get all orders
+    const { data: orders, error: ordersError } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (ordersError) {
+      console.error('❌ Error fetching orders:', ordersError)
+      throw ordersError
+    }
+
+    // Get all users
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (usersError) {
+      console.error('❌ Error fetching users:', usersError)
+      throw usersError
+    }
+
+    // Calculate basic stats
+    const totalOrders = orders?.length || 0
+    const totalRevenue = orders?.reduce((sum, order) => sum + (order.total || 0), 0) || 0
+    const totalUsers = users?.length || 0
+    const recentOrders = orders?.slice(0, 5).map(order => ({
+      ...order,
+      orderNumber: order.order_number || order.id.slice(0, 8).toUpperCase(),
+      customerName: order.customer_name,
+      customerEmail: order.customer_email,
+      customerPhone: order.customer_phone || '',
+      shippingAddress: order.shipping_address,
+      shippingCity: order.shipping_city,
+      shippingPostalCode: order.shipping_postal_code,
+      shippingCountry: order.shipping_country || 'Portugal',
+      items: order.items || [],
+      subtotal: parseFloat(order.subtotal || '0'),
+      shippingCost: parseFloat(order.shipping_cost || '0'),
+      total: parseFloat(order.total),
+      status: order.status,
+      paymentIntentId: order.payment_intent_id,
+      stripeCustomerId: order.stripe_customer_id,
+      notes: order.notes,
+      createdAt: order.created_at,
+      updatedAt: order.updated_at
+    })) || []
+
+    // Revenue by month (last 6 months)
+    const revenueByMonth = calculateRevenueByMonth(orders || [])
+
+    // Orders by status
+    const ordersByStatus = calculateOrdersByStatus(orders || [])
+
+    // User growth (last 6 months)
+    const userGrowth = calculateUserGrowth(users || [])
+
+    // Sales by day (last 7 days)
+    const salesByDay = calculateSalesByDay(orders || [])
+
+    // Top products (mock for now - would need products table with sales data)
+    const topProducts = [
+      { name: 'Box Braids Médias', sales: 45, revenue: 1350 },
+      { name: 'Tranças Nagô', sales: 38, revenue: 1140 },
+      { name: 'Twist Afro', sales: 32, revenue: 960 },
+      { name: 'Dreadlocks', sales: 28, revenue: 1400 },
+      { name: 'Tranças Soltas', sales: 25, revenue: 750 }
+    ]
+
+    console.log('✅ Dashboard stats calculated successfully')
+
+    return {
+      totalOrders,
+      totalRevenue,
+      totalUsers,
+      totalBraiders: 0, // Mock - would come from braiders table
+      pendingBraiders: 0, // Mock - would come from braiders table
+      approvedBraiders: 0, // Mock - would come from braiders table
+      recentOrders,
+      revenueByMonth,
+      ordersByStatus,
+      userGrowth,
+      topProducts,
+      salesByDay
+    }
+
+  } catch (error) {
+    console.error('❌ Error in getDashboardStats:', error)
+    throw error
+  }
+}
+
+function calculateRevenueByMonth(orders: any[]): { month: string; revenue: number }[] {
+  const last6Months = []
+  const now = new Date()
+  
+  for (let i = 5; i >= 0; i--) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const monthName = date.toLocaleDateString('pt-BR', { month: 'short' })
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+    
+    const monthRevenue = orders
+      .filter(order => {
+        const orderDate = new Date(order.created_at)
+        const orderKey = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}`
+        return orderKey === monthKey
+      })
+      .reduce((sum, order) => sum + (order.total || 0), 0)
+    
+    last6Months.push({
+      month: monthName,
+      revenue: monthRevenue
+    })
+  }
+  
+  return last6Months
+}
+
+function calculateOrdersByStatus(orders: any[]): { status: string; count: number; color: string }[] {
+  const statusCounts = {
+    pending: { count: 0, color: '#f59e0b' },
+    processing: { count: 0, color: '#3b82f6' },
+    shipped: { count: 0, color: '#A0522D' },
+    delivered: { count: 0, color: '#10b981' },
+    cancelled: { count: 0, color: '#ef4444' }
+  }
+  
+  orders.forEach(order => {
+    if (statusCounts.hasOwnProperty(order.status)) {
+      statusCounts[order.status as keyof typeof statusCounts].count++
+    }
+  })
+  
+  return Object.entries(statusCounts).map(([status, data]) => ({
+    status: status.charAt(0).toUpperCase() + status.slice(1),
+    count: data.count,
+    color: data.color
+  }))
+}
+
+function calculateUserGrowth(users: any[]): { month: string; users: number }[] {
+  const last6Months = []
+  const now = new Date()
+  
+  for (let i = 5; i >= 0; i--) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const monthName = date.toLocaleDateString('pt-BR', { month: 'short' })
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+    
+    const monthUsers = users.filter(user => {
+      const userDate = new Date(user.created_at)
+      const userKey = `${userDate.getFullYear()}-${String(userDate.getMonth() + 1).padStart(2, '0')}`
+      return userKey === monthKey
+    }).length
+    
+    last6Months.push({
+      month: monthName,
+      users: monthUsers
+    })
+  }
+  
+  return last6Months
+}
+
+function calculateSalesByDay(orders: any[]): { day: string; sales: number }[] {
+  const last7Days = []
+  const now = new Date()
+  
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
+    const dayName = date.toLocaleDateString('pt-BR', { weekday: 'short' })
+    const dayKey = date.toISOString().split('T')[0]
+    
+    const daySales = orders.filter(order => {
+      const orderDate = new Date(order.created_at).toISOString().split('T')[0]
+      return orderDate === dayKey
+    }).length
+    
+    last7Days.push({
+      day: dayName,
+      sales: daySales
+    })
+  }
+  
+  return last7Days
+}
+

@@ -1,97 +1,174 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { useRouter, useParams } from "next/navigation"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { getUserOrders, type Order } from "@/lib/orders"
 import { 
   ArrowLeft, 
-  ShoppingCart, 
-  Calendar, 
   Package, 
-  Euro, 
-  User, 
   MapPin, 
+  Calendar, 
+  CreditCard, 
+  User, 
   Phone, 
-  Mail, 
-  Clock, 
-  CheckCircle, 
-  AlertCircle, 
-  RefreshCw,
+  Mail,
+  Edit,
   Truck,
-  CreditCard,
-  FileText,
-  Edit3
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Copy,
+  ExternalLink
 } from "lucide-react"
-import Image from "next/image"
-import Link from "next/link"
-import { cn } from "@/lib/utils"
+import { getOrderById, getOrderTracking, type Order, type OrderStatus, type TrackingEvent } from "@/lib/data-supabase"
+import { formatEuro } from "@/lib/currency"
+import { toast } from "react-hot-toast"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import OrderTimeline from "@/components/order-timeline"
+
+const statusColors = {
+  pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
+  processing: "bg-blue-100 text-blue-800 border-blue-200", 
+  shipped: "bg-purple-100 text-purple-800 border-purple-200",
+  delivered: "bg-green-100 text-green-800 border-green-200",
+  cancelled: "bg-red-100 text-red-800 border-red-200"
+}
+
+const statusLabels = {
+  pending: "Pendente",
+  processing: "Processando",
+  shipped: "Enviado", 
+  delivered: "Entregue",
+  cancelled: "Cancelado"
+}
+
+const statusIcons = {
+  pending: Clock,
+  processing: Package,
+  shipped: Truck,
+  delivered: CheckCircle,
+  cancelled: AlertCircle
+}
 
 export default function OrderDetailsPage() {
-  const params = useParams()
   const router = useRouter()
-  const orderId = params.id as string
+  const params = useParams()
+  const orderId = params?.id as string
+
   const [order, setOrder] = useState<Order | null>(null)
+  const [tracking, setTracking] = useState<TrackingEvent[]>([])
   const [loading, setLoading] = useState(true)
+  const [updating, setUpdating] = useState(false)
 
   useEffect(() => {
     const fetchOrder = async () => {
-      setLoading(true)
+      if (!orderId) return
+
       try {
-        // Get all orders and find the specific one
-        const orders = await getUserOrders("user-1700000000000")
-        const foundOrder = orders.find(o => o.id === orderId)
-        setOrder(foundOrder || null)
+        setLoading(true)
+        const [fetchedOrder, trackingEvents] = await Promise.all([
+          getOrderById(orderId),
+          getOrderTracking(orderId)
+        ])
+        setOrder(fetchedOrder)
+        setTracking(trackingEvents)
       } catch (error) {
-        console.error("Error fetching order:", error)
-        setOrder(null)
+        console.error('Error fetching order:', error)
+        toast.error('Erro ao carregar pedido')
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
 
-    if (orderId) {
-      fetchOrder()
-    }
+    fetchOrder()
   }, [orderId])
 
-  const getStatusIcon = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "entregue":
-        return <CheckCircle className="h-5 w-5 text-green-600" />
-      case "pendente":
-        return <Clock className="h-5 w-5 text-yellow-600" />
-      case "processando":
-        return <RefreshCw className="h-5 w-5 text-blue-600" />
-      default:
-        return <AlertCircle className="h-5 w-5 text-gray-600" />
+  const handleStatusUpdate = async (newStatus: OrderStatus) => {
+    if (!order) return
+
+    try {
+      setUpdating(true)
+      console.log('🔄 Updating order status from', order.status, 'to', newStatus)
+      
+      // Use the new API route that has admin privileges
+      const response = await fetch('/api/update-order-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId: order.id,
+          status: newStatus
+        })
+      })
+
+      const result = await response.json()
+      
+      if (result.success) {
+        // Reload order data to ensure we have the latest state
+        const [updatedOrder, updatedTracking] = await Promise.all([
+          getOrderById(order.id),
+          getOrderTracking(order.id)
+        ])
+        
+        if (updatedOrder) {
+          setOrder(updatedOrder)
+          setTracking(updatedTracking)
+          console.log('✅ Order data reloaded, new status:', updatedOrder.status)
+          toast.success(`Status atualizado para ${statusLabels[newStatus]}`)
+        } else {
+          console.error('❌ Failed to reload order data')
+          toast.error('Status atualizado mas erro ao recarregar dados')
+        }
+      } else {
+        console.error('❌ Failed to update order status:', result.error)
+        toast.error(result.error || 'Erro ao atualizar status')
+      }
+    } catch (error) {
+      console.error('❌ Error updating order status:', error)
+      toast.error('Erro ao atualizar status')
+    } finally {
+      setUpdating(false)
     }
   }
 
-  const getStatusBadgeClass = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "entregue":
-        return "bg-green-100 text-green-700 border-green-200"
-      case "pendente":
-        return "bg-yellow-100 text-yellow-700 border-yellow-200"
-      case "processando":
-        return "bg-blue-100 text-blue-700 border-blue-200"
-      default:
-        return "bg-gray-100 text-gray-700 border-gray-200"
-    }
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+    toast.success('Copiado para área de transferência')
+  }
+
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  const getItemsCount = (items: any[]) => {
+    return items.reduce((total, item) => total + item.quantity, 0)
   }
 
   if (loading) {
     return (
-      <div className="space-y-8">
-        <div className="animate-pulse">
-          <div className="h-32 bg-gray-200 rounded-3xl mb-8"></div>
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="h-96 bg-gray-200 rounded-2xl"></div>
-            <div className="h-96 bg-gray-200 rounded-2xl"></div>
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
+          <div>
+            <div className="w-48 h-8 bg-gray-200 rounded animate-pulse mb-2" />
+            <div className="w-32 h-4 bg-gray-200 rounded animate-pulse" />
           </div>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="w-full h-96 bg-gray-200 rounded-2xl animate-pulse" />
+          <div className="w-full h-96 bg-gray-200 rounded-2xl animate-pulse" />
         </div>
       </div>
     )
@@ -99,236 +176,212 @@ export default function OrderDetailsPage() {
 
   if (!order) {
     return (
-      <div className="space-y-8">
-        <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0">
-          <CardContent className="p-12 text-center">
-            <AlertCircle className="h-16 w-16 mx-auto mb-4 text-red-500" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Pedido não encontrado</h2>
-            <p className="text-gray-600 mb-6">O pedido com ID "{orderId}" não existe ou foi removido.</p>
-            <Button asChild variant="outline" className="rounded-xl">
-              <Link href="/dashboard/orders">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Voltar aos Pedidos
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="text-center py-12">
+        <Package className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Pedido não encontrado</h2>
+        <p className="text-gray-600 mb-6">O pedido solicitado não existe ou foi removido.</p>
+        <Button onClick={() => router.push('/dashboard/orders')} className="gap-2">
+          <ArrowLeft className="h-4 w-4" />
+          Voltar aos Pedidos
+        </Button>
       </div>
     )
   }
 
+  const StatusIcon = statusIcons[order.status]
+
   return (
-    <div className="space-y-8">
-      {/* Header Section */}
-      <div className="bg-gradient-to-br from-blue-500 via-cyan-600 to-teal-600 rounded-3xl p-8 text-white relative overflow-hidden">
-        <div className="absolute inset-0 bg-black/10 backdrop-blur-3xl"></div>
-        <div className="relative z-10">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-6">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => router.back()}
-                className="w-12 h-12 bg-white/20 rounded-full hover:bg-white/30 transition-colors"
-              >
-                <ArrowLeft className="h-6 w-6" />
-              </Button>
-              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                <FileText className="h-8 w-8" />
-              </div>
-              <div>
-                <h1 className="text-4xl font-bold font-heading mb-2">
-                  Pedido #{order.id.split("-")[1]} 📋
-                </h1>
-                <p className="text-white/90 text-lg">
-                  Detalhes completos do pedido
-                </p>
-                <p className="text-white/80 text-sm mt-1">
-                  Realizado em {order.date}
-                </p>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold">€{order.total.toFixed(2)}</div>
-              <div className="text-white/80 font-medium">Valor Total</div>
-            </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => router.push('/dashboard/orders')}
+            className="rounded-full"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Pedido #{order.orderNumber || order.id.slice(0, 8).toUpperCase()}
+            </h1>
+            <p className="text-gray-600">Detalhes completos do pedido</p>
           </div>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <Badge className={`${statusColors[order.status]} border text-base px-3 py-1`}>
+            <StatusIcon className="h-4 w-4 mr-2" />
+            {statusLabels[order.status]}
+          </Badge>
           
-          {/* Status Badge */}
-          <div className="flex items-center gap-4">
-            <Badge variant="secondary" className={cn("text-sm px-4 py-2", getStatusBadgeClass(order.status))}>
-              <span className="flex items-center gap-2">
-                {getStatusIcon(order.status)}
-                Status: {order.status}
-              </span>
-            </Badge>
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl px-4 py-2">
-              <span className="text-sm font-medium">{order.items.length} {order.items.length === 1 ? 'item' : 'itens'}</span>
-            </div>
+          <div className="flex gap-2">
+            <Select
+              value={order.status}
+              onValueChange={handleStatusUpdate}
+              disabled={updating}
+            >
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Pendente</SelectItem>
+                <SelectItem value="processing">Processando</SelectItem>
+                <SelectItem value="shipped">Enviado</SelectItem>
+                <SelectItem value="delivered">Entregue</SelectItem>
+                <SelectItem value="cancelled">Cancelado</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {/* Button to create initial tracking if none exists */}
+            {tracking.length === 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  if (!order) return
+                  try {
+                    const response = await fetch('/api/create-initial-tracking', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ orderId: order.id })
+                    })
+                    const result = await response.json()
+                    if (result.success) {
+                      toast.success('Histórico inicial criado!')
+                      // Reload tracking data
+                      const updatedTracking = await getOrderTracking(order.id)
+                      setTracking(updatedTracking)
+                    } else {
+                      toast.error('Erro ao criar histórico')
+                    }
+                  } catch (error) {
+                    console.error('Error creating initial tracking:', error)
+                    toast.error('Erro ao criar histórico')
+                  }
+                }}
+                className="text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+              >
+                📝 Criar Histórico
+              </Button>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-8">
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Order Information */}
+        <div className="lg:col-span-2 space-y-6">
           {/* Order Items */}
           <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0">
             <CardHeader>
-              <CardTitle className="text-xl font-bold font-heading text-gray-900 flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                Itens do Pedido
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-accent-600" />
+                Items do Pedido ({getItemsCount(order.items)} {getItemsCount(order.items) === 1 ? 'item' : 'itens'})
               </CardTitle>
-              <CardDescription>
-                Produtos incluídos neste pedido
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {order.items.map((item, index) => (
-                <div key={index} className="p-4 bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-xl border border-gray-200">
-                  <div className="flex items-center gap-4">
-                    <Image
-                      src={item.imageUrl || "/placeholder.svg?height=80&width=80"}
-                      alt={item.name}
-                      width={80}
-                      height={80}
-                      className="rounded-lg object-cover"
-                      unoptimized={true}
-                    />
-                    <div className="flex-1">
-                      <h4 className="font-bold text-lg text-gray-900">{item.name}</h4>
-                      <p className="text-gray-600 mt-1">
-                        Quantidade: <span className="font-semibold">{item.quantity}</span>
-                      </p>
-                      <p className="text-gray-600">
-                        Preço unitário: <span className="font-semibold">€{item.price.toFixed(2)}</span>
-                      </p>
+                <div key={index} className="flex items-center gap-4 p-4 bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-xl border">
+                  <Image
+                    src={item.productImage || "/placeholder.svg"}
+                    alt={item.productName}
+                    width={80}
+                    height={80}
+                    className="rounded-lg object-cover"
+                    unoptimized={true}
+                  />
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-gray-900 text-lg">{item.productName}</h4>
+                    <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                      <span>Quantidade: {item.quantity}</span>
+                      <span>•</span>
+                      <span>Preço unitário: {formatEuro(item.productPrice)}</span>
                     </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-blue-600">
-                        €{(item.quantity * item.price).toFixed(2)}
-                      </p>
-                      <p className="text-sm text-gray-500">Subtotal</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-xl text-accent-600">
+                      {formatEuro(item.subtotal)}
                     </div>
                   </div>
                 </div>
               ))}
               
-              <Separator />
-              
-              {/* Order Total */}
-              <div className="flex justify-between items-center p-4 bg-blue-50 rounded-xl border border-blue-200">
-                <span className="text-xl font-bold text-gray-900">Total do Pedido:</span>
-                <span className="text-3xl font-bold text-blue-600">€{order.total.toFixed(2)}</span>
+              {/* Order Totals */}
+              <div className="border-t pt-4 space-y-2">
+                <div className="flex justify-between text-gray-600">
+                  <span>Subtotal:</span>
+                  <span className="font-medium">{formatEuro(order.subtotal)}</span>
+                </div>
+                <div className="flex justify-between text-gray-600">
+                  <span>Frete:</span>
+                  <span className="font-medium">
+                    {order.shippingCost > 0 ? formatEuro(order.shippingCost) : 'Grátis'}
+                  </span>
+                </div>
+                <Separator />
+                <div className="flex justify-between text-xl font-bold text-gray-900">
+                  <span>Total:</span>
+                  <span className="text-accent-600">{formatEuro(order.total)}</span>
+                </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Order Timeline */}
-          <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0">
-            <CardHeader>
-              <CardTitle className="text-xl font-bold font-heading text-gray-900 flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Histórico do Pedido
-              </CardTitle>
-              <CardDescription>
-                Acompanhe o status e movimentações
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Timeline Items */}
-                <div className="flex items-center gap-4 p-4 bg-green-50 rounded-xl border border-green-200">
-                  <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
-                    <ShoppingCart className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">Pedido Criado</p>
-                    <p className="text-sm text-gray-600">{order.date} • Pedido realizado pelo cliente</p>
-                  </div>
-                </div>
+          <OrderTimeline events={tracking} />
 
-                {order.status === "Processando" && (
-                  <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
-                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                      <RefreshCw className="h-5 w-5 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-900">Em Processamento</p>
-                      <p className="text-sm text-gray-600">Pedido sendo preparado</p>
-                    </div>
-                  </div>
-                )}
-
-                {order.status === "Entregue" && (
-                  <div className="flex items-center gap-4 p-4 bg-green-50 rounded-xl border border-green-200">
-                    <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
-                      <CheckCircle className="h-5 w-5 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-900">Pedido Entregue</p>
-                      <p className="text-sm text-gray-600">Pedido concluído com sucesso</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          {/* Order Notes */}
+          {order.notes && (
+            <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Edit className="h-5 w-5 text-accent-600" />
+                  Observações do Pedido
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-700 bg-gray-50 p-4 rounded-xl">{order.notes}</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
-        {/* Sidebar */}
+        {/* Customer & Order Details */}
         <div className="space-y-6">
           {/* Customer Information */}
           <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-bold font-heading text-gray-900 flex items-center gap-2">
-                <User className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5 text-accent-600" />
                 Informações do Cliente
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                <User className="h-5 w-5 text-gray-600" />
+              <div className="flex items-start gap-3">
+                <User className="h-5 w-5 text-gray-400 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-gray-900">Cliente #{order.id.split("-")[1]}</p>
-                  <p className="text-sm text-gray-600">ID do usuário</p>
+                  <p className="font-semibold text-gray-900">{order.customerName}</p>
+                  <p className="text-sm text-gray-600">Nome completo</p>
                 </div>
               </div>
-
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                <Mail className="h-5 w-5 text-gray-600" />
+              
+              <div className="flex items-start gap-3">
+                <Mail className="h-5 w-5 text-gray-400 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-gray-900">cliente@exemplo.com</p>
-                  <p className="text-sm text-gray-600">Email de contato</p>
+                  <p className="font-medium text-gray-900">{order.customerEmail}</p>
+                  <p className="text-sm text-gray-600">Email</p>
                 </div>
               </div>
-
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                <Phone className="h-5 w-5 text-gray-600" />
+              
+              <div className="flex items-start gap-3">
+                <Phone className="h-5 w-5 text-gray-400 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-gray-900">+351 900 000 000</p>
+                  <p className="font-medium text-gray-900">{order.customerPhone}</p>
                   <p className="text-sm text-gray-600">Telefone</p>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Payment Information */}
-          <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold font-heading text-gray-900 flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                Informações de Pagamento
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-3 bg-green-50 rounded-xl border border-green-200">
-                <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span className="font-semibold text-green-900">Pagamento Confirmado</span>
-                </div>
-                <p className="text-sm text-gray-600">Método: Cartão de Crédito</p>
-                <p className="text-sm text-gray-600">Total: €{order.total.toFixed(2)}</p>
               </div>
             </CardContent>
           </Card>
@@ -336,50 +389,136 @@ export default function OrderDetailsPage() {
           {/* Shipping Information */}
           <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-bold font-heading text-gray-900 flex items-center gap-2">
-                <Truck className="h-5 w-5" />
-                Informações de Entrega
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-accent-600" />
+                Endereço de Entrega
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                <MapPin className="h-5 w-5 text-gray-600" />
-                <div>
-                  <p className="font-semibold text-gray-900">Endereço Principal</p>
-                  <p className="text-sm text-gray-600">Rua Exemplo, 123</p>
-                  <p className="text-sm text-gray-600">1000-000 Lisboa, Portugal</p>
-                </div>
+            <CardContent>
+              <div className="space-y-2">
+                <p className="font-semibold text-gray-900">{order.customerName}</p>
+                <p className="text-gray-700">{order.shippingAddress}</p>
+                <p className="text-gray-700">
+                  {order.shippingCity}, {order.shippingPostalCode}
+                </p>
+                <p className="text-gray-700">{order.shippingCountry}</p>
               </div>
             </CardContent>
           </Card>
 
-          {/* Actions */}
+          {/* Order Details */}
           <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-bold font-heading text-gray-900 flex items-center gap-2">
-                <Edit3 className="h-5 w-5" />
-                Ações
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-accent-600" />
+                Detalhes do Pedido
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {order.status === "Pendente" && (
-                <Button asChild className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-xl">
-                  <Link href={`/dashboard/orders/${order.id}/process`}>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Processar Pedido
-                  </Link>
-                </Button>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">ID do Pedido:</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                    {order.id.slice(0, 8).toUpperCase()}
+                  </span>
+                  <Button
+                    variant="ghost" 
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => copyToClipboard(order.id)}
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Data do Pedido:</span>
+                <span className="font-medium">{formatDate(order.createdAt)}</span>
+              </div>
+              
+              {order.updatedAt && (
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Última Atualização:</span>
+                  <span className="font-medium">{formatDate(order.updatedAt)}</span>
+                </div>
               )}
               
-              <Button variant="outline" className="w-full rounded-xl">
-                <FileText className="h-4 w-4 mr-2" />
-                Gerar Fatura
-              </Button>
+              {order.paymentIntentId && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-600">Pagamento Stripe:</span>
+                    <Button
+                      variant="ghost"
+                      size="icon" 
+                      className="h-6 w-6"
+                      onClick={() => copyToClipboard(order.paymentIntentId!)}
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <div className="font-mono text-sm bg-gray-100 p-2 rounded break-all">
+                    {order.paymentIntentId}
+                  </div>
+                </div>
+              )}
               
-              <Button variant="outline" className="w-full rounded-xl">
-                <Mail className="h-4 w-4 mr-2" />
-                Enviar Email
-              </Button>
+              {order.stripeCustomerId && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-600">Cliente Stripe:</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6" 
+                      onClick={() => copyToClipboard(order.stripeCustomerId!)}
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <div className="font-mono text-sm bg-gray-100 p-2 rounded break-all">
+                    {order.stripeCustomerId}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Payment Information */}
+          <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 shadow-xl rounded-2xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-green-800">
+                <CreditCard className="h-5 w-5" />
+                Informações de Pagamento
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-green-700">Status:</span>
+                  <Badge className="bg-green-100 text-green-800 border-green-200">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Pago via Stripe
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-green-700">Total Pago:</span>
+                  <span className="font-bold text-xl text-green-800">
+                    {formatEuro(order.total)}
+                  </span>
+                </div>
+                {order.paymentIntentId && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full border-green-200 text-green-700 hover:bg-green-50"
+                    onClick={() => window.open(`https://dashboard.stripe.com/payments/${order.paymentIntentId}`, '_blank')}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Ver no Stripe Dashboard
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
