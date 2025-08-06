@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
+import { auth } from '@/lib/auth'
 import { 
   createProductAdmin, 
   getAllProductsAdminSecure,
@@ -8,11 +8,15 @@ import {
   deleteProductAdmin 
 } from '@/lib/data-admin'
 
-// Simple admin check - in production you'd check roles from database
+// Admin check using existing auth system
 async function isAdmin(req: NextRequest) {
-  // For now, we'll assume all authenticated users are admins
-  // In production, check user role from database
-  return true
+  try {
+    const session = await auth()
+    return session?.user?.role === 'admin'
+  } catch (error) {
+    console.error('Error checking admin status:', error)
+    return false
+  }
 }
 
 export async function GET(request: NextRequest) {

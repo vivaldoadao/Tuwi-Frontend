@@ -14,6 +14,9 @@ import type {
   BraiderAvailability 
 } from './data'
 
+// Re-export types for external use
+export type { Product, Service, Booking, BraiderAvailability } from './data'
+
 // Extended Braider type with additional fields for Supabase
 export type Braider = {
   id: string

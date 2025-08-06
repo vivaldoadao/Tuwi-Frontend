@@ -6,7 +6,7 @@ async function isAdmin(req: NextRequest) {
   return true
 }
 
-export async function POST(request: NextRequest) {
+export async function PUT(request: NextRequest) {
   try {
     if (!await isAdmin(request)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

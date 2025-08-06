@@ -48,7 +48,26 @@ export async function GET(request: NextRequest) {
         })
 
       case 'order':
-        const orderSent = await sendOrderConfirmationEmail(email, name)
+        // Mock order details for testing
+        const mockOrderDetails = {
+          orderId: 'test-123',
+          customerName: name,
+          items: [{
+            productName: 'Produto Teste',
+            productPrice: 50.00,
+            quantity: 1,
+            subtotal: 50.00
+          }],
+          subtotal: 50.00,
+          shippingCost: 10.00,
+          total: 60.00,
+          shippingAddress: 'Rua Teste, 123',
+          shippingCity: 'Lisboa',
+          shippingPostalCode: '1000-001',
+          shippingCountry: 'Portugal',
+          orderDate: new Date().toISOString()
+        }
+        const orderSent = await sendOrderConfirmationEmail(email, name, mockOrderDetails)
         return NextResponse.json({ 
           success: orderSent, 
           message: orderSent ? 'Order confirmation email sent!' : 'Failed to send order confirmation email' 
