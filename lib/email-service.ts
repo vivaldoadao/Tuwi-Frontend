@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer'
-import { passwordResetTemplate, emailVerificationTemplate, welcomeTemplate, orderConfirmationTemplate, orderTrackingTemplate } from './email-templates'
+import { passwordResetTemplate, emailVerificationTemplate, welcomeTemplate, orderConfirmationTemplate, orderTrackingTemplate, braiderApprovedTemplate, braiderRejectedTemplate } from './email-templates'
 
 // Email configuration
 const transporter = nodemailer.createTransport({
@@ -213,6 +213,78 @@ export const sendOrderTrackingEmail = async (
     return true
   } catch (error) {
     console.error('❌ Failed to send order tracking email:', error)
+    return false
+  }
+}
+
+// Send braider approval notification email
+export const sendBraiderApprovalEmail = async (
+  email: string,
+  braiderName: string,
+  submissionDate?: string,
+  reviewDate?: string
+): Promise<boolean> => {
+  try {
+    const htmlContent = braiderApprovedTemplate({ 
+      braiderName, 
+      status: 'approved',
+      submissionDate,
+      reviewDate
+    })
+    
+    const mailOptions = {
+      from: {
+        name: 'Wilnara Tranças',
+        address: process.env.EMAIL_FROM || process.env.EMAIL_SERVER_USER || 'noreply@wilnaratracas.com'
+      },
+      to: email,
+      subject: '🎉 Parabéns! Sua solicitação foi aprovada - Wilnara Tranças',
+      html: htmlContent,
+      text: `Olá, ${braiderName}!\n\nParabéns! Sua solicitação para se tornar uma trancista parceira da Wilnara Tranças foi APROVADA!\n\nBem-vinda à nossa equipe! Agora você pode fazer login e começar a receber clientes.\n\n🔑 Faça login: ${process.env.NEXTAUTH_URL}/login\n📊 Acesse seu dashboard: ${process.env.NEXTAUTH_URL}/braider-dashboard\n\nEstamos animados para tê-la conosco!\n\nWilnara Tranças`
+    }
+
+    const result = await transporter.sendMail(mailOptions)
+    console.log('✅ Braider approval email sent successfully:', result.messageId)
+    return true
+  } catch (error) {
+    console.error('❌ Failed to send braider approval email:', error)
+    return false
+  }
+}
+
+// Send braider rejection notification email
+export const sendBraiderRejectionEmail = async (
+  email: string,
+  braiderName: string,
+  reason?: string,
+  submissionDate?: string,
+  reviewDate?: string
+): Promise<boolean> => {
+  try {
+    const htmlContent = braiderRejectedTemplate({ 
+      braiderName, 
+      status: 'rejected',
+      reason,
+      submissionDate,
+      reviewDate
+    })
+    
+    const mailOptions = {
+      from: {
+        name: 'Wilnara Tranças',
+        address: process.env.EMAIL_FROM || process.env.EMAIL_SERVER_USER || 'noreply@wilnaratracas.com'
+      },
+      to: email,
+      subject: 'Atualização sobre sua solicitação - Wilnara Tranças',
+      html: htmlContent,
+      text: `Olá, ${braiderName}!\n\nAgradecemos seu interesse em se tornar uma trancista parceira da Wilnara Tranças.\n\nApós análise cuidadosa, infelizmente não poderemos prosseguir com sua solicitação neste momento.${reason ? `\n\nFeedback: ${reason}` : ''}\n\nEncorajamos que continue aprimorando suas habilidades e pode tentar novamente no futuro.\n\nAgradecemos seu interesse e desejamos sucesso na sua jornada!\n\nWilnara Tranças`
+    }
+
+    const result = await transporter.sendMail(mailOptions)
+    console.log('✅ Braider rejection email sent successfully:', result.messageId)
+    return true
+  } catch (error) {
+    console.error('❌ Failed to send braider rejection email:', error)
     return false
   }
 }

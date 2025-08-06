@@ -31,6 +31,14 @@ interface OrderConfirmationProps {
   orderDetails: OrderDetails
 }
 
+interface BraiderNotificationProps {
+  braiderName: string
+  status: 'approved' | 'rejected'
+  reason?: string
+  submissionDate?: string
+  reviewDate?: string
+}
+
 // Base template wrapper
 const baseTemplate = (content: string, title: string) => `
 <!DOCTYPE html>
@@ -659,4 +667,221 @@ export const orderTrackingTemplate = ({ userName, orderDetails, trackingEvent }:
   `
   
   return baseTemplate(content, `${trackingEvent.title} - Pedido #${orderDetails.orderId.slice(0, 8).toUpperCase()} - Wilnara Tranças`)
+}
+
+// Helper function to format dates
+const formatDate = (dateString?: string) => {
+  if (!dateString) return 'Não informada'
+  const date = new Date(dateString)
+  return date.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  })
+}
+
+// Braider application approved template
+export const braiderApprovedTemplate = ({ braiderName, submissionDate, reviewDate }: BraiderNotificationProps) => {
+  const content = `
+    <div style="text-align: center; margin-bottom: 40px;">
+        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #10B981 0%, #059669 100%); border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+            <span style="font-size: 32px; color: white;">✅</span>
+        </div>
+        <h2 style="color: #10B981; font-size: 28px; font-weight: 700; margin: 0 0 10px;">
+            🎉 Parabéns! Sua solicitação foi aprovada!
+        </h2>
+        <p style="color: #6b7280; font-size: 16px; margin: 0;">
+            Bem-vinda à equipe Wilnara Tranças!
+        </p>
+    </div>
+
+    <div class="greeting">Olá, ${braiderName}! 👋</div>
+    
+    <div class="message">
+        <p>Temos o prazer de informar que sua solicitação para se tornar uma trancista parceira da <strong>Wilnara Tranças</strong> foi <strong style="color: #10B981;">APROVADA</strong>! 🌟</p>
+        
+        <p>Sua candidatura demonstrou excelência profissional e se alinha perfeitamente com os nossos padrões de qualidade. Estamos animados para tê-la em nossa rede de profissionais!</p>
+    </div>
+
+    <!-- Application Details -->
+    <div style="background: #f0fdf4; border-radius: 12px; padding: 25px; margin: 30px 0; border-left: 4px solid #10B981;">
+        <h3 style="color: #065f46; font-size: 18px; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+            📋 Detalhes da Solicitação
+        </h3>
+        <div style="display: grid; gap: 12px;">
+            ${submissionDate ? `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #374151; font-weight: 600;">Data da Submissão:</span>
+                <span style="color: #6b7280;">${formatDate(submissionDate)}</span>
+            </div>
+            ` : ''}
+            ${reviewDate ? `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #374151; font-weight: 600;">Data da Aprovação:</span>
+                <span style="color: #10B981; font-weight: 600;">${formatDate(reviewDate)}</span>
+            </div>
+            ` : ''}
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #374151; font-weight: 600;">Status:</span>
+                <span style="background: #10B981; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">✅ APROVADA</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Next Steps -->
+    <div style="background: linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%); border-radius: 12px; padding: 25px; margin: 30px 0; color: white;">
+        <h3 style="color: white; font-size: 20px; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+            🚀 Próximos Passos
+        </h3>
+        <div style="display: grid; gap: 15px;">
+            <div style="display: flex; align-items: start; gap: 12px;">
+                <span style="background: rgba(255,255,255,0.2); padding: 6px; border-radius: 50%; min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">1</span>
+                <div>
+                    <strong style="color: white;">Acesse sua conta:</strong>
+                    <p style="margin: 5px 0 0; opacity: 0.9; font-size: 14px;">Faça login com o email usado na candidatura</p>
+                </div>
+            </div>
+            <div style="display: flex; align-items: start; gap: 12px;">
+                <span style="background: rgba(255,255,255,0.2); padding: 6px; border-radius: 50%; min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">2</span>
+                <div>
+                    <strong style="color: white;">Complete seu perfil:</strong>
+                    <p style="margin: 5px 0 0; opacity: 0.9; font-size: 14px;">Adicione fotos do seu trabalho e ajuste suas informações</p>
+                </div>
+            </div>
+            <div style="display: flex; align-items: start; gap: 12px;">
+                <span style="background: rgba(255,255,255,0.2); padding: 6px; border-radius: 50%; min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">3</span>
+                <div>
+                    <strong style="color: white;">Comece a receber clientes:</strong>
+                    <p style="margin: 5px 0 0; opacity: 0.9; font-size: 14px;">Seu perfil ficará visível para clientes em sua região</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="message">
+        <p>Estamos aqui para apoiá-la em cada passo desta jornada. Se tiver qualquer dúvida, não hesite em nos contactar.</p>
+        
+        <p><strong>Bem-vinda à família Wilnara Tranças! 💜</strong></p>
+    </div>
+    
+    <div style="text-align: center; margin-top: 40px;">
+        <a href="${process.env.NEXTAUTH_URL || 'https://wilnaratracas.com'}/login" class="button" style="margin-right: 15px;">
+            🔑 Fazer Login
+        </a>
+        <a href="${process.env.NEXTAUTH_URL || 'https://wilnaratracas.com'}/braider-dashboard" class="button" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%);">
+            📊 Acessar Dashboard
+        </a>
+    </div>
+  `
+  
+  return baseTemplate(content, `🎉 Solicitação Aprovada - Wilnara Tranças`)
+}
+
+// Braider application rejected template
+export const braiderRejectedTemplate = ({ braiderName, reason, submissionDate, reviewDate }: BraiderNotificationProps) => {
+  const content = `
+    <div style="text-align: center; margin-bottom: 40px;">
+        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%); border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+            <span style="font-size: 32px; color: white;">✋</span>
+        </div>
+        <h2 style="color: #EF4444; font-size: 28px; font-weight: 700; margin: 0 0 10px;">
+            Atualização sobre sua solicitação
+        </h2>
+        <p style="color: #6b7280; font-size: 16px; margin: 0;">
+            Obrigado pelo seu interesse em se juntar à nossa equipe
+        </p>
+    </div>
+
+    <div class="greeting">Olá, ${braiderName}! 👋</div>
+    
+    <div class="message">
+        <p>Agradecemos sinceramente pelo seu interesse em se tornar uma trancista parceira da <strong>Wilnara Tranças</strong>.</p>
+        
+        <p>Após uma análise cuidadosa da sua candidatura, infelizmente não poderemos prosseguir com sua solicitação neste momento.</p>
+    </div>
+
+    <!-- Application Details -->
+    <div style="background: #fef2f2; border-radius: 12px; padding: 25px; margin: 30px 0; border-left: 4px solid #EF4444;">
+        <h3 style="color: #991b1b; font-size: 18px; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+            📋 Detalhes da Solicitação
+        </h3>
+        <div style="display: grid; gap: 12px;">
+            ${submissionDate ? `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #374151; font-weight: 600;">Data da Submissão:</span>
+                <span style="color: #6b7280;">${formatDate(submissionDate)}</span>
+            </div>
+            ` : ''}
+            ${reviewDate ? `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #374151; font-weight: 600;">Data da Revisão:</span>
+                <span style="color: #EF4444; font-weight: 600;">${formatDate(reviewDate)}</span>
+            </div>
+            ` : ''}
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #374151; font-weight: 600;">Status:</span>
+                <span style="background: #EF4444; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">❌ NÃO APROVADA</span>
+            </div>
+        </div>
+    </div>
+
+    ${reason ? `
+    <!-- Reason -->
+    <div style="background: #fffbeb; border-radius: 12px; padding: 25px; margin: 30px 0; border-left: 4px solid #F59E0B;">
+        <h3 style="color: #92400e; font-size: 18px; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+            💬 Feedback da Nossa Equipe
+        </h3>
+        <p style="color: #374151; line-height: 1.6; margin: 0;">
+            ${reason}
+        </p>
+    </div>
+    ` : ''}
+
+    <!-- Encouragement -->
+    <div style="background: linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%); border-radius: 12px; padding: 25px; margin: 30px 0; color: white;">
+        <h3 style="color: white; font-size: 20px; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+            🌟 Não Desista dos Seus Sonhos!
+        </h3>
+        <div style="display: grid; gap: 15px;">
+            <div style="display: flex; align-items: start; gap: 12px;">
+                <span style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 50%; min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">💪</span>
+                <div>
+                    <strong style="color: white;">Continue aprimorando suas habilidades:</strong>
+                    <p style="margin: 5px 0 0; opacity: 0.9; font-size: 14px;">Cada experiência é uma oportunidade de crescimento</p>
+                </div>
+            </div>
+            <div style="display: flex; align-items: start; gap: 12px;">
+                <span style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 50%; min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">🔄</span>
+                <div>
+                    <strong style="color: white;">Pode candidatar-se novamente:</strong>
+                    <p style="margin: 5px 0 0; opacity: 0.9; font-size: 14px;">Encorajamos que tente novamente no futuro</p>
+                </div>
+            </div>
+            <div style="display: flex; align-items: start; gap: 12px;">
+                <span style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 50%; min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">❤️</span>
+                <div>
+                    <strong style="color: white;">Admiramos sua paixão:</strong>
+                    <p style="margin: 5px 0 0; opacity: 0.9; font-size: 14px;">Sua dedicação às tranças é inspiradora</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="message">
+        <p>Agradecemos novamente pelo seu interesse e desejamos muito sucesso na sua jornada profissional.</p>
+        
+        <p>Continue brilhando com seu talento! ✨</p>
+    </div>
+    
+    <div style="text-align: center; margin-top: 40px;">
+        <a href="${process.env.NEXTAUTH_URL || 'https://wilnaratracas.com'}" class="button" style="margin-right: 15px;">
+            🏠 Visitar Site
+        </a>
+        <a href="${process.env.NEXTAUTH_URL || 'https://wilnaratracas.com'}/register-braider" class="button" style="background: linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%);">
+            🔄 Candidatar-se Novamente
+        </a>
+    </div>
+  `
+  
+  return baseTemplate(content, `Atualização da Sua Solicitação - Wilnara Tranças`)
 }

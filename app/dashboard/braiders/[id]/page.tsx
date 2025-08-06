@@ -6,6 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { fetchBraiderByIdAdmin, updateBraiderStatusAdmin, type BraiderAdmin } from "@/lib/api-client"
 // import { EditBraiderForm } from "@/components/edit-braider-form"
 import { toast } from "react-hot-toast"
@@ -47,7 +51,10 @@ export default function BraiderDetailsPage() {
   const braiderId = params.id as string
   const [braider, setBraider] = useState<BraiderAdmin | null>(null)
   const [loading, setLoading] = useState(true)
-  const [processing, setProcessing] = useState(false)
+  const [processingApproval, setProcessingApproval] = useState(false)
+  const [processingRejection, setProcessingRejection] = useState(false)
+  const [rejectionReason, setRejectionReason] = useState("")
+  const [rejectionModalOpen, setRejectionModalOpen] = useState(false)
 
   useEffect(() => {
     const fetchBraider = async () => {
@@ -76,23 +83,48 @@ export default function BraiderDetailsPage() {
     fetchBraider()
   }, [braiderId])
 
-  const handleUpdateStatus = async (newStatus: BraiderAdmin["status"]) => {
+  const handleApprove = async () => {
     if (!braider) return
 
-    setProcessing(true)
+    setProcessingApproval(true)
     try {
-      const { success, message } = await updateBraiderStatusAdmin(braider.id, newStatus)
+      const { success, message } = await updateBraiderStatusAdmin(braider.id, 'approved')
       if (success) {
-        setBraider(prev => prev ? { ...prev, status: newStatus } : null)
-        toast.success(message || 'Status da trancista atualizado com sucesso')
+        setBraider(prev => prev ? { ...prev, status: 'approved' } : null)
+        toast.success(message || 'Trancista aprovada com sucesso')
       } else {
-        toast.error(message || 'Erro ao atualizar status da trancista')
+        toast.error(message || 'Erro ao aprovar trancista')
       }
     } catch (error) {
-      console.error('Error updating braider status:', error)
-      toast.error('Erro inesperado ao atualizar status da trancista')
+      console.error('Error approving braider:', error)
+      toast.error('Erro inesperado ao aprovar trancista')
     } finally {
-      setProcessing(false)
+      setProcessingApproval(false)
+    }
+  }
+
+  const handleReject = async () => {
+    if (!braider || !rejectionReason.trim()) {
+      toast.error('Por favor, forneça uma razão para a rejeição')
+      return
+    }
+
+    setProcessingRejection(true)
+    try {
+      const { success, message } = await updateBraiderStatusAdmin(braider.id, 'rejected', rejectionReason.trim())
+      if (success) {
+        setBraider(prev => prev ? { ...prev, status: 'rejected' } : null)
+        toast.success(message || 'Trancista rejeitada com sucesso')
+        setRejectionModalOpen(false)
+        setRejectionReason("")
+      } else {
+        toast.error(message || 'Erro ao rejeitar trancista')
+      }
+    } catch (error) {
+      console.error('Error rejecting braider:', error)
+      toast.error('Erro inesperado ao rejeitar trancista')
+    } finally {
+      setProcessingRejection(false)
     }
   }
 
@@ -519,40 +551,102 @@ export default function BraiderDetailsPage() {
               {braider.status === "pending" && (
                 <>
                   <Button
-                    onClick={() => handleUpdateStatus("approved")}
-                    disabled={processing}
+                    onClick={handleApprove}
+                    disabled={processingApproval || processingRejection}
                     className="w-full bg-green-500 hover:bg-green-600 text-white rounded-xl h-12 font-semibold"
                   >
-                    {processing ? (
+                    {processingApproval ? (
                       <RefreshCw className="h-4 w-4 animate-spin mr-2" />
                     ) : (
                       <CheckCircle className="h-4 w-4 mr-2" />
                     )}
                     Aprovar Trancista
                   </Button>
-                  <Button
-                    onClick={() => handleUpdateStatus("rejected")}
-                    disabled={processing}
-                    variant="destructive"
-                    className="w-full rounded-xl h-12 font-semibold"
-                  >
-                    {processing ? (
-                      <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <XCircle className="h-4 w-4 mr-2" />
-                    )}
-                    Rejeitar Solicitação
-                  </Button>
+                  
+                  <Dialog open={rejectionModalOpen} onOpenChange={setRejectionModalOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        disabled={processingApproval || processingRejection}
+                        variant="destructive"
+                        className="w-full rounded-xl h-12 font-semibold"
+                      >
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Rejeitar Solicitação
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[425px]">
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                          <XCircle className="h-5 w-5 text-red-500" />
+                          Rejeitar Solicitação
+                        </DialogTitle>
+                        <DialogDescription>
+                          Por favor, forneça uma razão detalhada para a rejeição. Isso ajudará a trancista a entender o feedback e melhorar sua candidatura futura.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="rejection-reason">Razão da Rejeição *</Label>
+                          <Textarea
+                            id="rejection-reason"
+                            placeholder="Exemplo: A documentação fornecida não atende aos requisitos mínimos. É necessário apresentar certificados de curso profissional e pelo menos 2 anos de experiência comprovada..."
+                            value={rejectionReason}
+                            onChange={(e) => setRejectionReason(e.target.value)}
+                            className="min-h-[120px] resize-none"
+                            maxLength={500}
+                          />
+                          <div className="text-xs text-gray-500 text-right">
+                            {rejectionReason.length}/500 caracteres
+                          </div>
+                        </div>
+                        
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                          <div className="flex items-start gap-2">
+                            <div className="text-amber-500 mt-0.5">⚠️</div>
+                            <div className="text-sm text-amber-700">
+                              <strong>Importante:</strong> Esta mensagem será enviada por email para a trancista, então seja construtiva e profissional no feedback.
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-3">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setRejectionModalOpen(false)
+                            setRejectionReason("")
+                          }}
+                          className="flex-1"
+                          disabled={processingRejection}
+                        >
+                          Cancelar
+                        </Button>
+                        <Button
+                          onClick={handleReject}
+                          disabled={processingRejection || !rejectionReason.trim()}
+                          variant="destructive"
+                          className="flex-1"
+                        >
+                          {processingRejection ? (
+                            <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                          ) : (
+                            <XCircle className="h-4 w-4 mr-2" />
+                          )}
+                          Confirmar Rejeição
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </>
               )}
 
               {braider.status === "rejected" && (
                 <Button
-                  onClick={() => handleUpdateStatus("approved")}
-                  disabled={processing}
+                  onClick={handleApprove}
+                  disabled={processingApproval || processingRejection}
                   className="w-full bg-green-500 hover:bg-green-600 text-white rounded-xl h-12 font-semibold"
                 >
-                  {processing ? (
+                  {processingApproval ? (
                     <RefreshCw className="h-4 w-4 animate-spin mr-2" />
                   ) : (
                     <CheckCircle className="h-4 w-4 mr-2" />
@@ -562,19 +656,71 @@ export default function BraiderDetailsPage() {
               )}
 
               {braider.status === "approved" && (
-                <Button
-                  onClick={() => handleUpdateStatus("rejected")}
-                  disabled={processing}
-                  variant="outline"
-                  className="w-full rounded-xl h-12 font-semibold hover:bg-red-50 hover:border-red-300 hover:text-red-600"
-                >
-                  {processing ? (
-                    <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <UserX className="h-4 w-4 mr-2" />
-                  )}
-                  Desativar Trancista
-                </Button>
+                <Dialog open={rejectionModalOpen} onOpenChange={setRejectionModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      disabled={processingApproval || processingRejection}
+                      variant="outline"
+                      className="w-full rounded-xl h-12 font-semibold hover:bg-red-50 hover:border-red-300 hover:text-red-600"
+                    >
+                      <UserX className="h-4 w-4 mr-2" />
+                      Desativar Trancista
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <UserX className="h-5 w-5 text-red-500" />
+                        Desativar Trancista
+                      </DialogTitle>
+                      <DialogDescription>
+                        Por favor, forneça uma razão para a desativação desta trancista aprovada.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="deactivation-reason">Razão da Desativação *</Label>
+                        <Textarea
+                          id="deactivation-reason"
+                          placeholder="Exemplo: Violação dos termos de serviço, qualidade do atendimento abaixo dos padrões, etc..."
+                          value={rejectionReason}
+                          onChange={(e) => setRejectionReason(e.target.value)}
+                          className="min-h-[100px] resize-none"
+                          maxLength={500}
+                        />
+                        <div className="text-xs text-gray-500 text-right">
+                          {rejectionReason.length}/500 caracteres
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setRejectionModalOpen(false)
+                          setRejectionReason("")
+                        }}
+                        className="flex-1"
+                        disabled={processingRejection}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
+                        onClick={handleReject}
+                        disabled={processingRejection || !rejectionReason.trim()}
+                        variant="destructive"
+                        className="flex-1"
+                      >
+                        {processingRejection ? (
+                          <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <UserX className="h-4 w-4 mr-2" />
+                        )}
+                        Confirmar Desativação
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               )}
             </CardContent>
           </Card>

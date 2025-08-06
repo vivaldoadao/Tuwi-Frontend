@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { auth } from '@/lib/auth'
+import { sendBraiderApprovalEmail, sendBraiderRejectionEmail } from '@/lib/email-service'
 
 // Server-side service client with admin privileges
 const getServiceClient = () => {
@@ -13,7 +14,7 @@ const getServiceClient = () => {
 // GET /api/admin/braiders/[id] - Get single braider for admin
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check if user is authenticated and is admin
@@ -25,7 +26,8 @@ export async function GET(
       )
     }
 
-    const braiderId = params.id
+    const resolvedParams = await params
+    const braiderId = resolvedParams.id
     if (!braiderId) {
       return NextResponse.json(
         { error: 'ID da trancista é obrigatório' },
@@ -133,7 +135,7 @@ export async function GET(
 // PUT /api/admin/braiders/[id] - Update braider status
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check if user is authenticated and is admin
@@ -145,7 +147,8 @@ export async function PUT(
       )
     }
 
-    const braiderId = params.id
+    const resolvedParams = await params
+    const braiderId = resolvedParams.id
     const body = await request.json()
     const { status, reason } = body
 
@@ -165,13 +168,26 @@ export async function PUT(
 
     const serviceSupabase = getServiceClient()
 
+    // Get braider data first for email notification
+    const { data: braiderData, error: fetchError } = await serviceSupabase
+      .from('braiders')
+      .select('name, contact_email, created_at')
+      .eq('id', braiderId)
+      .single()
+
+    if (fetchError) {
+      console.error('Error fetching braider data:', fetchError)
+      return NextResponse.json(
+        { error: 'Erro ao buscar dados da trancista' },
+        { status: 500 }
+      )
+    }
+
+    // Update braider status
     const { error } = await serviceSupabase
       .from('braiders')
       .update({ 
         status,
-        review_reason: reason || null,
-        reviewed_at: new Date().toISOString(),
-        reviewed_by: session.user.id,
         updated_at: new Date().toISOString()
       })
       .eq('id', braiderId)
@@ -182,6 +198,36 @@ export async function PUT(
         { error: 'Erro ao atualizar status da trancista' },
         { status: 500 }
       )
+    }
+
+    // Send email notification based on status
+    if (braiderData.contact_email) {
+      try {
+        const submissionDate = braiderData.created_at
+        const reviewDate = new Date().toISOString()
+        
+        if (status === 'approved') {
+          await sendBraiderApprovalEmail(
+            braiderData.contact_email,
+            braiderData.name || 'Trancista',
+            submissionDate,
+            reviewDate
+          )
+          console.log('✅ Approval email sent to:', braiderData.contact_email)
+        } else if (status === 'rejected') {
+          await sendBraiderRejectionEmail(
+            braiderData.contact_email,
+            braiderData.name || 'Trancista',
+            reason,
+            submissionDate,
+            reviewDate
+          )
+          console.log('✅ Rejection email sent to:', braiderData.contact_email)
+        }
+      } catch (emailError) {
+        console.error('❌ Failed to send email notification:', emailError)
+        // Don't fail the status update if email fails
+      }
     }
 
     return NextResponse.json({ 
