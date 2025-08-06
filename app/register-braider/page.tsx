@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import SiteHeader from "@/components/site-header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -298,6 +299,7 @@ const serviceTypes = [
 ]
 
 export default function RegisterBraiderPage() {
+  const router = useRouter()
   const { user, isLoading: authLoading } = useAuth()
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(false)
@@ -485,7 +487,12 @@ export default function RegisterBraiderPage() {
       })
 
       if (result.success) {
-        toast.success("Cadastro enviado com sucesso! Nossa equipe irá analisar e entrar em contato em breve. 🎉")
+        toast.success("Cadastro enviado com sucesso! Redirecionando para página de confirmação...")
+        
+        // Redirecionar para página de sucesso com o nome do usuário
+        setTimeout(() => {
+          router.push(`/register-braider/success?name=${encodeURIComponent(personalData.name)}`)
+        }, 2000)
         // Reset form
         setPersonalData({
           name: "",
