@@ -5,7 +5,7 @@ import Image from "next/image"
 import { Menu, ShoppingCart, User, LogOut, Heart, Bell, Search } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { useCart } from "@/context/cart-context"
 import { useAuth } from "@/context/auth-context"
 import { useFavorites } from "@/context/favorites-context"
@@ -157,6 +157,7 @@ export default function SiteHeader() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="bg-white border-r border-gray-200">
+              <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
               <Link href="/" className="flex items-center gap-3 mb-8">
                 <Image
                   src="/wilnara-logo.png"

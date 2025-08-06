@@ -67,8 +67,14 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      await signIn("google", { callbackUrl: "/" })
+      console.log('Iniciando login com Google...')
+      const result = await signIn("google", { 
+        callbackUrl: "/",
+        redirect: true 
+      })
+      console.log('Resultado do Google login:', result)
     } catch (error) {
+      console.error('Erro no Google login:', error)
       setError("Erro ao fazer login com Google")
       setLoading(false)
     }

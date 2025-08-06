@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import SiteHeader from "@/components/site-header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { addBraider } from "@/lib/data"
+import { registerBraider } from "@/lib/api-client"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { 
@@ -25,11 +25,15 @@ import {
   Home,
   Car,
   Check,
-  Star
+  Star,
+  Building2
 } from "lucide-react"
 import { toast } from "react-hot-toast"
+import { useAuth } from "@/context/auth-context"
 
 // Dados de Portugal por distrito
+// TODO: Migrar para APIs públicas (ver /lib/portugal-api.ts e /hooks/usePortugalLocation.ts)
+// APIs disponíveis: geoapi.pt e api.ipma.pt com dados atualizados automaticamente
 const portugalDistricts = {
   "Aveiro": {
     concelhos: {
@@ -294,6 +298,7 @@ const serviceTypes = [
 ]
 
 export default function RegisterBraiderPage() {
+  const { user, isLoading: authLoading } = useAuth()
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(false)
   
@@ -317,7 +322,10 @@ export default function RegisterBraiderPage() {
     postalCode: "",
     servesHome: false,
     servesStudio: false,
-    maxTravelDistance: "10"
+    servesSalon: false,
+    maxTravelDistance: "10",
+    salonName: "",
+    salonAddress: ""
   })
 
   // Serviços e experiência
@@ -382,6 +390,30 @@ export default function RegisterBraiderPage() {
     setFreguesias(getFreguesias(locationData.district, concelho))
   }
 
+  // Prefill user data when user is loaded
+  useEffect(() => {
+    if (user && user.email) {
+      setPersonalData(prev => ({
+        ...prev,
+        name: user.name || "",
+        contactEmail: user.email || ""
+      }))
+    }
+  }, [user])
+
+  // Price validation
+  const validatePrices = () => {
+    const minPrice = parseFloat(serviceData.minPrice)
+    const maxPrice = parseFloat(serviceData.maxPrice)
+    
+    if (serviceData.minPrice && serviceData.maxPrice && minPrice > maxPrice) {
+      return "O preço mínimo deve ser menor ou igual ao preço máximo"
+    }
+    return null
+  }
+
+  const priceError = validatePrices()
+
   const handleSpecialtyToggle = (specialty: string) => {
     setServiceData(prev => ({
       ...prev,
@@ -414,16 +446,42 @@ export default function RegisterBraiderPage() {
         setCurrentStep(3)
         return
       }
+      
+      // Validar preços
+      if (priceError) {
+        toast.error(priceError)
+        setCurrentStep(3)
+        return
+      }
 
       const fullLocation = `${locationData.freguesia ? locationData.freguesia + ', ' : ''}${locationData.concelho}, ${locationData.district}, Portugal`
 
-      const result = await addBraider({
+      const result = await registerBraider({
         name: personalData.name,
         bio: personalData.bio,
         location: fullLocation,
         contactEmail: personalData.contactEmail,
         contactPhone: personalData.contactPhone,
         profileImageUrl: personalData.profileImageUrl,
+        whatsapp: personalData.whatsapp,
+        instagram: personalData.instagram,
+        district: locationData.district,
+        concelho: locationData.concelho,
+        freguesia: locationData.freguesia,
+        address: locationData.address,
+        postalCode: locationData.postalCode,
+        servesHome: locationData.servesHome,
+        servesStudio: locationData.servesStudio,
+        servesSalon: locationData.servesSalon,
+        maxTravelDistance: parseInt(locationData.maxTravelDistance) || 10,
+        salonName: locationData.salonName,
+        salonAddress: locationData.salonAddress,
+        specialties: serviceData.specialties,
+        yearsExperience: serviceData.yearsExperience,
+        certificates: serviceData.certificates,
+        minPrice: parseFloat(serviceData.minPrice) || undefined,
+        maxPrice: parseFloat(serviceData.maxPrice) || undefined,
+        availability: serviceData.availability
       })
 
       if (result.success) {
@@ -446,7 +504,10 @@ export default function RegisterBraiderPage() {
           postalCode: "",
           servesHome: false,
           servesStudio: false,
-          maxTravelDistance: "10"
+          servesSalon: false,
+          maxTravelDistance: "10",
+          salonName: "",
+          salonAddress: ""
         })
         setServiceData({
           specialties: [],
@@ -483,6 +544,53 @@ export default function RegisterBraiderPage() {
 
   const prevStep = () => {
     if (currentStep > 1) setCurrentStep(currentStep - 1)
+  }
+
+  // Show loading state while authentication is loading
+  if (authLoading) {
+    return (
+      <div className="flex flex-col min-h-screen bg-gradient-to-br from-brand-50 via-white to-accent-50">
+        <SiteHeader />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary mx-auto mb-4"></div>
+            <p className="text-gray-600">Carregando informações do usuário...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show authentication required message if not logged in
+  if (!user) {
+    return (
+      <div className="flex flex-col min-h-screen bg-gradient-to-br from-brand-50 via-white to-accent-50">
+        <SiteHeader />
+        <div className="flex-1 flex items-center justify-center px-4">
+          <div className="max-w-md w-full">
+            <Card className="text-center">
+              <CardHeader>
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-100 rounded-full mx-auto mb-4">
+                  <User className="h-8 w-8 text-brand-600" />
+                </div>
+                <CardTitle className="text-2xl text-brand-800">Acesso Restrito</CardTitle>
+                <CardDescription className="text-gray-600">
+                  Para se registrar como trancista, você precisa estar logado em sua conta.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button asChild className="w-full">
+                  <a href="/login">Fazer Login</a>
+                </Button>
+                <Button asChild variant="outline" className="w-full">
+                  <a href="/register">Criar Nova Conta</a>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -801,7 +909,10 @@ export default function RegisterBraiderPage() {
 
                     <div className="space-y-4">
                       <Label className="text-base font-semibold">Modalidades de Atendimento *</Label>
-                      <div className="grid gap-4 md:grid-cols-2">
+                      <p className="text-sm text-gray-600">
+                        Selecione pelo menos uma modalidade de atendimento
+                      </p>
+                      <div className="grid gap-4 md:grid-cols-3">
                         <div className="flex items-center space-x-3 p-4 border rounded-xl">
                           <Checkbox
                             id="servesHome"
@@ -825,6 +936,19 @@ export default function RegisterBraiderPage() {
                             <Home className="h-5 w-5 text-brand-primary" />
                             <Label htmlFor="servesStudio" className="font-semibold">
                               Atendimento no Estúdio/Casa
+                            </Label>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-3 p-4 border rounded-xl">
+                          <Checkbox
+                            id="servesSalon"
+                            checked={locationData.servesSalon}
+                            onCheckedChange={(checked) => setLocationData(prev => ({...prev, servesSalon: !!checked}))}
+                          />
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-5 w-5 text-brand-primary" />
+                            <Label htmlFor="servesSalon" className="font-semibold">
+                              Atendimento no Salão
                             </Label>
                           </div>
                         </div>
@@ -853,6 +977,46 @@ export default function RegisterBraiderPage() {
                             <SelectItem value="100">Mais de 50 km</SelectItem>
                           </SelectContent>
                         </Select>
+                      </div>
+                    )}
+
+                    {/* Campos do Salão */}
+                    {locationData.servesSalon && (
+                      <div className="space-y-4 p-4 bg-brand-50 rounded-xl border-l-4 border-brand-500">
+                        <div className="flex items-center gap-2 text-brand-700 font-semibold">
+                          <Building2 className="h-5 w-5" />
+                          <span>Informações do Salão</span>
+                        </div>
+                        
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label className="text-base font-semibold">
+                              Nome do Salão *
+                            </Label>
+                            <Input
+                              value={locationData.salonName}
+                              onChange={(e) => setLocationData(prev => ({...prev, salonName: e.target.value}))}
+                              placeholder="Ex: Salão Beleza Africana"
+                              className="h-12 rounded-xl border-gray-200"
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label className="text-base font-semibold">
+                              Endereço do Salão *
+                            </Label>
+                            <Input
+                              value={locationData.salonAddress}
+                              onChange={(e) => setLocationData(prev => ({...prev, salonAddress: e.target.value}))}
+                              placeholder="Ex: Rua das Flores, 123, Lisboa"
+                              className="h-12 rounded-xl border-gray-200"
+                            />
+                          </div>
+                        </div>
+                        
+                        <p className="text-sm text-gray-600">
+                          ℹ️ Estas informações aparecerão no seu perfil público para que os clientes possam localizar o salão.
+                        </p>
                       </div>
                     )}
                   </div>
@@ -933,7 +1097,10 @@ export default function RegisterBraiderPage() {
                           placeholder="25"
                           value={serviceData.minPrice}
                           onChange={(e) => setServiceData(prev => ({...prev, minPrice: e.target.value}))}
-                          className="h-12 rounded-xl border-gray-200 focus:border-brand-background focus:ring-brand-background"
+                          className={cn(
+                            "h-12 rounded-xl border-gray-200 focus:border-brand-background focus:ring-brand-background",
+                            priceError && "border-red-300 focus:border-red-500 focus:ring-red-500"
+                          )}
                         />
                       </div>
                       <div className="space-y-2">
@@ -947,8 +1114,17 @@ export default function RegisterBraiderPage() {
                           placeholder="150"
                           value={serviceData.maxPrice}
                           onChange={(e) => setServiceData(prev => ({...prev, maxPrice: e.target.value}))}
-                          className="h-12 rounded-xl border-gray-200 focus:border-brand-background focus:ring-brand-background"
+                          className={cn(
+                            "h-12 rounded-xl border-gray-200 focus:border-brand-background focus:ring-brand-background",
+                            priceError && "border-red-300 focus:border-red-500 focus:ring-red-500"
+                          )}
                         />
+                        {priceError && (
+                          <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
+                            <span className="text-red-500">⚠</span>
+                            {priceError}
+                          </p>
+                        )}
                       </div>
                     </div>
 

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { useNotifications, type Notification } from "@/context/notifications-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,7 +26,6 @@ import {
   MoreVertical
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import Link from "next/link"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 const getNotificationIcon = (type: Notification['type']) => {
@@ -100,6 +100,7 @@ interface NotificationItemProps {
 
 function NotificationItem({ notification, onClose }: NotificationItemProps) {
   const { markAsRead, deleteNotification } = useNotifications()
+  const router = useRouter()
 
   const handleMarkAsRead = () => {
     if (!notification.isRead) {
@@ -157,20 +158,16 @@ function NotificationItem({ notification, onClose }: NotificationItemProps) {
         
         <div className="flex items-center justify-between">
           {notification.actionUrl && notification.actionLabel && (
-            <Button
-              asChild
-              variant="ghost"
-              size="sm"
-              className="h-auto p-1 text-xs text-blue-600 hover:text-blue-700"
+            <button
               onClick={(e) => {
                 e.stopPropagation()
                 if (onClose) onClose()
+                router.push(notification.actionUrl! as any)
               }}
+              className="h-auto p-1 text-xs text-blue-600 hover:text-blue-700 bg-transparent border-none cursor-pointer"
             >
-              <Link href={notification.actionUrl}>
-                {notification.actionLabel}
-              </Link>
-            </Button>
+              {notification.actionLabel}
+            </button>
           )}
           
           <Button
@@ -186,11 +183,19 @@ function NotificationItem({ notification, onClose }: NotificationItemProps) {
     </div>
   )
 
+  const handleNotificationClick = () => {
+    handleMarkAsRead()
+    if (notification.actionUrl && !notification.isRead) {
+      if (onClose) onClose()
+      router.push(notification.actionUrl as any)
+    }
+  }
+
   if (notification.actionUrl && !notification.isRead) {
     return (
-      <Link href={notification.actionUrl} onClick={onClose}>
+      <div onClick={handleNotificationClick} className="cursor-pointer">
         {NotificationContent}
-      </Link>
+      </div>
     )
   }
 

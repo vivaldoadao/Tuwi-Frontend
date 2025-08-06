@@ -26,7 +26,35 @@ export type Braider = {
   profileImageUrl: string
   services: Service[]
   portfolioImages: string[]
-  status: "pending" | "approved" | "rejected" // Novo campo de status
+  status: "pending" | "approved" | "rejected"
+  // Novos campos do formulário expandido
+  whatsapp?: string
+  instagram?: string
+  district?: string
+  concelho?: string
+  freguesia?: string
+  address?: string
+  postalCode?: string
+  servesHome?: boolean
+  servesStudio?: boolean
+  servesSalon?: boolean
+  maxTravelDistance?: number
+  salonName?: string
+  salonAddress?: string
+  specialties?: string[]
+  yearsExperience?: "iniciante" | "1-2" | "3-5" | "6-10" | "10+"
+  certificates?: string
+  minPrice?: number
+  maxPrice?: number
+  availability?: {
+    monday: boolean
+    tuesday: boolean
+    wednesday: boolean
+    thursday: boolean
+    friday: boolean
+    saturday: boolean
+    sunday: boolean
+  }
 }
 
 export type Booking = {
@@ -656,6 +684,38 @@ export async function addBraider(
 ): Promise<{ success: boolean; message: string; braider?: Braider }> {
   await new Promise((resolve) => setTimeout(resolve, 700)) // Simulate API delay
 
+  // Verificar se já existe trancista com este email
+  const existingBraider = allBraiders.find(b => b.contactEmail === newBraiderData.contactEmail)
+  
+  if (existingBraider && existingBraider.status !== "rejected") {
+    return { 
+      success: false, 
+      message: "Já existe um cadastro de trancista com este email. Se você foi rejeitada anteriormente, pode tentar novamente." 
+    }
+  }
+
+  // Se existe mas foi rejeitada, atualizar registro existente
+  if (existingBraider && existingBraider.status === "rejected") {
+    const updatedBraider: Braider = {
+      ...existingBraider,
+      ...newBraiderData,
+      status: "pending", // Reset para pending
+      services: existingBraider.services || [],
+      portfolioImages: existingBraider.portfolioImages || [],
+    }
+    
+    const index = allBraiders.findIndex(b => b.id === existingBraider.id)
+    allBraiders[index] = updatedBraider
+    
+    console.log("Braider re-application:", updatedBraider)
+    return { 
+      success: true, 
+      message: "Sua nova solicitação foi enviada para aprovação! Nossa equipe irá analisar em breve.", 
+      braider: updatedBraider 
+    }
+  }
+
+  // Criar novo registro
   const newBraider: Braider = {
     id: `braider-${Date.now()}`,
     ...newBraiderData,
@@ -663,9 +723,14 @@ export async function addBraider(
     portfolioImages: [], // Novas trancistas começam sem portfólio
     status: "pending", // Status inicial pendente
   }
+  
   allBraiders.push(newBraider)
   console.log("New braider registered:", newBraider)
-  return { success: true, message: "Seu cadastro foi enviado para aprovação!", braider: newBraider }
+  return { 
+    success: true, 
+    message: "Seu cadastro foi enviado para aprovação! Nossa equipe irá analisar em até 48 horas úteis.", 
+    braider: newBraider 
+  }
 }
 
 export async function updateBraiderStatus(

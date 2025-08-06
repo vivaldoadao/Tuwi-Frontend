@@ -5,6 +5,7 @@ import BraiderCard from "@/components/braider-card"
 import HeroCarouselOptimized from "@/components/hero-carousel-optimized"
 import { Section } from "@/components/common/section"
 import { Button } from "@/components/ui/button"
+import BraiderRegisterButton from "@/components/auth/braider-register-button"
 import { getFeaturedProducts, getFeaturedBraiders } from "@/lib/data-supabase"
 import type { Product } from "@/lib/data"
 import type { Braider } from "@/lib/data-supabase"
@@ -124,12 +125,9 @@ export default async function HomePage() {
             Amplie seu alcance, gerencie seus agendamentos e conecte-se com novos clientes. Cadastre-se agora e faça
             parte da Wilnara Tranças!
           </p>
-          <Button
-            asChild
+          <BraiderRegisterButton 
             className="bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white px-8 py-3 text-lg font-semibold rounded-full transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-          >
-            <Link href="/register-braider">Cadastre-se como Trancista</Link>
-          </Button>
+          />
         </div>
       </Section>
 
