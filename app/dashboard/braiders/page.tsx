@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { BraidersTable } from "@/components/braiders-table"
-import { getAllBraiders, type Braider } from "@/lib/data-supabase"
+import { fetchBraidersAdmin, type BraiderAdmin } from "@/lib/api-client"
 import { 
   Users, 
   Clock, 
@@ -14,14 +14,14 @@ import {
 } from "lucide-react"
 
 export default function DashboardBraidersPage() {
-  const [braiders, setBraiders] = useState<Braider[]>([])
+  const [braiders, setBraiders] = useState<BraiderAdmin[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchBraiders = async () => {
       setLoading(true)
       try {
-        const { braiders: fetchedBraiders } = await getAllBraiders(1, 1000) // Get all braiders for stats
+        const { braiders: fetchedBraiders } = await fetchBraidersAdmin(1, 1000) // Get all braiders for stats
         setBraiders(fetchedBraiders)
       } catch (error) {
         console.error('Error fetching braiders:', error)

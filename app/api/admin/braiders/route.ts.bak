@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { withAdmin, type AuthenticatedRequest } from '@/lib/api-auth'
 import { createClient } from '@/lib/supabase/server'
 
 // GET /api/admin/braiders - Get all braiders for admin management
-export const GET = withAdmin(async (request: AuthenticatedRequest) => {
+async function handleGet(request: AuthenticatedRequest): Promise<NextResponse> {
   try {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status') // pending, approved, rejected
@@ -45,10 +45,10 @@ export const GET = withAdmin(async (request: AuthenticatedRequest) => {
       { status: 500 }
     )
   }
-})
+}
 
 // PUT /api/admin/braiders - Update braider status (approve/reject)
-export const PUT = withAdmin(async (request: AuthenticatedRequest) => {
+async function handlePut(request: AuthenticatedRequest): Promise<NextResponse> {
   try {
     const body = await request.json()
     const { braiderId, status, reason } = body
@@ -91,4 +91,14 @@ export const PUT = withAdmin(async (request: AuthenticatedRequest) => {
       { status: 500 }
     )
   }
-})
+}
+
+export async function GET(request: NextRequest) {
+  const handler = withAdmin(handleGet)
+  return handler(request)
+}
+
+export async function PUT(request: NextRequest) {
+  const handler = withAdmin(handlePut)
+  return handler(request)
+}

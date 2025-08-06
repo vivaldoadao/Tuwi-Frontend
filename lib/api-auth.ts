@@ -14,10 +14,10 @@ export interface AuthenticatedRequest extends NextRequest {
 /**
  * Middleware to protect API routes with authentication
  */
-export async function withAuth(
-  handler: (request: AuthenticatedRequest) => Promise<Response>
+export async function withAuth<T extends Response>(
+  handler: (request: AuthenticatedRequest) => Promise<T>
 ) {
-  return async function(request: NextRequest): Promise<Response> {
+  return async function(request: NextRequest): Promise<T | Response> {
     try {
       const session = await auth()
 
@@ -57,9 +57,9 @@ export async function withAuth(
 /**
  * Middleware to protect API routes with role-based access control
  */
-export function withRole(
+export function withRole<T extends Response>(
   requiredRole: UserRole,
-  handler: (request: AuthenticatedRequest) => Promise<Response>
+  handler: (request: AuthenticatedRequest) => Promise<T>
 ) {
   return withAuth(async (request: AuthenticatedRequest) => {
     const userRole = request.user.role
@@ -86,8 +86,8 @@ export function withRole(
 /**
  * Middleware for admin-only API routes
  */
-export function withAdmin(
-  handler: (request: AuthenticatedRequest) => Promise<Response>
+export function withAdmin<T extends Response>(
+  handler: (request: AuthenticatedRequest) => Promise<T>
 ) {
   return withRole(USER_ROLES.ADMIN, handler)
 }
@@ -95,8 +95,8 @@ export function withAdmin(
 /**
  * Middleware for braider-level API routes (braiders and admins)
  */
-export function withBraider(
-  handler: (request: AuthenticatedRequest) => Promise<Response>
+export function withBraider<T extends Response>(
+  handler: (request: AuthenticatedRequest) => Promise<T>
 ) {
   return withRole(USER_ROLES.BRAIDER, handler)
 }

@@ -27,18 +27,15 @@ import {
   ChevronRight, 
   MoreHorizontal,
   UserCheck,
-  UserX,
   Eye,
   Edit,
-  Ban,
   CheckCircle,
   Clock,
   XCircle,
   MapPin,
   Star,
   Award,
-  Mail,
-  Phone
+  Mail
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -48,15 +45,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
-import { getAllBraiders, updateBraiderStatus, toggleBraiderAccount, type Braider } from "@/lib/data-supabase"
-import { EditBraiderForm } from "@/components/edit-braider-form"
+import { fetchBraidersAdmin, updateBraiderStatusAdmin, type BraiderAdmin } from "@/lib/api-client"
+// import { EditBraiderForm } from "@/components/edit-braider-form"
 import { toast } from "react-hot-toast"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 
 export function BraidersTable() {
   const router = useRouter()
-  const [braiders, setBraiders] = React.useState<Braider[]>([])
+  const [braiders, setBraiders] = React.useState<BraiderAdmin[]>([])
   const [loading, setLoading] = React.useState(true)
   const [currentPage, setCurrentPage] = React.useState(1)
   const [totalBraiders, setTotalBraiders] = React.useState(0)
@@ -70,7 +67,7 @@ export function BraidersTable() {
   const fetchBraiders = React.useCallback(async (page: number = 1, search?: string, status?: string) => {
     setLoading(true)
     try {
-      const { braiders: fetchedBraiders, total, hasMore: moreBraiders } = await getAllBraiders(
+      const { braiders: fetchedBraiders, total, hasMore: moreBraiders } = await fetchBraidersAdmin(
         page, 
         braidersPerPage, 
         search,
@@ -117,12 +114,12 @@ export function BraidersTable() {
   const handleStatusChange = async (braiderId: string, newStatus: 'pending' | 'approved' | 'rejected') => {
     setActionLoading(braiderId)
     try {
-      const { success, error } = await updateBraiderStatus(braiderId, newStatus)
+      const { success, message } = await updateBraiderStatusAdmin(braiderId, newStatus)
       if (success) {
-        toast.success('Status da trancista atualizado com sucesso')
+        toast.success(message || 'Status da trancista atualizado com sucesso')
         fetchBraiders(currentPage, searchQuery, statusFilter) // Refresh current page
       } else {
-        toast.error(error || 'Erro ao atualizar status da trancista')
+        toast.error(message || 'Erro ao atualizar status da trancista')
       }
     } catch (error) {
       console.error('Error updating braider status:', error)
@@ -143,31 +140,13 @@ export function BraidersTable() {
     }
   }
 
-  const handleToggleAccount = async (braiderId: string) => {
-    setActionLoading(braiderId)
-    try {
-      const { success, error, isActive } = await toggleBraiderAccount(braiderId)
-      if (success) {
-        toast.success(isActive ? 'Conta ativada com sucesso' : 'Conta desativada com sucesso')
-        fetchBraiders(currentPage, searchQuery, statusFilter) // Refresh current page
-      } else {
-        toast.error(error || 'Erro ao alterar status da conta')
-      }
-    } catch (error) {
-      console.error('Error toggling account:', error)
-      toast.error('Erro inesperado ao alterar status da conta')
-    } finally {
-      setActionLoading(null)
-    }
-  }
-
-  const handleBraiderUpdated = (updatedBraider: Braider) => {
-    setBraiders(prevBraiders => 
-      prevBraiders.map(braider => 
-        braider.id === updatedBraider.id ? updatedBraider : braider
-      )
-    )
-  }
+  // const handleBraiderUpdated = (updatedBraider: BraiderAdmin) => {
+  //   setBraiders(prevBraiders => 
+  //     prevBraiders.map(braider => 
+  //       braider.id === updatedBraider.id ? updatedBraider : braider
+  //     )
+  //   )
+  // }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -334,7 +313,7 @@ export function BraidersTable() {
                     <TableCell>
                       <div className="flex items-center gap-1 text-sm">
                         <Award className="h-4 w-4 text-purple-600" />
-                        {braider.services?.length || 0} serviços
+                        {braider.specialties?.length || 0} especialidades
                       </div>
                     </TableCell>
                     <TableCell>
@@ -404,27 +383,10 @@ export function BraidersTable() {
                           <DropdownMenuSeparator />
                           <DropdownMenuLabel>Gestão da Conta</DropdownMenuLabel>
                           
-                          {/* Edit Profile */}
-                          <DropdownMenuItem asChild>
-                            <EditBraiderForm 
-                              braider={braider}
-                              onBraiderUpdated={handleBraiderUpdated}
-                              trigger={
-                                <div className="flex items-center w-full px-2 py-1.5 text-sm cursor-pointer">
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Editar Perfil
-                                </div>
-                              }
-                            />
-                          </DropdownMenuItem>
-                          
-                          {/* Toggle Account */}
-                          <DropdownMenuItem 
-                            onClick={() => handleToggleAccount(braider.id)}
-                            className="text-orange-600"
-                          >
-                            <UserX className="h-4 w-4 mr-2" />
-                            Desativar/Ativar Conta
+                          {/* Edit Profile - TODO: Implement EditBraiderForm */}
+                          <DropdownMenuItem disabled>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Editar Perfil (em desenvolvimento)
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

@@ -303,6 +303,9 @@ export default function RegisterBraiderPage() {
   const { user, isLoading: authLoading } = useAuth()
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(false)
+  const [isSuccessLoading, setIsSuccessLoading] = useState(false)
+  const [loadingStep, setLoadingStep] = useState(0)
+  const [loadingMessage, setLoadingMessage] = useState("")
   
   // Dados pessoais
   const [personalData, setPersonalData] = useState({
@@ -403,7 +406,77 @@ export default function RegisterBraiderPage() {
     }
   }, [user])
 
-  // Price validation
+  // Validation functions for real-time feedback
+  const validateName = () => {
+    if (!personalData.name.trim()) return "Nome é obrigatório"
+    if (personalData.name.length < 2) return "Nome deve ter pelo menos 2 caracteres"
+    if (personalData.name.length > 100) return "Nome não pode ter mais de 100 caracteres"
+    return null
+  }
+
+  const validateBio = () => {
+    if (!personalData.bio.trim()) return "Biografia é obrigatória"
+    if (personalData.bio.length < 50) return "Biografia deve ter pelo menos 50 caracteres"
+    if (personalData.bio.length > 1000) return "Biografia não pode ter mais de 1000 caracteres"
+    return null
+  }
+
+  const validateContactEmail = () => {
+    if (!personalData.contactEmail.trim()) return "Email é obrigatório"
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(personalData.contactEmail)) return "Email deve ter um formato válido"
+    return null
+  }
+
+  const validateContactPhone = () => {
+    if (!personalData.contactPhone.trim()) return "Telefone é obrigatório"
+    if (personalData.contactPhone.length < 9) return "Telefone deve ter pelo menos 9 dígitos"
+    const phoneRegex = /^[\+]?[0-9\s\-\(\)]+$/
+    if (!phoneRegex.test(personalData.contactPhone)) return "Telefone deve conter apenas números, espaços, +, -, ( e )"
+    return null
+  }
+
+  const validateWhatsapp = () => {
+    if (personalData.whatsapp && personalData.whatsapp.length > 0 && personalData.whatsapp.length < 9) {
+      return "WhatsApp deve ter pelo menos 9 dígitos se fornecido"
+    }
+    return null
+  }
+
+  const validateDistrict = () => {
+    if (!locationData.district) return "Distrito é obrigatório"
+    return null
+  }
+
+  const validateConcelho = () => {
+    if (!locationData.concelho) return "Concelho é obrigatório"
+    return null
+  }
+
+  const validateServiceModes = () => {
+    if (!locationData.servesHome && !locationData.servesStudio && !locationData.servesSalon) {
+      return "Selecione pelo menos uma modalidade de atendimento"
+    }
+    return null
+  }
+
+  const validateSalonFields = () => {
+    if (locationData.servesSalon && (!locationData.salonName || !locationData.salonAddress)) {
+      return "Nome e endereço do salão são obrigatórios quando atende no salão"
+    }
+    return null
+  }
+
+  const validateSpecialties = () => {
+    if (serviceData.specialties.length === 0) return "Selecione pelo menos uma especialidade"
+    return null
+  }
+
+  const validateExperience = () => {
+    if (!serviceData.yearsExperience) return "Experiência é obrigatória"
+    return null
+  }
+
   const validatePrices = () => {
     const minPrice = parseFloat(serviceData.minPrice)
     const maxPrice = parseFloat(serviceData.maxPrice)
@@ -414,7 +487,21 @@ export default function RegisterBraiderPage() {
     return null
   }
 
-  const priceError = validatePrices()
+  // Get all validation errors
+  const validationErrors = {
+    name: validateName(),
+    bio: validateBio(),
+    contactEmail: validateContactEmail(),
+    contactPhone: validateContactPhone(),
+    whatsapp: validateWhatsapp(),
+    district: validateDistrict(),
+    concelho: validateConcelho(),
+    serviceModes: validateServiceModes(),
+    salonFields: validateSalonFields(),
+    specialties: validateSpecialties(),
+    experience: validateExperience(),
+    prices: validatePrices()
+  }
 
   const handleSpecialtyToggle = (specialty: string) => {
     setServiceData(prev => ({
@@ -430,28 +517,29 @@ export default function RegisterBraiderPage() {
     setLoading(true)
 
     try {
-      // Validações
-      if (!personalData.name || !personalData.bio || !personalData.contactEmail || !personalData.contactPhone) {
-        toast.error("Por favor, preencha todos os campos obrigatórios dos dados pessoais.")
+      // Validações usando as funções de validação em tempo real
+      const errors = validationErrors
+      
+      // Verificar erros do Step 1 (Dados Pessoais)
+      if (errors.name || errors.bio || errors.contactEmail || errors.contactPhone || errors.whatsapp) {
+        const firstError = errors.name || errors.bio || errors.contactEmail || errors.contactPhone || errors.whatsapp
+        toast.error(firstError)
         setCurrentStep(1)
         return
       }
-
-      if (!locationData.district || !locationData.concelho) {
-        toast.error("Por favor, selecione pelo menos o distrito e concelho.")
+      
+      // Verificar erros do Step 2 (Localização)
+      if (errors.district || errors.concelho || errors.serviceModes || errors.salonFields) {
+        const firstError = errors.district || errors.concelho || errors.serviceModes || errors.salonFields
+        toast.error(firstError)
         setCurrentStep(2)
         return
       }
 
-      if (serviceData.specialties.length === 0) {
-        toast.error("Por favor, selecione pelo menos uma especialidade.")
-        setCurrentStep(3)
-        return
-      }
-      
-      // Validar preços
-      if (priceError) {
-        toast.error(priceError)
+      // Verificar erros do Step 3 (Serviços)
+      if (errors.specialties || errors.experience || errors.prices) {
+        const firstError = errors.specialties || errors.experience || errors.prices
+        toast.error(firstError)
         setCurrentStep(3)
         return
       }
@@ -487,12 +575,45 @@ export default function RegisterBraiderPage() {
       })
 
       if (result.success) {
-        toast.success("Cadastro enviado com sucesso! Redirecionando para página de confirmação...")
+        // Ativar estado de sucesso com loading interativo
+        setIsSuccessLoading(true)
+        setLoadingStep(0)
+        setLoadingMessage("Enviando seus dados...")
         
-        // Redirecionar para página de sucesso com o nome do usuário
-        setTimeout(() => {
-          router.push(`/register-braider/success?name=${encodeURIComponent(personalData.name)}`)
-        }, 2000)
+        // Simular progresso do cadastro com mensagens interativas
+        const loadingSteps = [
+          { message: "Enviando seus dados...", duration: 800 },
+          { message: "Validando informações...", duration: 1000 },
+          { message: "Criando seu perfil...", duration: 900 },
+          { message: "Configurando suas especialidades...", duration: 700 },
+          { message: "Definindo sua localização...", duration: 600 },
+          { message: "Finalizando cadastro...", duration: 800 },
+          { message: "Cadastro criado com sucesso!", duration: 1200 }
+        ]
+        
+        let currentStep = 0
+        const progressTimer = () => {
+          if (currentStep < loadingSteps.length) {
+            setLoadingStep(currentStep)
+            setLoadingMessage(loadingSteps[currentStep].message)
+            
+            setTimeout(() => {
+              currentStep++
+              if (currentStep < loadingSteps.length) {
+                progressTimer()
+              } else {
+                // Finalizar com sucesso e redirecionar para página de sucesso
+                setTimeout(() => {
+                  toast.success("Cadastro criado com sucesso! Redirecionando...")
+                  router.push(`/register-braider/success?name=${encodeURIComponent(personalData.name)}`)
+                }, 500)
+              }
+            }, loadingSteps[currentStep].duration)
+          }
+        }
+        
+        progressTimer()
+        return
         // Reset form
         setPersonalData({
           name: "",
@@ -594,6 +715,92 @@ export default function RegisterBraiderPage() {
                 </Button>
               </CardContent>
             </Card>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show interactive loading screen during registration process
+  if (isSuccessLoading) {
+    const loadingIcons = ['📝', '✅', '👤', '🎯', '📍', '⚡', '🎉']
+    const progressPercentage = Math.floor((loadingStep / 6) * 100)
+    
+    return (
+      <div className="flex flex-col min-h-screen bg-gradient-to-br from-brand-50 via-white to-accent-50">
+        <SiteHeader />
+        <div className="flex-1 flex items-center justify-center px-4">
+          <div className="max-w-lg w-full text-center">
+            <Card className="bg-white/95 backdrop-blur-sm shadow-2xl border-0 rounded-3xl overflow-hidden">
+              <CardHeader className="pb-8">
+                {/* Animated Icon */}
+                <div className="relative mx-auto mb-6">
+                  <div className="w-24 h-24 bg-gradient-to-r from-brand-primary to-accent-600 rounded-full flex items-center justify-center shadow-lg animate-pulse">
+                    <span className="text-4xl animate-bounce">{loadingIcons[loadingStep] || '🎉'}</span>
+                  </div>
+                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center shadow-md">
+                    <Check className="h-4 w-4 text-white" />
+                  </div>
+                </div>
+                
+                {/* Title */}
+                <CardTitle className="text-3xl font-bold text-gray-900 mb-2">
+                  Criando seu cadastro...
+                </CardTitle>
+                
+                {/* Progress Message */}
+                <CardDescription className="text-lg text-gray-600 min-h-[2rem]">
+                  {loadingMessage}
+                </CardDescription>
+              </CardHeader>
+              
+              <CardContent className="pb-8">
+                {/* Progress Bar */}
+                <div className="mb-6">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-gray-700">Progresso</span>
+                    <span className="text-sm font-bold text-brand-primary">{progressPercentage}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                    <div 
+                      className="bg-gradient-to-r from-brand-primary to-accent-600 h-full rounded-full transition-all duration-500 ease-out"
+                      style={{ width: `${progressPercentage}%` }}
+                    ></div>
+                  </div>
+                </div>
+                
+                {/* Animated Dots */}
+                <div className="flex items-center justify-center space-x-2 mb-6">
+                  {[0, 1, 2, 3].map((dot) => (
+                    <div
+                      key={dot}
+                      className={cn(
+                        "w-3 h-3 rounded-full transition-all duration-300",
+                        dot <= loadingStep 
+                          ? "bg-brand-primary scale-110" 
+                          : "bg-gray-300 animate-pulse"
+                      )}
+                      style={{
+                        animationDelay: `${dot * 0.2}s`
+                      }}
+                    ></div>
+                  ))}
+                </div>
+                
+                {/* Status Message */}
+                <div className="bg-gradient-to-r from-green-50 to-brand-50 border border-green-200 rounded-2xl p-4">
+                  <p className="text-sm text-gray-700 flex items-center justify-center gap-2">
+                    <span className="w-2 h-2 bg-green-500 rounded-full animate-ping"></span>
+                    Processando suas informações com segurança...
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* Additional Info */}
+            <p className="text-xs text-gray-500 mt-4">
+              Este processo pode levar alguns segundos. Não feche esta página.
+            </p>
           </div>
         </div>
       </div>
@@ -710,9 +917,18 @@ export default function RegisterBraiderPage() {
                           placeholder="Seu nome completo"
                           value={personalData.name}
                           onChange={(e) => setPersonalData(prev => ({...prev, name: e.target.value}))}
-                          className="h-12 rounded-xl border-gray-200 focus:border-brand-background focus:ring-brand-background"
+                          className={cn(
+                            "h-12 rounded-xl border-gray-200 focus:border-brand-background focus:ring-brand-background",
+                            validationErrors.name && "border-red-300 focus:border-red-500 focus:ring-red-500"
+                          )}
                           required
                         />
+                        {validationErrors.name && (
+                          <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
+                            <span className="text-red-500">⚠</span>
+                            {validationErrors.name}
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="contactEmail" className="flex items-center gap-2 text-base font-semibold">
@@ -725,9 +941,18 @@ export default function RegisterBraiderPage() {
                           placeholder="seu@email.com"
                           value={personalData.contactEmail}
                           onChange={(e) => setPersonalData(prev => ({...prev, contactEmail: e.target.value}))}
-                          className="h-12 rounded-xl border-gray-200 focus:border-brand-background focus:ring-brand-background"
+                          className={cn(
+                            "h-12 rounded-xl border-gray-200 focus:border-brand-background focus:ring-brand-background",
+                            validationErrors.contactEmail && "border-red-300 focus:border-red-500 focus:ring-red-500"
+                          )}
                           required
                         />
+                        {validationErrors.contactEmail && (
+                          <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
+                            <span className="text-red-500">⚠</span>
+                            {validationErrors.contactEmail}
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -743,9 +968,18 @@ export default function RegisterBraiderPage() {
                           placeholder="+351 912 345 678"
                           value={personalData.contactPhone}
                           onChange={(e) => setPersonalData(prev => ({...prev, contactPhone: e.target.value}))}
-                          className="h-12 rounded-xl border-gray-200 focus:border-brand-background focus:ring-brand-background"
+                          className={cn(
+                            "h-12 rounded-xl border-gray-200 focus:border-brand-background focus:ring-brand-background",
+                            validationErrors.contactPhone && "border-red-300 focus:border-red-500 focus:ring-red-500"
+                          )}
                           required
                         />
+                        {validationErrors.contactPhone && (
+                          <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
+                            <span className="text-red-500">⚠</span>
+                            {validationErrors.contactPhone}
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="whatsapp" className="flex items-center gap-2 text-base font-semibold">
@@ -774,9 +1008,18 @@ export default function RegisterBraiderPage() {
                         rows={4}
                         value={personalData.bio}
                         onChange={(e) => setPersonalData(prev => ({...prev, bio: e.target.value}))}
-                        className="rounded-xl border-gray-200 focus:border-brand-background focus:ring-brand-background"
+                        className={cn(
+                          "rounded-xl border-gray-200 focus:border-brand-background focus:ring-brand-background",
+                          validationErrors.bio && "border-red-300 focus:border-red-500 focus:ring-red-500"
+                        )}
                         required
                       />
+                      {validationErrors.bio && (
+                        <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
+                          <span className="text-red-500">⚠</span>
+                          {validationErrors.bio}
+                        </p>
+                      )}
                       <p className="text-sm text-gray-500">
                         Mínimo 50 caracteres. Esta descrição será vista pelos clientes.
                       </p>
@@ -823,7 +1066,10 @@ export default function RegisterBraiderPage() {
                           Distrito *
                         </Label>
                         <Select onValueChange={handleDistrictChange} value={locationData.district}>
-                          <SelectTrigger className="h-12 rounded-xl border-gray-200 focus:border-brand-background focus:ring-brand-background">
+                          <SelectTrigger className={cn(
+                            "h-12 rounded-xl border-gray-200 focus:border-brand-background focus:ring-brand-background",
+                            validationErrors.district && "border-red-300 focus:border-red-500 focus:ring-red-500"
+                          )}>
                             <SelectValue placeholder="Selecione o distrito" />
                           </SelectTrigger>
                           <SelectContent>
@@ -834,6 +1080,12 @@ export default function RegisterBraiderPage() {
                             ))}
                           </SelectContent>
                         </Select>
+                        {validationErrors.district && (
+                          <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
+                            <span className="text-red-500">⚠</span>
+                            {validationErrors.district}
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <Label className="flex items-center gap-2 text-base font-semibold">
@@ -1033,7 +1285,18 @@ export default function RegisterBraiderPage() {
                 {currentStep === 3 && (
                   <div className="space-y-6">
                     <div className="space-y-4">
-                      <Label className="text-base font-semibold">Especialidades * (selecione todas que se aplicam)</Label>
+                      <Label className={cn(
+                        "text-base font-semibold",
+                        validationErrors.specialties && "text-red-600"
+                      )}>
+                        Especialidades * (selecione todas que se aplicam)
+                      </Label>
+                      {validationErrors.specialties && (
+                        <p className="text-sm text-red-600 flex items-center gap-1">
+                          <span className="text-red-500">⚠</span>
+                          {validationErrors.specialties}
+                        </p>
+                      )}
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                         {serviceTypes.map((service) => (
                           <div
@@ -1106,7 +1369,7 @@ export default function RegisterBraiderPage() {
                           onChange={(e) => setServiceData(prev => ({...prev, minPrice: e.target.value}))}
                           className={cn(
                             "h-12 rounded-xl border-gray-200 focus:border-brand-background focus:ring-brand-background",
-                            priceError && "border-red-300 focus:border-red-500 focus:ring-red-500"
+                            validationErrors.prices && "border-red-300 focus:border-red-500 focus:ring-red-500"
                           )}
                         />
                       </div>
@@ -1123,13 +1386,13 @@ export default function RegisterBraiderPage() {
                           onChange={(e) => setServiceData(prev => ({...prev, maxPrice: e.target.value}))}
                           className={cn(
                             "h-12 rounded-xl border-gray-200 focus:border-brand-background focus:ring-brand-background",
-                            priceError && "border-red-300 focus:border-red-500 focus:ring-red-500"
+                            validationErrors.prices && "border-red-300 focus:border-red-500 focus:ring-red-500"
                           )}
                         />
-                        {priceError && (
+                        {validationErrors.prices && (
                           <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
                             <span className="text-red-500">⚠</span>
-                            {priceError}
+                            {validationErrors.prices}
                           </p>
                         )}
                       </div>
