@@ -623,6 +623,60 @@ export async function getAllBraidersLegacy(): Promise<Braider[]> {
   return braiders.filter(b => b.status === 'approved')
 }
 
+export async function getBraiderByUserId(userId: string): Promise<Braider | null> {
+  try {
+    const { data, error } = await supabase
+      .from('braiders')
+      .select('*')
+      .eq('user_id', userId)
+      .single()
+
+    if (error) {
+      console.error('Error fetching braider by user_id:', error)
+      return null
+    }
+
+    // Get the user's information
+    const { data: userData } = await supabase
+      .from('users')
+      .select('id, name, email')
+      .eq('id', userId)
+      .single()
+
+    // Get services for this braider
+    const { data: servicesData } = await supabase
+      .from('services')
+      .select('*')
+      .eq('braider_id', data.id)
+
+    return {
+      id: data.id,
+      name: data.name || userData?.name || `Trancista ${data.id.slice(0, 8)}`,
+      bio: data.bio || '',
+      location: data.location || 'Localização não informada',
+      contactEmail: data.contact_email || userData?.email || '',
+      contactPhone: data.contact_phone || '',
+      profileImageUrl: '/placeholder.svg?height=200&width=200&text=T',
+      services: (servicesData || []).map((service: any) => ({
+        id: service.id,
+        name: service.name,
+        price: parseFloat(service.price || 0),
+        durationMinutes: service.duration_minutes || 0,
+        description: service.description || '',
+        imageUrl: service.image_url || '/placeholder.svg'
+      })),
+      portfolioImages: data.portfolio_images || [],
+      status: data.status || 'pending',
+      averageRating: parseFloat(data.average_rating || '0'),
+      totalReviews: parseInt(data.total_reviews || '0'),
+      createdAt: data.created_at || new Date().toISOString()
+    }
+  } catch (error) {
+    console.error('Unexpected error fetching braider by user_id:', error)
+    return null
+  }
+}
+
 export async function getBraiderById(id: string): Promise<Braider | null> {
   try {
     const { data, error } = await supabase
@@ -920,37 +974,72 @@ export async function toggleBraiderAccount(
 export async function updateBraiderProfile(
   braiderId: string,
   profileData: {
+    name?: string
     bio?: string
     location?: string
-    contact_phone?: string
-    portfolio_images?: string[]
+    contactEmail?: string
+    contactPhone?: string
+    profileImageUrl?: string
   }
-): Promise<{ success: boolean, error?: string }> {
+): Promise<{ success: boolean, message: string }> {
   try {
-    const updateData: any = {
+    // First get the braider to find the user_id
+    const { data: braiderData, error: braiderError } = await supabase
+      .from('braiders')
+      .select('user_id')
+      .eq('id', braiderId)
+      .single()
+
+    if (braiderError) {
+      console.error('Error fetching braider:', braiderError)
+      return { success: false, message: 'Trancista não encontrada' }
+    }
+
+    // Update braider table
+    const braiderUpdateData: any = {
       updated_at: new Date().toISOString()
     }
 
-    // Only include fields that are provided
-    if (profileData.bio !== undefined) updateData.bio = profileData.bio
-    if (profileData.location !== undefined) updateData.location = profileData.location
-    if (profileData.contact_phone !== undefined) updateData.contact_phone = profileData.contact_phone
-    if (profileData.portfolio_images !== undefined) updateData.portfolio_images = profileData.portfolio_images
+    if (profileData.name !== undefined) braiderUpdateData.name = profileData.name
+    if (profileData.bio !== undefined) braiderUpdateData.bio = profileData.bio
+    if (profileData.location !== undefined) braiderUpdateData.location = profileData.location
+    if (profileData.contactEmail !== undefined) braiderUpdateData.contact_email = profileData.contactEmail
+    if (profileData.contactPhone !== undefined) braiderUpdateData.contact_phone = profileData.contactPhone
 
-    const { error } = await supabase
+    const { error: braiderUpdateError } = await supabase
       .from('braiders')
-      .update(updateData)
+      .update(braiderUpdateData)
       .eq('id', braiderId)
 
-    if (error) {
-      console.error('Error updating braider profile:', error)
-      return { success: false, error: error.message }
+    if (braiderUpdateError) {
+      console.error('Error updating braider:', braiderUpdateError)
+      return { success: false, message: 'Erro ao atualizar dados da trancista' }
     }
 
-    return { success: true }
+    // Update user table if name or email changed
+    if (profileData.name !== undefined || profileData.contactEmail !== undefined) {
+      const userUpdateData: any = {
+        updated_at: new Date().toISOString()
+      }
+
+      if (profileData.name !== undefined) userUpdateData.name = profileData.name
+      if (profileData.contactEmail !== undefined) userUpdateData.email = profileData.contactEmail
+
+      const { error: userUpdateError } = await supabase
+        .from('users')
+        .update(userUpdateData)
+        .eq('id', braiderData.user_id)
+
+      if (userUpdateError) {
+        console.error('Error updating user:', userUpdateError)
+        // Don't fail the whole operation for user update errors
+      }
+    }
+
+    return { success: true, message: 'Perfil atualizado com sucesso!' }
   } catch (error) {
     console.error('Unexpected error updating braider profile:', error)
-    return { success: false, error: 'Erro inesperado ao atualizar perfil da trancista' }
+    return { success: false, message: 'Erro inesperado ao atualizar perfil' }
   }
 }
 

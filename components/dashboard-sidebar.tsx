@@ -2,7 +2,8 @@
 import * as React from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { Home, ShoppingCart, Package, Settings, ChevronDown, User2, Users, UserCheck } from "lucide-react"
+import { Home, ShoppingCart, Package, Settings, ChevronDown, User2, Users, UserCheck, Bell, LogOut } from "lucide-react"
+import { signOut } from "next-auth/react"
 
 import {
   Sidebar,
@@ -21,16 +22,30 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/context/auth-context"
 import { useRouter, usePathname } from "next/navigation"
+import { toast } from "react-hot-toast"
 
 export function DashboardSidebar() {
   const { user } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const { isMobile, setOpenMobile } = useSidebar()
+  const [unreadNotifications, setUnreadNotifications] = React.useState(3) // Mock count - em produção seria uma API
 
-  const handleLogout = () => {
-    // TODO: Implement logout functionality
-    router.push("/login")
+  const handleLogout = async () => {
+    try {
+      toast.loading("Fazendo logout...", { id: "logout" })
+      
+      await signOut({ 
+        redirect: false
+      })
+      
+      toast.success("Logout realizado com sucesso!", { id: "logout" })
+      router.push("/login")
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error)
+      toast.error("Erro ao fazer logout", { id: "logout" })
+      router.push("/login")
+    }
   }
 
   const navItems = [
@@ -63,6 +78,11 @@ export function DashboardSidebar() {
       title: "Configurações",
       href: "/dashboard/settings",
       icon: Settings,
+    },
+    {
+      title: "Notificações",
+      href: "/dashboard/notifications",
+      icon: Bell,
     },
   ]
 
@@ -104,6 +124,11 @@ export function DashboardSidebar() {
                     >
                       <item.icon />
                       <span>{item.title}</span>
+                      {item.title === "Notificações" && unreadNotifications > 0 && (
+                        <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[20px] h-5 flex items-center justify-center">
+                          {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                        </span>
+                      )}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -127,6 +152,7 @@ export function DashboardSidebar() {
                   <span>Meu Perfil</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
                   <span>Sair</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>

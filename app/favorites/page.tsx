@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/context/auth-context"
 import { useFavorites } from "@/context/favorites-context"
-import { allProducts, getAllBraiders, type Product, type Braider } from "@/lib/data"
+import { getAllProducts, getAllBraiders, type Product, type Braider } from "@/lib/data-supabase"
 import { 
   Heart, 
   Search, 
@@ -55,10 +55,18 @@ export default function FavoritesPage() {
 
     const fetchData = async () => {
       setLoading(true)
-      const allBraiders = await getAllBraiders()
-      setProducts(allProducts)
-      setBraiders(allBraiders)
-      setLoading(false)
+      try {
+        const [allProductsData, allBraidersData] = await Promise.all([
+          getAllProducts(),
+          getAllBraiders()
+        ])
+        setProducts(allProductsData)
+        setBraiders(allBraidersData.braiders)
+      } catch (error) {
+        console.error('Error fetching favorites data:', error)
+      } finally {
+        setLoading(false)
+      }
     }
 
     fetchData()

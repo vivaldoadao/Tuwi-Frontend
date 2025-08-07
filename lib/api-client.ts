@@ -370,3 +370,35 @@ export async function registerBraider(braiderData: {
     }
   }
 }
+
+/**
+ * Delete user and test cascade deletion (admin only) - FOR TESTING
+ */
+export async function deleteUserCascadeTest(userId: string): Promise<{ 
+  success: boolean, 
+  message: string,
+  cascadeTest: {
+    userDeleted: boolean,
+    hadBraiderProfile: boolean,
+    braiderId: string | null
+  }
+}> {
+  try {
+    const response = await fetch(`/api/admin/users/${userId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Erro ao deletar usuário')
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error('Error deleting user:', error)
+    throw error
+  }
+}

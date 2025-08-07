@@ -16,7 +16,20 @@ export default function BraiderDashboardLayout({ children }: { children: React.R
     if (user?.id) {
       // In a real app, we'd fetch braider profile by user ID
       // For now, use fallback or create mock based on user
-      const braiderProfile = getBraiderById(user.id) || getBraiderById("braider-1")
+      const braiderProfile = getBraiderById(user.id) || getBraiderById("braider-1") || {
+        id: user.id,
+        name: user.name || "Trancista",
+        bio: "Bem-vinda ao seu dashboard",
+        location: "Localização não definida",
+        profileImageUrl: user.image || "/placeholder.svg?height=200&width=200&text=T",
+        availability: {},
+        ratings: [],
+        reviews: [],
+        specialties: [],
+        contactEmail: user.email || "",
+        contactPhone: "",
+        services: []
+      }
       setBraider(braiderProfile)
     }
     setLoading(false)

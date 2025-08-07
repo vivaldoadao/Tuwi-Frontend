@@ -200,6 +200,52 @@ export async function PUT(
       )
     }
 
+    // Update user role when braider is approved
+    if (status === 'approved' && braiderData.contact_email) {
+      try {
+        const { error: userUpdateError } = await serviceSupabase
+          .from('users')
+          .update({ 
+            role: 'braider',
+            updated_at: new Date().toISOString()
+          })
+          .eq('email', braiderData.contact_email)
+
+        if (userUpdateError) {
+          console.error('Error updating user role to braider:', userUpdateError)
+          // Log error but don't fail the braider approval
+        } else {
+          console.log('✅ User role updated to braider for:', braiderData.contact_email)
+        }
+      } catch (roleUpdateError) {
+        console.error('Unexpected error updating user role:', roleUpdateError)
+        // Log error but don't fail the braider approval
+      }
+    }
+
+    // Update user role back to customer when braider is rejected
+    if (status === 'rejected' && braiderData.contact_email) {
+      try {
+        const { error: userUpdateError } = await serviceSupabase
+          .from('users')
+          .update({ 
+            role: 'customer',
+            updated_at: new Date().toISOString()
+          })
+          .eq('email', braiderData.contact_email)
+
+        if (userUpdateError) {
+          console.error('Error updating user role back to customer:', userUpdateError)
+          // Log error but don't fail the braider rejection
+        } else {
+          console.log('✅ User role updated back to customer for:', braiderData.contact_email)
+        }
+      } catch (roleUpdateError) {
+        console.error('Unexpected error updating user role:', roleUpdateError)
+        // Log error but don't fail the braider rejection
+      }
+    }
+
     // Send email notification based on status
     if (braiderData.contact_email) {
       try {
@@ -230,9 +276,19 @@ export async function PUT(
       }
     }
 
+    // Generate success message
+    let successMessage = ''
+    if (status === 'approved') {
+      successMessage = 'Trancista aprovada com sucesso! A usuária agora tem acesso ao dashboard de trancistas.'
+    } else if (status === 'rejected') {
+      successMessage = 'Trancista rejeitada com sucesso! A usuária voltou ao perfil de cliente.'
+    } else {
+      successMessage = 'Status da trancista atualizado com sucesso'
+    }
+
     return NextResponse.json({ 
       success: true, 
-      message: `Trancista ${status === 'approved' ? 'aprovada' : status === 'rejected' ? 'rejeitada' : 'marcada como pendente'} com sucesso` 
+      message: successMessage
     })
   } catch (error) {
     console.error('Unexpected error updating braider:', error)

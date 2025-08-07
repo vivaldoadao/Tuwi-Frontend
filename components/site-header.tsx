@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { Menu, ShoppingCart, User, LogOut, Heart, Bell, Search } from "lucide-react"
+import { Menu, ShoppingCart, User, LogOut, Heart, Bell, Search, Shield, UserCheck } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
@@ -29,6 +29,37 @@ export default function SiteHeader() {
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/login" })
   }
+
+  // Função para determinar o link e texto do dashboard baseado na role
+  const getDashboardInfo = () => {
+    if (!user?.role) {
+      return { href: "/profile", text: "Minha Conta", icon: User }
+    }
+
+    switch (user.role) {
+      case 'admin':
+        return { 
+          href: "/dashboard", 
+          text: "Dashboard Admin", 
+          icon: Shield 
+        }
+      case 'braider':
+        return { 
+          href: "/braider-dashboard", 
+          text: "Dashboard Trancista", 
+          icon: UserCheck 
+        }
+      case 'customer':
+      default:
+        return { 
+          href: "/profile", 
+          text: "Minha Conta", 
+          icon: User 
+        }
+    }
+  }
+
+  const dashboardInfo = getDashboardInfo()
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
@@ -76,8 +107,9 @@ export default function SiteHeader() {
             <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-brand-600 group-hover:w-full transition-all duration-300" />
           </Link>
           {user && (
-            <Link href="/dashboard" className="relative text-gray-700 hover:text-brand-700 transition-colors group py-2">
-              Dashboard
+            <Link href={dashboardInfo.href as any} className="relative text-gray-700 hover:text-brand-700 transition-colors group py-2 flex items-center gap-1">
+              <dashboardInfo.icon className="h-4 w-4" />
+              {dashboardInfo.text}
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-brand-600 group-hover:w-full transition-all duration-300" />
             </Link>
           )}
@@ -192,8 +224,9 @@ export default function SiteHeader() {
                   Rastrear Pedido
                 </Link>
                 {user && (
-                  <Link href="/dashboard" className="text-gray-700 hover:text-brand-700 transition-colors py-2 border-b border-gray-100">
-                    Dashboard
+                  <Link href={dashboardInfo.href as any} className="text-gray-700 hover:text-brand-700 transition-colors py-2 border-b border-gray-100 flex items-center gap-2">
+                    <dashboardInfo.icon className="h-4 w-4" />
+                    {dashboardInfo.text}
                   </Link>
                 )}
                 <Link href="/cart" className="text-gray-700 hover:text-brand-700 transition-colors py-2 border-b border-gray-100 flex items-center justify-between">

@@ -11,7 +11,7 @@ import type { Braider } from "@/lib/data"
 interface BraiderDashboardClientLayoutProps {
   children: React.ReactNode
   defaultSidebarOpen: boolean
-  braider: Braider
+  braider: Braider | null
 }
 
 export function BraiderDashboardClientLayout({

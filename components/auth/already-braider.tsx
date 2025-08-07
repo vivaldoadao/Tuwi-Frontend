@@ -114,7 +114,7 @@ export default function AlreadyBraider({ status, braiderName }: AlreadyBraiderPr
           
           <div className="space-y-3">
             {config.actions.map((action, index) => (
-              <Link key={index} href={action.href} className="block">
+              <Link key={index} href={action.href as any} className="block">
                 <Button 
                   className={
                     action.primary 

@@ -2,15 +2,15 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react"
 import { useNotificationHelpers } from "@/hooks/use-notification-helpers"
-import { getProductById, getBraiderById } from "@/lib/data"
+import { getProductById, getBraiderById } from "@/lib/data-supabase"
 
 interface FavoritesContextType {
   favoriteProducts: string[]
   favoriteBraiders: string[]
-  addFavoriteProduct: (productId: string) => void
-  removeFavoriteProduct: (productId: string) => void
-  addFavoriteBraider: (braiderId: string) => void
-  removeFavoriteBraider: (braiderId: string) => void
+  addFavoriteProduct: (productId: string) => Promise<void>
+  removeFavoriteProduct: (productId: string) => Promise<void>
+  addFavoriteBraider: (braiderId: string) => Promise<void>
+  removeFavoriteBraider: (braiderId: string) => Promise<void>
   isFavoriteProduct: (productId: string) => boolean
   isFavoriteBraider: (braiderId: string) => boolean
   toggleFavoriteProduct: (productId: string) => void
@@ -79,50 +79,54 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     }
   }, [favoriteBraiders, isInitialized])
 
-  const addFavoriteProduct = (productId: string) => {
+  const addFavoriteProduct = async (productId: string) => {
     setFavoriteProducts(prev => {
       if (!prev.includes(productId)) {
         // Get product data and trigger notification if available
-        const product = getProductById(productId)
-        if (product && notifyProductAddedToFavorites) {
-          notifyProductAddedToFavorites(product)
-        }
+        getProductById(productId).then(product => {
+          if (product && notifyProductAddedToFavorites) {
+            notifyProductAddedToFavorites(product)
+          }
+        }).catch(console.error)
         return [...prev, productId]
       }
       return prev
     })
   }
 
-  const removeFavoriteProduct = (productId: string) => {
+  const removeFavoriteProduct = async (productId: string) => {
     // Get product data before removing
-    const product = getProductById(productId)
+    getProductById(productId).then(product => {
+      if (product && notifyProductRemovedFromFavorites) {
+        notifyProductRemovedFromFavorites(product)
+      }
+    }).catch(console.error)
     setFavoriteProducts(prev => prev.filter(id => id !== productId))
-    if (product && notifyProductRemovedFromFavorites) {
-      notifyProductRemovedFromFavorites(product)
-    }
   }
 
-  const addFavoriteBraider = (braiderId: string) => {
+  const addFavoriteBraider = async (braiderId: string) => {
     setFavoriteBraiders(prev => {
       if (!prev.includes(braiderId)) {
         // Get braider data and trigger notification if available
-        const braider = getBraiderById(braiderId)
-        if (braider && notifyBraiderAddedToFavorites) {
-          notifyBraiderAddedToFavorites(braider)
-        }
+        getBraiderById(braiderId).then(braider => {
+          if (braider && notifyBraiderAddedToFavorites) {
+            notifyBraiderAddedToFavorites(braider)
+          }
+        }).catch(console.error)
         return [...prev, braiderId]
       }
       return prev
     })
   }
 
-  const removeFavoriteBraider = (braiderId: string) => {
+  const removeFavoriteBraider = async (braiderId: string) => {
     // Get braider data before removing
-    const braider = getBraiderById(braiderId)
+    getBraiderById(braiderId).then(braider => {
+      if (braider && notifyBraiderRemovedFromFavorites) {
+        notifyBraiderRemovedFromFavorites(braider)
+      }
+    }).catch(console.error)
     setFavoriteBraiders(prev => prev.filter(id => id !== braiderId))
-    if (braider && notifyBraiderRemovedFromFavorites) {
-      notifyBraiderRemovedFromFavorites(braider)
-    }
   }
 
   const isFavoriteProduct = (productId: string) => {

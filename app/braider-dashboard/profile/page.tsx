@@ -2,33 +2,124 @@
 
 import type React from "react"
 import { useEffect, useState } from "react"
+import { useSession } from "next-auth/react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { getBraiderById, updateBraiderProfile, type Braider } from "@/lib/data"
+import { type Braider } from "@/lib/data-supabase"
 import { User, Mail, Phone, MapPin, Edit3, Save, CheckCircle, AlertCircle, Camera, Briefcase, Star, Calendar } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 import Link from "next/link"
 
 export default function BraiderProfileSettingsPage() {
-  // Simular que o braider-1 está logado
-  const braiderId = "braider-1"
-  const initialBraider = getBraiderById(braiderId)
-
-  const [braider, setBraider] = useState<Braider | undefined>(initialBraider)
+  const { data: session, status } = useSession()
+  const [braider, setBraider] = useState<Braider | undefined>(undefined)
   const [loading, setLoading] = useState(false)
+  const [initialLoading, setInitialLoading] = useState(true)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   useEffect(() => {
-    // Em um cenário real, você buscaria o perfil da trancista logada aqui
-    if (!initialBraider) {
-      setMessage({ type: "error", text: "Perfil da trancista não encontrado." })
+    async function fetchBraiderProfile() {
+      if (status === 'loading') return
+      
+      if (!session?.user?.id) {
+        setMessage({ type: "error", text: "Sessão não encontrada. Faça login novamente." })
+        setInitialLoading(false)
+        return
+      }
+
+      try {
+        console.log('🚀 Fetching braider profile from API...')
+        
+        // Pass the user email as a query parameter
+        const email = encodeURIComponent(session.user.email || '')
+        const response = await fetch(`/api/braiders/profile?email=${email}`)
+        const result = await response.json()
+        
+        console.log('📦 API Response:', result.success ? 'Success' : 'Failed', result.message)
+        
+        if (result.success && result.data) {
+          setBraider(result.data)
+          console.log('✅ Braider profile loaded:', result.data.name)
+        } else {
+          // Only show critical errors, not "profile not found" messages
+          if (result.message && !result.message.includes('não encontrado') && !result.message.includes('Usuário não encontrado')) {
+            setMessage({ type: "error", text: "Erro técnico ao carregar perfil. Contacte o suporte se persistir." })
+          } else {
+            console.log('ℹ️ Profile loading issue, but handled gracefully')
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error fetching braider profile:', error)
+        setMessage({ type: "error", text: "Erro ao carregar perfil. Tente novamente." })
+      } finally {
+        setInitialLoading(false)
+      }
     }
-  }, [initialBraider])
+
+    fetchBraiderProfile()
+  }, [session, status])
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !session?.user?.email) return
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      setMessage({ type: "error", text: "Tipo de arquivo não suportado. Use JPG, PNG ou WebP." })
+      return
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setMessage({ type: "error", text: "Arquivo muito grande. Máximo 5MB." })
+      return
+    }
+
+    setUploadingImage(true)
+    setMessage(null)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('email', session.user.email)
+
+      console.log('🖼️ Uploading profile image...')
+      
+      const response = await fetch('/api/upload-profile-image', {
+        method: 'POST',
+        body: formData
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        // Update braider state with new image URL
+        if (braider) {
+          setBraider({
+            ...braider,
+            profileImageUrl: result.imageUrl
+          })
+        }
+        setMessage({ type: "success", text: result.message })
+        console.log('✅ Profile image uploaded successfully')
+      } else {
+        setMessage({ type: "error", text: result.message })
+        console.error('❌ Upload failed:', result.message)
+      }
+    } catch (error) {
+      console.error('❌ Error uploading image:', error)
+      setMessage({ type: "error", text: "Erro ao fazer upload da imagem." })
+    } finally {
+      setUploadingImage(false)
+    }
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target
@@ -46,26 +137,62 @@ export default function BraiderProfileSettingsPage() {
     }
 
     setLoading(true)
-    const result = await updateBraiderProfile(braider.id, {
-      name: braider.name,
-      bio: braider.bio,
-      location: braider.location,
-      contactEmail: braider.contactEmail,
-      contactPhone: braider.contactPhone,
-      profileImageUrl: braider.profileImageUrl,
-      // Não atualizamos serviços ou portfolioImages por aqui neste formulário simplificado
-    })
+    try {
+      console.log('🚀 Updating braider profile via API...')
+      
+      const response = await fetch('/api/braiders/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: braider.name,
+          bio: braider.bio,
+          location: braider.location,
+          contactEmail: braider.contactEmail,
+          contactPhone: braider.contactPhone,
+          profileImageUrl: braider.profileImageUrl,
+        }),
+      })
 
-    if (result.success) {
-      setMessage({ type: "success", text: result.message })
-    } else {
-      setMessage({ type: "error", text: result.message })
+      const result = await response.json()
+
+      console.log('📦 Update API Response:', result.success ? 'Success' : 'Failed', result.message)
+
+      if (result.success) {
+        setMessage({ type: "success", text: result.message })
+        console.log('✅ Profile updated successfully')
+      } else {
+        setMessage({ type: "error", text: result.message })
+      }
+    } catch (error) {
+      console.error('❌ Error updating profile:', error)
+      setMessage({ type: "error", text: "Erro inesperado ao atualizar perfil." })
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
-  if (!braider && !message) {
-    return <p className="text-gray-700">Carregando perfil...</p>
+  if (initialLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <div className="w-8 h-8 border-4 border-accent-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-gray-700">Carregando perfil...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!braider) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <div className="w-8 h-8 border-4 border-accent-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-gray-700">Carregando perfil...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -85,7 +212,7 @@ export default function BraiderProfileSettingsPage() {
             </p>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-bold">{braider?.services.length || 0}</div>
+            <div className="text-2xl font-bold">{braider?.services?.length || 0}</div>
             <div className="text-white/80">Serviços ativos</div>
           </div>
         </div>
@@ -128,7 +255,7 @@ export default function BraiderProfileSettingsPage() {
                 <Briefcase className="h-6 w-6 text-purple-600" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-gray-900">{braider?.services.length || 0}</div>
+                <div className="text-2xl font-bold text-gray-900">{braider?.services?.length || 0}</div>
                 <div className="text-gray-600 font-medium">Serviços</div>
               </div>
             </div>
@@ -158,9 +285,33 @@ export default function BraiderProfileSettingsPage() {
                   height={120}
                   className="rounded-full object-cover border-4 border-white shadow-lg"
                   unoptimized={true}
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement
+                    target.src = "/placeholder.svg?height=120&width=120&text=T"
+                  }}
                 />
-                <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-accent-500 rounded-full flex items-center justify-center shadow-lg cursor-pointer hover:bg-accent-600 transition-colors">
-                  <Camera className="h-4 w-4 text-white" />
+                <div className="absolute -bottom-2 -right-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    id="profile-image-upload"
+                    disabled={uploadingImage}
+                  />
+                  <label
+                    htmlFor="profile-image-upload"
+                    className={cn(
+                      "w-8 h-8 bg-accent-500 rounded-full flex items-center justify-center shadow-lg cursor-pointer hover:bg-accent-600 transition-colors",
+                      uploadingImage && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    {uploadingImage ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Camera className="h-4 w-4 text-white" />
+                    )}
+                  </label>
                 </div>
               </div>
               <div className="text-center">
@@ -170,9 +321,14 @@ export default function BraiderProfileSettingsPage() {
                   {braider?.location}
                 </p>
               </div>
-              <Button variant="outline" className="w-full rounded-xl">
+              <Button 
+                variant="outline" 
+                className="w-full rounded-xl"
+                onClick={() => document.getElementById('profile-image-upload')?.click()}
+                disabled={uploadingImage}
+              >
                 <Camera className="h-4 w-4 mr-2" />
-                Alterar Foto
+                {uploadingImage ? 'Enviando...' : 'Alterar Foto'}
               </Button>
             </div>
           </CardContent>
@@ -209,8 +365,7 @@ export default function BraiderProfileSettingsPage() {
               </div>
             </div>
           )}
-          {braider ? (
-            <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-3">
                 <Label htmlFor="name" className="text-base font-semibold text-gray-900 flex items-center gap-2">
                   <User className="h-4 w-4" />
@@ -300,12 +455,6 @@ export default function BraiderProfileSettingsPage() {
                 )}
               </Button>
             </form>
-          ) : (
-            <div className="text-center py-8">
-              <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-500" />
-              <p className="text-red-500 font-medium">Não foi possível carregar o perfil da trancista.</p>
-            </div>
-          )}
         </CardContent>
       </Card>
       </div>
@@ -323,7 +472,7 @@ export default function BraiderProfileSettingsPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {braider?.services.slice(0, 3).map((service) => (
+            {braider?.services?.slice(0, 3).map((service) => (
               <div key={service.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-accent-100 rounded-full flex items-center justify-center">

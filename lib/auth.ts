@@ -77,7 +77,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     })
   ],
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn() {
       // Always allow sign-in first, then try to create user record
       return true
     },
@@ -127,9 +127,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       return session
     },
+    async redirect({ url, baseUrl }) {
+      // Se é um callback de sign-in, redirecionar para nossa página de callback
+      if (url.startsWith(baseUrl + '/api/auth/callback')) {
+        return `${baseUrl}/auth-callback`
+      }
+      // Para outros casos, usar o comportamento padrão
+      return url.startsWith(baseUrl) ? url : baseUrl
+    },
   },
   pages: {
     signIn: '/login',
+    signOut: '/',
+    error: '/login',
   },
   session: {
     strategy: 'jwt',
@@ -154,7 +164,7 @@ declare module 'next-auth' {
   }
 }
 
-declare module '@auth/core/jwt' {
+declare module 'next-auth/jwt' {
   interface JWT {
     role?: string
   }

@@ -1,16 +1,26 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useSession } from "next-auth/react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { getBraiderById, type Braider, type Service } from "@/lib/data"
-import { Plus, Edit3, Trash2, Briefcase, Clock, Euro, Save, X, CheckCircle, AlertCircle } from "lucide-react"
+import { Plus, Edit3, Trash2, Briefcase, Clock, Euro, Save, X, CheckCircle, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
+
+interface Service {
+  id: string
+  name: string
+  description: string
+  price: number
+  durationMinutes: number
+  imageUrl?: string
+  isAvailable: boolean
+}
 
 interface NewService {
   name: string
@@ -20,14 +30,30 @@ interface NewService {
 }
 
 export default function BraiderServicesPage() {
-  const braiderId = "braider-1"
-  const braider = getBraiderById(braiderId)
-  
-  const [services, setServices] = useState<Service[]>(braider?.services || [])
+  const { data: session, status } = useSession()
+  const [services, setServices] = useState<Service[]>([])
   const [isAdding, setIsAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [initialLoading, setInitialLoading] = useState(true)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalServices, setTotalServices] = useState(0)
+  const [hasNext, setHasNext] = useState(false)
+  const [hasPrev, setHasPrev] = useState(false)
+  const servicesPerPage = 3
+  
+  // Delete modal state
+  const [deleteModal, setDeleteModal] = useState<{ show: boolean; service: Service | null }>({
+    show: false,
+    service: null
+  })
+  
+  // Edit service state
+  const [editingService, setEditingService] = useState<Service | null>(null)
   
   const [newService, setNewService] = useState<NewService>({
     name: "",
@@ -36,6 +62,62 @@ export default function BraiderServicesPage() {
     durationMinutes: 60
   })
 
+  // Load services from database with pagination
+  useEffect(() => {
+    async function fetchServices() {
+      if (status === 'loading') return
+      
+      if (!session?.user?.email) {
+        setMessage({ type: "error", text: "Sessão não encontrada. Faça login novamente." })
+        setInitialLoading(false)
+        return
+      }
+
+      try {
+        console.log('🚀 Fetching services from API with pagination...')
+        console.log('📧 User email:', session.user.email)
+        console.log('📄 Current page:', currentPage)
+        console.log('📊 Services per page:', servicesPerPage)
+        
+        const email = encodeURIComponent(session.user.email || '')
+        const apiUrl = `/api/braiders/services?email=${email}&page=${currentPage}&limit=${servicesPerPage}`
+        console.log('🔗 API URL:', apiUrl)
+        
+        const response = await fetch(apiUrl)
+        const result = await response.json()
+        console.log('📦 API Response:', result)
+        
+        if (result.success && result.data) {
+          setServices(result.data.services || [])
+          setTotalPages(result.data.pagination.totalPages)
+          setTotalServices(result.data.pagination.total)
+          setHasNext(result.data.pagination.hasNext)
+          setHasPrev(result.data.pagination.hasPrev)
+          console.log('✅ Services loaded:', result.data.services.length, 'of', result.data.pagination.total)
+          console.log('📄 Pagination state:', {
+            totalPages: result.data.pagination.totalPages,
+            currentPage,
+            hasNext: result.data.pagination.hasNext,
+            hasPrev: result.data.pagination.hasPrev
+          })
+        } else {
+          console.log('ℹ️ No services found or braider not found')
+          setServices([])
+          setTotalServices(0)
+          setTotalPages(1)
+          setHasNext(false)
+          setHasPrev(false)
+        }
+      } catch (error) {
+        console.error('❌ Error fetching services:', error)
+        setMessage({ type: "error", text: "Erro ao carregar serviços. Tente novamente." })
+      } finally {
+        setInitialLoading(false)
+      }
+    }
+
+    fetchServices()
+  }, [session, status, currentPage])
 
   const handleAddService = async () => {
     if (!newService.name.trim() || newService.price <= 0) {
@@ -43,46 +125,211 @@ export default function BraiderServicesPage() {
       return
     }
 
-    setLoading(true)
-    
-    // Simulate API call
-    const serviceToAdd: Service = {
-      id: `service-${Date.now()}`,
-      name: newService.name,
-      description: newService.description,
-      price: newService.price,
-      durationMinutes: newService.durationMinutes,
-      imageUrl: "/placeholder.svg?height=200&width=300&text=" + encodeURIComponent(newService.name)
+    if (!session?.user?.email) {
+      setMessage({ type: "error", text: "Sessão não encontrada. Faça login novamente." })
+      return
     }
 
-    setServices(prev => [...prev, serviceToAdd])
-    setNewService({
-      name: "",
-      description: "",
-      price: 0,
-      durationMinutes: 60
-    })
-    setIsAdding(false)
-    setMessage({ type: "success", text: "Serviço adicionado com sucesso!" })
-    setLoading(false)
-  }
-
-  const handleDeleteService = async (serviceId: string) => {
     setLoading(true)
-    setServices(prev => prev.filter(s => s.id !== serviceId))
-    setMessage({ type: "success", text: "Serviço removido com sucesso!" })
-    setLoading(false)
+    setMessage(null)
+    
+    try {
+      console.log('🚀 Creating new service via API...')
+      
+      const response = await fetch('/api/braiders/services', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: session.user.email,
+          name: newService.name,
+          description: newService.description,
+          price: newService.price,
+          durationMinutes: newService.durationMinutes,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        // Reset form
+        setNewService({
+          name: "",
+          description: "",
+          price: 0,
+          durationMinutes: 60
+        })
+        setIsAdding(false)
+        setMessage({ type: "success", text: result.message })
+        console.log('✅ Service created successfully')
+        
+        // Refresh services list (will trigger useEffect with current page)
+        const email = encodeURIComponent(session.user.email || '')
+        const response = await fetch(`/api/braiders/services?email=${email}&page=${currentPage}&limit=${servicesPerPage}`)
+        const refreshResult = await response.json()
+        
+        if (refreshResult.success && refreshResult.data) {
+          setServices(refreshResult.data.services || [])
+          setTotalPages(refreshResult.data.pagination.totalPages)
+          setTotalServices(refreshResult.data.pagination.total)
+          setHasNext(refreshResult.data.pagination.hasNext)
+          setHasPrev(refreshResult.data.pagination.hasPrev)
+        }
+      } else {
+        setMessage({ type: "error", text: result.message })
+      }
+    } catch (error) {
+      console.error('❌ Error creating service:', error)
+      setMessage({ type: "error", text: "Erro ao criar serviço. Tente novamente." })
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const totalServices = services.length
-  const activeServices = services.length // All services are active in this example
+  const handleDeleteClick = (service: Service) => {
+    setDeleteModal({ show: true, service })
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteModal.service || !session?.user?.email) {
+      return
+    }
+
+    setLoading(true)
+    setMessage(null)
+    
+    try {
+      console.log('🗑️ Deleting service via API...')
+      
+      const response = await fetch(`/api/braiders/services?serviceId=${deleteModal.service.id}&email=${encodeURIComponent(session.user.email)}`, {
+        method: 'DELETE',
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setMessage({ type: "success", text: result.message })
+        console.log('✅ Service deleted successfully')
+        
+        // Check if we need to go back a page (if current page becomes empty)
+        const shouldGoBack = services.length === 1 && currentPage > 1
+        const targetPage = shouldGoBack ? currentPage - 1 : currentPage
+        
+        // Refresh services list
+        const email = encodeURIComponent(session.user.email || '')
+        const response = await fetch(`/api/braiders/services?email=${email}&page=${targetPage}&limit=${servicesPerPage}`)
+        const refreshResult = await response.json()
+        
+        if (refreshResult.success && refreshResult.data) {
+          setServices(refreshResult.data.services || [])
+          setTotalPages(refreshResult.data.pagination.totalPages)
+          setTotalServices(refreshResult.data.pagination.total)
+          setHasNext(refreshResult.data.pagination.hasNext)
+          setHasPrev(refreshResult.data.pagination.hasPrev)
+          
+          if (shouldGoBack) {
+            setCurrentPage(targetPage)
+          }
+        }
+      } else {
+        setMessage({ type: "error", text: result.message })
+      }
+    } catch (error) {
+      console.error('❌ Error deleting service:', error)
+      setMessage({ type: "error", text: "Erro ao remover serviço. Tente novamente." })
+    } finally {
+      setLoading(false)
+      setDeleteModal({ show: false, service: null })
+    }
+  }
+
+  const handleEditClick = (service: Service) => {
+    setEditingService(service)
+  }
+
+  const handleUpdateService = async () => {
+    if (!editingService || !session?.user?.email) {
+      return
+    }
+
+    if (!editingService.name.trim() || editingService.price <= 0) {
+      setMessage({ type: "error", text: "Por favor, preencha todos os campos obrigatórios." })
+      return
+    }
+
+    setLoading(true)
+    setMessage(null)
+    
+    try {
+      console.log('✏️ Updating service via API...')
+      
+      const response = await fetch('/api/braiders/services', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          serviceId: editingService.id,
+          email: session.user.email,
+          name: editingService.name,
+          description: editingService.description,
+          price: editingService.price,
+          durationMinutes: editingService.durationMinutes,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setEditingService(null)
+        setMessage({ type: "success", text: result.message })
+        console.log('✅ Service updated successfully')
+        
+        // Refresh services list to get updated data
+        const email = encodeURIComponent(session.user.email || '')
+        const response = await fetch(`/api/braiders/services?email=${email}&page=${currentPage}&limit=${servicesPerPage}`)
+        const refreshResult = await response.json()
+        
+        if (refreshResult.success && refreshResult.data) {
+          setServices(refreshResult.data.services || [])
+          setTotalPages(refreshResult.data.pagination.totalPages)
+          setTotalServices(refreshResult.data.pagination.total)
+          setHasNext(refreshResult.data.pagination.hasNext)
+          setHasPrev(refreshResult.data.pagination.hasPrev)
+        }
+      } else {
+        setMessage({ type: "error", text: result.message })
+      }
+    } catch (error) {
+      console.error('❌ Error updating service:', error)
+      setMessage({ type: "error", text: "Erro ao atualizar serviço. Tente novamente." })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const activeServices = services.filter(s => s.isAvailable).length
   const averagePrice = services.length > 0 ? services.reduce((sum, s) => sum + s.price, 0) / services.length : 0
   const totalDuration = services.reduce((sum, s) => sum + s.durationMinutes, 0)
 
-  if (!braider) {
+  if (initialLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-red-500">Erro: Dados da trancista não encontrados. Acesso negado.</p>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <div className="w-8 h-8 border-4 border-accent-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-gray-700">Carregando serviços...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!session) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <p className="text-red-500">Erro: Sessão não encontrada. Faça login novamente.</p>
+        </div>
       </div>
     )
   }
@@ -309,11 +556,19 @@ export default function BraiderServicesPage() {
         <div className="lg:col-span-2 space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold font-heading text-gray-900">
-              Meus Serviços ({services.length})
+              Meus Serviços ({totalServices})
             </h2>
+            <div className="text-sm text-gray-600">
+              Página {currentPage} de {totalPages} 
+              {totalPages > 1 && (
+                <span className="ml-2 text-accent-600 font-medium">
+                  • Paginação ativa
+                </span>
+              )}
+            </div>
           </div>
 
-          {loading && services.length === 0 ? (
+          {initialLoading ? (
             <div className="space-y-4">
               {[1, 2, 3].map(i => (
                 <Card key={i} className="animate-pulse bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0">
@@ -393,7 +648,8 @@ export default function BraiderServicesPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => setEditingId(service.id)}
+                              onClick={() => handleEditClick(service)}
+                              disabled={loading}
                               className="rounded-xl"
                             >
                               <Edit3 className="h-4 w-4" />
@@ -401,7 +657,7 @@ export default function BraiderServicesPage() {
                             <Button
                               variant="destructive"
                               size="sm"
-                              onClick={() => handleDeleteService(service.id)}
+                              onClick={() => handleDeleteClick(service)}
                               disabled={loading}
                               className="rounded-xl"
                             >
@@ -416,8 +672,221 @@ export default function BraiderServicesPage() {
               ))}
             </div>
           )}
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-8">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={!hasPrev || loading}
+                className="rounded-xl"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNumber: number
+                  if (totalPages <= 5) {
+                    pageNumber = i + 1
+                  } else if (currentPage <= 3) {
+                    pageNumber = i + 1
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNumber = totalPages - 4 + i
+                  } else {
+                    pageNumber = currentPage - 2 + i
+                  }
+                  
+                  return (
+                    <Button
+                      key={pageNumber}
+                      variant={pageNumber === currentPage ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(pageNumber)}
+                      disabled={loading}
+                      className={cn(
+                        "w-8 h-8 rounded-xl",
+                        pageNumber === currentPage 
+                          ? "bg-accent-500 text-white hover:bg-accent-600" 
+                          : ""
+                      )}
+                    >
+                      {pageNumber}
+                    </Button>
+                  )
+                })}
+              </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={!hasNext || loading}
+                className="rounded-xl"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.show && deleteModal.service && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-md mx-4 shadow-2xl">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="h-8 w-8 text-red-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
+                Remover Serviço
+              </h3>
+              <p className="text-gray-600 mb-2">
+                Tem certeza que deseja remover o serviço:
+              </p>
+              <p className="font-semibold text-gray-900 mb-4">
+                "{deleteModal.service.name}"?
+              </p>
+              <p className="text-sm text-red-600 mb-6">
+                Esta ação não pode ser desfeita.
+              </p>
+              
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setDeleteModal({ show: false, service: null })}
+                  disabled={loading}
+                  className="flex-1 rounded-xl"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleConfirmDelete}
+                  disabled={loading}
+                  className="flex-1 rounded-xl"
+                >
+                  {loading ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    'Remover'
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Service Modal */}
+      {editingService && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-lg mx-4 shadow-2xl max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <Edit3 className="h-5 w-5" />
+                Editar Serviço
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setEditingService(null)}
+                className="rounded-xl"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name" className="text-sm font-semibold text-gray-900">
+                  Nome do Serviço
+                </Label>
+                <Input
+                  id="edit-name"
+                  value={editingService.name}
+                  onChange={(e) => setEditingService(prev => prev ? { ...prev, name: e.target.value } : null)}
+                  className="h-10 bg-gray-50 border-gray-200 rounded-xl focus:ring-accent-500 focus:border-accent-500"
+                  placeholder="Ex: Tranças Nagô"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-description" className="text-sm font-semibold text-gray-900">
+                  Descrição
+                </Label>
+                <Textarea
+                  id="edit-description"
+                  value={editingService.description}
+                  onChange={(e) => setEditingService(prev => prev ? { ...prev, description: e.target.value } : null)}
+                  className="min-h-[80px] bg-gray-50 border-gray-200 rounded-xl focus:ring-accent-500 focus:border-accent-500 resize-none"
+                  placeholder="Descreva o serviço..."
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-price" className="text-sm font-semibold text-gray-900">
+                    Preço (€)
+                  </Label>
+                  <Input
+                    id="edit-price"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={editingService.price}
+                    onChange={(e) => setEditingService(prev => prev ? { ...prev, price: parseFloat(e.target.value) || 0 } : null)}
+                    className="h-10 bg-gray-50 border-gray-200 rounded-xl focus:ring-accent-500 focus:border-accent-500"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-duration" className="text-sm font-semibold text-gray-900">
+                    Duração (min)
+                  </Label>
+                  <Input
+                    id="edit-duration"
+                    type="number"
+                    min="15"
+                    step="15"
+                    value={editingService.durationMinutes}
+                    onChange={(e) => setEditingService(prev => prev ? { ...prev, durationMinutes: parseInt(e.target.value) || 60 } : null)}
+                    className="h-10 bg-gray-50 border-gray-200 rounded-xl focus:ring-accent-500 focus:border-accent-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setEditingService(null)}
+                  disabled={loading}
+                  className="flex-1 rounded-xl"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleUpdateService}
+                  disabled={loading || !editingService.name.trim() || editingService.price <= 0}
+                  className="flex-1 bg-accent-500 hover:bg-accent-600 text-white rounded-xl"
+                >
+                  {loading ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Salvar
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

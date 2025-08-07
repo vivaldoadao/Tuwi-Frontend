@@ -32,7 +32,8 @@ import {
   Eye,
   Ban,
   CheckCircle,
-  Edit
+  Edit,
+  Trash2
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -42,12 +43,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
-import { getAllUsers, updateUserRole, toggleUserStatus, type User } from "@/lib/data-supabase"
+import { getAllUsers, updateUserRole, toggleUserStatus, type User as UserType } from "@/lib/data-supabase"
 import { EditUserForm } from "@/components/edit-user-form"
+import { deleteUserCascadeTest } from "@/lib/api-client"
 import { toast } from "react-hot-toast"
 
 export function UsersTable() {
-  const [users, setUsers] = React.useState<User[]>([])
+  const [users, setUsers] = React.useState<UserType[]>([])
   const [loading, setLoading] = React.useState(true)
   const [currentPage, setCurrentPage] = React.useState(1)
   const [totalUsers, setTotalUsers] = React.useState(0)
@@ -139,12 +141,57 @@ export function UsersTable() {
     window.location.href = `/dashboard/users/${userId}`
   }
 
-  const handleUserUpdated = (updatedUser: User) => {
+  const handleUserUpdated = (updatedUser: UserType) => {
     setUsers(prevUsers => 
       prevUsers.map(user => 
         user.id === updatedUser.id ? updatedUser : user
       )
     )
+  }
+
+  const handleCascadeTest = async (userId: string) => {
+    const user = users.find(u => u.id === userId)
+    if (!user) return
+
+    const confirmDelete = confirm(
+      `⚠️ TESTE DE CASCADE\n\n` +
+      `Isso vai DELETAR permanentemente o usuário:\n` +
+      `${user.name} (${user.email})\n\n` +
+      `E testar se o perfil de trancista é deletado automaticamente.\n\n` +
+      `Esta ação NÃO pode ser desfeita!\n\n` +
+      `Continuar?`
+    )
+
+    if (!confirmDelete) return
+
+    setActionLoading(userId)
+    try {
+      const result = await deleteUserCascadeTest(userId)
+      
+      if (result.success) {
+        // Remove user from local state
+        setUsers(users.filter(u => u.id !== userId))
+        setTotalUsers(prev => prev - 1)
+        
+        // Show detailed result
+        toast.success(
+          `✅ ${result.message}\n\n` +
+          `Teste de Cascade:\n` +
+          `• Usuário deletado: ${result.cascadeTest.userDeleted ? 'Sim' : 'Não'}\n` +
+          `• Tinha perfil trancista: ${result.cascadeTest.hadBraiderProfile ? 'Sim' : 'Não'}\n` +
+          `• ID do braider: ${result.cascadeTest.braiderId || 'N/A'}`,
+          { duration: 8000 }
+        )
+        console.log('CASCADE TEST RESULT:', result.cascadeTest)
+      } else {
+        toast.error(`Erro: ${result.message}`)
+      }
+    } catch (error) {
+      console.error('Error testing cascade deletion:', error)
+      toast.error('Erro ao testar deleção em cascade')
+    } finally {
+      setActionLoading(null)
+    }
   }
 
   const getRoleBadge = (role: string) => {
@@ -355,6 +402,18 @@ export function UsersTable() {
                                 Ativar Usuário
                               </>
                             )}
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuSeparator />
+                          <DropdownMenuLabel className="text-orange-600">🧪 Testes (Admin)</DropdownMenuLabel>
+                          
+                          {/* Teste de Cascade */}
+                          <DropdownMenuItem 
+                            onClick={() => handleCascadeTest(user.id)}
+                            className="text-orange-600 hover:bg-orange-50"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Testar Cascade Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

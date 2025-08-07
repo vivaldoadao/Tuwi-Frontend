@@ -2,11 +2,13 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { signIn, getSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import SiteHeader from "@/components/site-header"
 import { useNotificationHelpers } from "@/hooks/use-notification-helpers"
+import { useAuth } from "@/context/auth-context"
+import { AuthRedirect } from "@/components/auth-redirect"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -24,6 +26,20 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const { notifyWelcome } = useNotificationHelpers()
+  const { session, isLoading } = useAuth()
+
+  // Se já estiver logado, redirecionar automaticamente
+  useEffect(() => {
+    if (session?.user && !isLoading) {
+      if (session.user.role === "admin") {
+        router.push("/dashboard" as any)
+      } else if (session.user.role === "braider") {
+        router.push("/braider-dashboard" as any)
+      } else {
+        router.push("/" as any)
+      }
+    }
+  }, [session, isLoading, router])
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -68,11 +84,10 @@ export default function LoginPage() {
 
     try {
       console.log('Iniciando login com Google...')
-      const result = await signIn("google", { 
-        callbackUrl: "/",
+      // O NextAuth vai redirecionar para nossa página de callback automaticamente
+      await signIn("google", { 
         redirect: true 
       })
-      console.log('Resultado do Google login:', result)
     } catch (error) {
       console.error('Erro no Google login:', error)
       setError("Erro ao fazer login com Google")

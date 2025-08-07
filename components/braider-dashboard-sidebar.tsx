@@ -22,7 +22,7 @@ import { useRouter, usePathname } from "next/navigation"
 import type { Braider } from "@/lib/data"
 
 interface BraiderDashboardSidebarProps {
-  braider: Braider // Receber os dados da trancista
+  braider: Braider | null // Braider pode ser null
 }
 
 export function BraiderDashboardSidebar({ braider }: BraiderDashboardSidebarProps) {
@@ -121,14 +121,14 @@ export function BraiderDashboardSidebar({ braider }: BraiderDashboardSidebarProp
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton>
                   <Image
-                    src={braider.profileImageUrl || "/placeholder.svg?height=20&width=20&text=T"}
-                    alt={braider.name}
+                    src={braider?.profileImageUrl || "/placeholder.svg?height=20&width=20&text=T"}
+                    alt={braider?.name || "Trancista"}
                     width={20}
                     height={20}
                     className="rounded-full object-cover"
                     unoptimized={true}
                   />{" "}
-                  {braider.name || "Trancista"}
+                  {braider?.name || "Trancista"}
                   <ChevronDown className="ml-auto group-data-[state=collapsed]/sidebar-wrapper:hidden" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>

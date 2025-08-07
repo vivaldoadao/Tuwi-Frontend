@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { useEffect } from "react"
 import { useAuth } from "@/context/auth-context"
 import { hasRole, hasRolePermission, type UserRole, USER_ROLES } from "@/lib/roles"
 import { AlertTriangle } from "lucide-react"
@@ -33,6 +34,29 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   const { session, isLoading } = useAuth()
   const router = useRouter()
 
+  // Handle redirects in useEffect to avoid during render
+  useEffect(() => {
+    if (!isLoading) {
+      // No session means no access
+      if (!session?.user && redirectTo) {
+        router.push(redirectTo as any)
+        return
+      }
+
+      // Check role permission if role is required
+      if (role && session?.user) {
+        const hasAccess = requireExact 
+          ? hasRole(session, role)
+          : hasRolePermission(session, role)
+
+        if (!hasAccess && redirectTo) {
+          router.push(redirectTo as any)
+          return
+        }
+      }
+    }
+  }, [session, isLoading, role, requireExact, redirectTo, router])
+
   // Show loading state
   if (isLoading) {
     return (
@@ -45,8 +69,11 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   // No session means no access
   if (!session?.user) {
     if (redirectTo) {
-      router.push(redirectTo)
-      return null
+      return (
+        <div className="flex items-center justify-center p-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      )
     }
     
     return fallback || <AccessDenied reason="Você precisa estar logado para acessar esta área." />
@@ -64,8 +91,11 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
 
   if (!hasAccess) {
     if (redirectTo) {
-      router.push(redirectTo)
-      return null
+      return (
+        <div className="flex items-center justify-center p-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      )
     }
     
     return fallback || <AccessDenied reason="Você não tem permissão para acessar esta área." />
