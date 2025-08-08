@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useEffect, useState } from "react"
+import { useSession } from "next-auth/react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,16 +13,11 @@ import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval } from "date
 import { ptBR } from "date-fns/locale"
 import { CalendarIcon, PlusCircle, Trash2, Clock, CheckCircle, AlertCircle, Calendar as CalendarLarge, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
-import {
-  addBraiderAvailability,
-  getBraiderAvailabilities,
-  deleteBraiderAvailability,
-  type BraiderAvailability,
-} from "@/lib/data"
+import { type BraiderAvailability } from "@/lib/data"
 import { Badge } from "@/components/ui/badge"
 
 export default function BraiderAvailabilityPage() {
-  const braiderId = "braider-1"
+  const { data: session, status } = useSession()
 
   const [date, setDate] = useState<Date | undefined>(new Date())
   const [startTime, setStartTime] = useState("")
@@ -31,38 +27,81 @@ export default function BraiderAvailabilityPage() {
   const [loading, setLoading] = useState(true)
   const [isAdding, setIsAdding] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  
+  // Delete confirmation modal state
+  const [deleteModal, setDeleteModal] = useState<{ show: boolean; availabilityId: string | null }>({
+    show: false,
+    availabilityId: null
+  })
 
   const fetchAvailabilities = async (selectedDate: Date | undefined) => {
-    if (!selectedDate) {
-      setAvailabilities([])
+    if (!selectedDate || status === 'loading') return
+    
+    if (!session?.user?.email) {
+      setMessage({ type: "error", text: "Sessão não encontrada. Faça login novamente." })
+      setLoading(false)
       return
     }
-    setLoading(true)
-    setMessage(null)
-    const formattedDate = format(selectedDate, "yyyy-MM-dd")
-    const fetchedAvailabilities = await getBraiderAvailabilities(braiderId, formattedDate)
-    setAvailabilities(fetchedAvailabilities)
-    setLoading(false)
+
+    try {
+      setLoading(true)
+      setMessage(null)
+      
+      const formattedDate = format(selectedDate, "yyyy-MM-dd")
+      const email = encodeURIComponent(session.user.email)
+      
+      console.log('📅 Fetching availability for:', formattedDate)
+      
+      const response = await fetch(`/api/braiders/availability?email=${email}&date=${formattedDate}`)
+      const result = await response.json()
+      
+      if (result.success) {
+        setAvailabilities(result.data || [])
+        console.log('✅ Availability loaded:', result.data?.length || 0, 'slots')
+      } else {
+        console.error('❌ Error fetching availability:', result.message)
+        setMessage({ type: "error", text: result.message })
+        setAvailabilities([])
+      }
+    } catch (error) {
+      console.error('💥 Error fetching availability:', error)
+      setMessage({ type: "error", text: "Erro ao carregar disponibilidade. Tente novamente." })
+      setAvailabilities([])
+    } finally {
+      setLoading(false)
+    }
   }
 
   const fetchWeekAvailabilities = async (selectedDate: Date | undefined) => {
-    if (!selectedDate) {
+    if (!selectedDate || status === 'loading') return
+    
+    if (!session?.user?.email) return
+
+    try {
+      const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 })
+      const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 })
+      
+      const dateStart = format(weekStart, "yyyy-MM-dd")
+      const dateEnd = format(weekEnd, "yyyy-MM-dd")
+      const email = encodeURIComponent(session.user.email)
+      
+      console.log('📊 Fetching week availability:', dateStart, 'to', dateEnd)
+      
+      // Single API call for entire week (performance optimization)
+      const response = await fetch(`/api/braiders/availability?email=${email}&dateStart=${dateStart}&dateEnd=${dateEnd}`)
+      const result = await response.json()
+      
+      if (result.success) {
+        setWeekAvailabilities(result.data || [])
+        console.log('✅ Week availability loaded:', result.data?.length || 0, 'slots')
+      } else {
+        console.error('❌ Error fetching week availability:', result.message)
+        setWeekAvailabilities([])
+      }
+    } catch (error) {
+      console.error('💥 Error fetching week availability:', error)
       setWeekAvailabilities([])
-      return
     }
-    
-    const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 }) // Monday
-    const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 }) // Sunday
-    const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd })
-    
-    const allWeekAvailabilities = []
-    for (const day of weekDays) {
-      const formattedDate = format(day, "yyyy-MM-dd")
-      const dayAvailabilities = await getBraiderAvailabilities(braiderId, formattedDate)
-      allWeekAvailabilities.push(...dayAvailabilities)
-    }
-    
-    setWeekAvailabilities(allWeekAvailabilities)
   }
 
   useEffect(() => {
@@ -84,39 +123,94 @@ export default function BraiderAvailabilityPage() {
       return
     }
 
-    setIsAdding(true)
-    const formattedDate = format(date, "yyyy-MM-dd")
-    const result = await addBraiderAvailability({
-      braiderId,
-      date: formattedDate,
-      startTime,
-      endTime,
-    })
-
-    if (result.success) {
-      setMessage({ type: "success", text: result.message })
-      setStartTime("")
-      setEndTime("")
-      fetchAvailabilities(date)
-      fetchWeekAvailabilities(date)
-    } else {
-      setMessage({ type: "error", text: result.message })
+    if (!session?.user?.email) {
+      setMessage({ type: "error", text: "Sessão não encontrada. Faça login novamente." })
+      return
     }
-    setIsAdding(false)
+
+    try {
+      setIsAdding(true)
+      
+      const formattedDate = format(date, "yyyy-MM-dd")
+      
+      console.log('➕ Adding availability:', formattedDate, startTime, '-', endTime)
+      
+      const response = await fetch('/api/braiders/availability', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: session.user.email,
+          date: formattedDate,
+          startTime,
+          endTime,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setMessage({ type: "success", text: result.message })
+        setStartTime("")
+        setEndTime("")
+        
+        // Refresh both views
+        fetchAvailabilities(date)
+        fetchWeekAvailabilities(date)
+        
+        console.log('✅ Availability added successfully')
+      } else {
+        setMessage({ type: "error", text: result.message })
+      }
+    } catch (error) {
+      console.error('❌ Error adding availability:', error)
+      setMessage({ type: "error", text: "Erro ao adicionar horário. Tente novamente." })
+    } finally {
+      setIsAdding(false)
+    }
   }
 
-  const handleDeleteAvailability = async (availabilityId: string) => {
-    setLoading(true)
-    setMessage(null)
-    const result = await deleteBraiderAvailability(availabilityId)
-    if (result.success) {
-      setMessage({ type: "success", text: result.message })
-      fetchAvailabilities(date)
-      fetchWeekAvailabilities(date)
-    } else {
-      setMessage({ type: "error", text: result.message })
+  const handleDeleteClick = (availabilityId: string) => {
+    setDeleteModal({ show: true, availabilityId })
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteModal.availabilityId || !session?.user?.email) {
+      return
     }
-    setLoading(false)
+
+    try {
+      setLoading(true)
+      setMessage(null)
+      
+      console.log('🗑️ Deleting availability:', deleteModal.availabilityId)
+      
+      const email = encodeURIComponent(session.user.email)
+      const response = await fetch(`/api/braiders/availability?availabilityId=${deleteModal.availabilityId}&email=${email}`, {
+        method: 'DELETE',
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setMessage({ type: "success", text: result.message })
+        
+        // Refresh both views
+        fetchAvailabilities(date)
+        fetchWeekAvailabilities(date)
+        
+        console.log('✅ Availability deleted successfully')
+      } else {
+        setMessage({ type: "error", text: result.message })
+      }
+    } catch (error) {
+      console.error('❌ Error deleting availability:', error)
+      setMessage({ type: "error", text: "Erro ao remover horário. Tente novamente." })
+    } finally {
+      setLoading(false)
+      setDeleteModal({ show: false, availabilityId: null })
+    }
   }
 
   // Quick availability templates
@@ -155,6 +249,29 @@ export default function BraiderAvailabilityPage() {
   }
 
   const weekDays = getWeekDays()
+
+  // Loading state for initial auth check
+  if (status === 'loading') {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <div className="w-8 h-8 border-4 border-accent-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-gray-700">Carregando...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Not authenticated
+  if (!session) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <p className="text-red-500">Erro: Sessão não encontrada. Faça login novamente.</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-8">
@@ -450,7 +567,7 @@ export default function BraiderAvailabilityPage() {
                         <Button
                           variant="destructive"
                           size="icon"
-                          onClick={() => handleDeleteAvailability(avail.id)}
+                          onClick={() => handleDeleteClick(avail.id)}
                           disabled={loading}
                           className="rounded-xl"
                         >
@@ -466,6 +583,51 @@ export default function BraiderAvailabilityPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.show && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-md mx-4 shadow-2xl">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="h-8 w-8 text-red-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
+                Remover Horário
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Tem certeza que deseja remover este horário de disponibilidade?
+              </p>
+              <p className="text-sm text-red-600 mb-6">
+                Esta ação não pode ser desfeita.
+              </p>
+              
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setDeleteModal({ show: false, availabilityId: null })}
+                  disabled={loading}
+                  className="flex-1 rounded-xl"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleConfirmDelete}
+                  disabled={loading}
+                  className="flex-1 rounded-xl"
+                >
+                  {loading ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    'Remover'
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

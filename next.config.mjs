@@ -7,8 +7,8 @@ const nextConfig = {
     domains: [
       'localhost',
       'via.placeholder.com',
-      process.env.NEXT_PUBLIC_SUPABASE_URL?.replace('https://', '').replace('.supabase.co', '.supabase.co'),
-    ].filter(Boolean),
+      'ttqxxxphasfmwakstedi.supabase.co'
+    ],
     formats: ['image/webp', 'image/avif'],
   },
   async headers() {

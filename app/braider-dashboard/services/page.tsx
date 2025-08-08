@@ -8,9 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Edit3, Trash2, Briefcase, Clock, Euro, Save, X, CheckCircle, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react"
+import { Plus, Edit3, Trash2, Briefcase, Clock, Euro, Save, X, CheckCircle, AlertCircle, ChevronLeft, ChevronRight, Upload, Image as ImageIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
-import Image from "next/image"
 
 interface Service {
   id: string
@@ -33,7 +32,6 @@ export default function BraiderServicesPage() {
   const { data: session, status } = useSession()
   const [services, setServices] = useState<Service[]>([])
   const [isAdding, setIsAdding] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [initialLoading, setInitialLoading] = useState(true)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
@@ -54,6 +52,11 @@ export default function BraiderServicesPage() {
   
   // Edit service state
   const [editingService, setEditingService] = useState<Service | null>(null)
+  
+  // Image upload state
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
   
   const [newService, setNewService] = useState<NewService>({
     name: "",
@@ -119,6 +122,70 @@ export default function BraiderServicesPage() {
     fetchServices()
   }, [session, status, currentPage])
 
+  // Handle image selection
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      setMessage({ type: "error", text: "Tipo de arquivo não permitido. Use JPG, PNG ou WebP." })
+      return
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024 // 5MB
+    if (file.size > maxSize) {
+      setMessage({ type: "error", text: "Arquivo muito grande. Máximo 5MB." })
+      return
+    }
+
+    setSelectedImage(file)
+
+    // Create preview
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setImagePreview(e.target?.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  // Upload image for new service
+  const uploadServiceImage = async (serviceId: string): Promise<string | null> => {
+    if (!selectedImage || !session?.user?.email) return null
+
+    setUploadingImage(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', selectedImage)
+      formData.append('email', session.user.email)
+      formData.append('serviceId', serviceId)
+
+      const response = await fetch('/api/upload-service-image', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        console.log('✅ Service image uploaded:', result.imageUrl)
+        return result.imageUrl
+      } else {
+        console.error('❌ Error uploading image:', result.message)
+        setMessage({ type: "error", text: "Erro no upload da imagem: " + result.message })
+        return null
+      }
+    } catch (error) {
+      console.error('❌ Error uploading service image:', error)
+      setMessage({ type: "error", text: "Erro no upload da imagem. Tente novamente." })
+      return null
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
   const handleAddService = async () => {
     if (!newService.name.trim() || newService.price <= 0) {
       setMessage({ type: "error", text: "Por favor, preencha todos os campos obrigatórios." })
@@ -153,6 +220,17 @@ export default function BraiderServicesPage() {
       const result = await response.json()
 
       if (result.success) {
+        console.log('✅ Service created successfully')
+        
+        // Upload image if selected
+        if (selectedImage) {
+          console.log('📤 Uploading service image...')
+          const imageUrl = await uploadServiceImage(result.data.id)
+          if (imageUrl) {
+            console.log('✅ Service image uploaded successfully')
+          }
+        }
+        
         // Reset form
         setNewService({
           name: "",
@@ -160,9 +238,10 @@ export default function BraiderServicesPage() {
           price: 0,
           durationMinutes: 60
         })
+        setSelectedImage(null)
+        setImagePreview(null)
         setIsAdding(false)
         setMessage({ type: "success", text: result.message })
-        console.log('✅ Service created successfully')
         
         // Refresh services list (will trigger useEffect with current page)
         const email = encodeURIComponent(session.user.email || '')
@@ -518,15 +597,66 @@ export default function BraiderServicesPage() {
                   </div>
                 </div>
 
+                {/* Image Upload */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-gray-900">
+                    Imagem do Serviço (opcional)
+                  </Label>
+                  <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 hover:border-accent-400 transition-colors">
+                    {imagePreview ? (
+                      <div className="relative">
+                        <img 
+                          src={imagePreview} 
+                          alt="Preview" 
+                          className="w-full h-32 object-cover rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedImage(null)
+                            setImagePreview(null)
+                          }}
+                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label htmlFor="service-image" className="cursor-pointer">
+                        <div className="text-center py-4">
+                          <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                          <p className="text-sm text-gray-600">
+                            Clique para enviar uma imagem
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            JPG, PNG ou WebP (máx. 5MB)
+                          </p>
+                        </div>
+                        <input
+                          id="service-image"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageSelect}
+                          className="hidden"
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
 
                 <div className="flex gap-2">
                   <Button
                     onClick={handleAddService}
-                    disabled={loading}
+                    disabled={loading || uploadingImage}
                     className="flex-1 bg-green-500 hover:bg-green-600 text-white rounded-xl"
                   >
-                    {loading ? (
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    {loading || uploadingImage ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span className="text-sm">
+                          {uploadingImage ? "Enviando..." : "Salvando..."}
+                        </span>
+                      </div>
                     ) : (
                       <Save className="h-4 w-4" />
                     )}
@@ -541,6 +671,8 @@ export default function BraiderServicesPage() {
                         price: 0,
                         durationMinutes: 60
                       })
+                      setSelectedImage(null)
+                      setImagePreview(null)
                     }}
                     className="px-3 rounded-xl"
                   >
@@ -607,14 +739,24 @@ export default function BraiderServicesPage() {
                     <div className="flex">
                       {/* Image */}
                       <div className="w-32 h-32 bg-gray-100 flex-shrink-0">
-                        <Image
-                          src={service.imageUrl || "/placeholder.svg?height=128&width=128&text=S"}
-                          alt={service.name}
-                          width={128}
-                          height={128}
-                          className="w-full h-full object-cover"
-                          unoptimized={true}
-                        />
+                        {service.imageUrl && service.imageUrl !== '/placeholder.svg' ? (
+                          <img
+                            src={service.imageUrl}
+                            alt={service.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              console.error('❌ Image load error:', service.name, service.imageUrl)
+                              e.currentTarget.src = "/placeholder.svg?height=128&width=128&text=S"
+                            }}
+                            onLoad={() => {
+                              console.log('✅ Image loaded successfully:', service.name, service.imageUrl)
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                            <ImageIcon className="h-12 w-12 text-gray-400" />
+                          </div>
+                        )}
                       </div>
 
                       {/* Content */}

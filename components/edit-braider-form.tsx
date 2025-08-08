@@ -56,11 +56,11 @@ export function EditBraiderForm({ braider, onBraiderUpdated, trigger }: EditBrai
       const profileResult = await updateBraiderProfile(braider.id, {
         bio: formData.bio,
         location: formData.location,
-        contact_phone: formData.contactPhone
+        contactPhone: formData.contactPhone
       })
 
       if (!profileResult.success) {
-        toast.error(profileResult.error || 'Erro ao atualizar perfil da trancista')
+        toast.error(profileResult.message || 'Erro ao atualizar perfil da trancista')
         setLoading(false)
         return
       }

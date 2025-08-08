@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { getBraiderBookings, getBraiderById, updateBookingStatus, type Booking, type Service } from "@/lib/data"
 import { MapPin, Home, CheckCircle, XCircle, Calendar, Phone, Mail, Clock, Euro, Filter, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -11,10 +10,40 @@ import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Image from "next/image"
+import { useAuth } from "@/context/auth-context"
+import { useRouter } from "next/navigation"
+
+interface Booking {
+  id: string
+  braiderId: string
+  serviceId: string
+  clientName: string
+  clientEmail: string
+  clientPhone: string
+  clientAddress?: string
+  date: string
+  time: string
+  bookingType: 'domicilio' | 'trancista'
+  status: 'Pendente' | 'Confirmado' | 'Cancelado'
+  createdAt: string
+  service?: {
+    name: string
+    price: number
+    durationMinutes: number
+  }
+}
+
+interface Braider {
+  id: string
+  name: string
+  contactEmail: string
+  status: string
+}
 
 export default function BraiderBookingsPage() {
-  const braiderId = "braider-1"
-  const braider = getBraiderById(braiderId)
+  const { user } = useAuth()
+  const router = useRouter()
+  const [braider, setBraider] = useState<Braider | null>(null)
   const [bookings, setBookings] = useState<Booking[]>([])
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
@@ -23,15 +52,65 @@ export default function BraiderBookingsPage() {
   const [typeFilter, setTypeFilter] = useState("all")
 
   useEffect(() => {
-    const fetchBookings = async () => {
+    const fetchData = async () => {
+      console.log('Current user object:', user)
+      
+      if (!user?.id) {
+        console.log('No user ID found, redirecting to login')
+        router.push('/login')
+        return
+      }
+
       setLoading(true)
-      const braiderBookings = await getBraiderBookings(braiderId)
-      setBookings(braiderBookings)
-      setFilteredBookings(braiderBookings)
-      setLoading(false)
+      try {
+        console.log('Fetching braider bookings via API...')
+        console.log('User details:', { id: user.id, email: user.email, name: user.name, role: user.role })
+        
+        // Check if user has braider role
+        if (user.role !== 'braider') {
+          console.log('User role is not braider. Current role:', user.role)
+        }
+        
+        // Fetch data via API to bypass RLS issues
+        const response = await fetch('/api/braiders/bookings', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
+
+        const result = await response.json()
+
+        if (!response.ok) {
+          console.error('API error:', result.error)
+          if (result.needsRegistration) {
+            console.log('User needs to be registered as braider')
+            setLoading(false)
+            return
+          }
+          throw new Error(result.error || 'Erro ao carregar dados')
+        }
+
+        console.log('API response:', result)
+
+        if (result.success) {
+          setBraider(result.braider)
+          setBookings(result.bookings || [])
+          setFilteredBookings(result.bookings || [])
+          console.log('Data loaded successfully:', { 
+            braider: result.braider.id, 
+            bookingsCount: result.bookings?.length || 0 
+          })
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error)
+      } finally {
+        setLoading(false)
+      }
     }
-    fetchBookings()
-  }, [])
+    
+    fetchData()
+  }, [user, router])
 
   // Filter bookings based on search and filters
   useEffect(() => {
@@ -60,17 +139,32 @@ export default function BraiderBookingsPage() {
 
   const handleUpdateBookingStatus = async (bookingId: string, newStatus: Booking["status"]) => {
     setLoading(true)
-    const result = await updateBookingStatus(bookingId, newStatus)
-    if (result.success) {
-      setBookings(prevBookings => 
-        prevBookings.map(b => 
-          b.id === bookingId ? { ...b, status: newStatus } : b
+    try {
+      const response = await fetch('/api/braiders/bookings', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ bookingId, status: newStatus })
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        setBookings(prevBookings => 
+          prevBookings.map(b => 
+            b.id === bookingId ? { ...b, status: newStatus } : b
+          )
         )
-      )
-    } else {
-      console.error("Erro ao atualizar status do agendamento:", result.message)
+        console.log('Status atualizado com sucesso')
+      } else {
+        console.error("Erro ao atualizar status do agendamento:", result.error)
+      }
+    } catch (error) {
+      console.error("Erro inesperado ao atualizar status:", error)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const getStatusBadgeVariant = (status: Booking["status"]) => {
@@ -94,14 +188,75 @@ export default function BraiderBookingsPage() {
   const totalRevenue = bookings
     .filter(b => b.status === "Confirmado")
     .reduce((sum, booking) => {
-      const service = braider?.services.find(s => s.id === booking.serviceId)
-      return sum + (service?.price || 0)
+      return sum + (booking.service?.price || 0)
     }, 0)
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-600 mx-auto mb-4"></div>
+          <p className="text-lg text-gray-600">Carregando agendamentos...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!braider) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-red-500">Erro: Dados da trancista não encontrados. Acesso negado.</p>
+        <div className="text-center max-w-md mx-auto p-8">
+          <div className="bg-yellow-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-6">
+            <Calendar className="h-8 w-8 text-yellow-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Acesso Restrito</h2>
+          <p className="text-gray-600 mb-6">
+            Esta página é exclusiva para trancistas registradas e aprovadas no sistema.
+          </p>
+          
+          {user?.email && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <p className="text-blue-800 text-sm">
+                <strong>Email atual:</strong> {user.email}
+              </p>
+              <p className="text-blue-600 text-xs mt-1">
+                Role: {user.role || 'customer'}
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-3 text-sm text-gray-500">
+            <p>• Verifique se você se registrou como trancista</p>
+            <p>• Aguarde a aprovação do seu cadastro</p>
+            <p>• Para testar, use um email de trancista mock</p>
+            <p>• Entre em contato conosco se houver problemas</p>
+          </div>
+
+          <div className="bg-gray-50 border rounded-lg p-3 mt-4 text-xs">
+            <p className="font-semibold text-gray-700 mb-2">Emails de teste disponíveis:</p>
+            <div className="grid grid-cols-1 gap-1 text-gray-600">
+              <p>ana.trancista@example.com</p>
+              <p>maria@example.com</p>
+              <p>ana@example.com</p>
+            </div>
+          </div>
+
+          <div className="mt-8 space-y-3">
+            <Button
+              onClick={() => router.push('/register-braider')}
+              className="w-full bg-accent-500 hover:bg-accent-600 text-white"
+            >
+              Registrar-se como Trancista
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => router.push('/')}
+              className="w-full"
+            >
+              Voltar ao Início
+            </Button>
+          </div>
+        </div>
       </div>
     )
   }
@@ -245,21 +400,7 @@ export default function BraiderBookingsPage() {
           </Badge>
         </div>
 
-        {loading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map(i => (
-              <Card key={i} className="animate-pulse bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0">
-                <CardContent className="p-6">
-                  <div className="space-y-3">
-                    <div className="h-6 bg-gray-200 rounded w-3/4"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : filteredBookings.length === 0 ? (
+        {filteredBookings.length === 0 ? (
           <Card className="bg-white/90 backdrop-blur-sm shadow-lg rounded-3xl border-0">
             <CardContent className="text-center py-16">
               <Calendar className="h-16 w-16 mx-auto mb-6 text-gray-400" />
@@ -285,7 +426,7 @@ export default function BraiderBookingsPage() {
           </Card>
         ) : (
           filteredBookings.map((booking) => {
-            const service = braider.services.find((s: Service) => s.id === booking.serviceId)
+            const service = booking.service
             return (
               <Card key={booking.id} className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0 overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <CardContent className="p-0">
@@ -357,10 +498,10 @@ export default function BraiderBookingsPage() {
                           <div className="flex items-center gap-4">
                             <span>
                               <Clock className="h-4 w-4 inline mr-1" />
-                              {service.durationMinutes} min
+                              {service?.durationMinutes || 0} min
                             </span>
                             <span className="text-2xl font-bold text-accent-600">
-                              €{service.price.toFixed(2)}
+                              €{service?.price?.toFixed(2) || '0.00'}
                             </span>
                           </div>
                         </div>
@@ -378,7 +519,7 @@ export default function BraiderBookingsPage() {
                               disabled={loading}
                             >
                               <CheckCircle className="h-4 w-4 mr-2" />
-                              Aceitar
+                              Aprovar
                             </Button>
                             <Button
                               variant="destructive"

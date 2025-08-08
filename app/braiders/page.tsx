@@ -2,34 +2,112 @@
 
 import SiteHeader from "@/components/site-header"
 import BraiderCard from "@/components/braider-card"
-import { allBraiders } from "@/lib/data"
+import { getAllBraidersLegacy } from "@/lib/data-supabase"
 import Image from "next/image"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { useState } from "react"
-import { Search, Star, SlidersHorizontal } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Search, Star, SlidersHorizontal, MapPin, Filter } from "lucide-react"
 import BraiderRegisterButton from "@/components/auth/braider-register-button"
+import { Braider } from "@/lib/data"
+import { portugalDistricts } from "@/lib/portugal-data"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 export default function BraidersPage() {
+  const [braiders, setBraiders] = useState<Braider[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedFilter, setSelectedFilter] = useState("all")
+  const [selectedDistrito, setSelectedDistrito] = useState("all")
+  const [selectedConcelho, setSelectedConcelho] = useState("all")
+  const [selectedFreguesia, setSelectedFreguesia] = useState("all")
   const [sortBy, setSortBy] = useState("name")
 
-  // Filter braiders based on search and filters
-  const filteredBraiders = allBraiders.filter((braider) => {
+  // Load braiders from database
+  useEffect(() => {
+    async function loadBraiders() {
+      try {
+        setLoading(true)
+        console.log('Starting to load braiders...')
+        const data = await getAllBraidersLegacy()
+        console.log('Braiders loaded:', data.length, data)
+        setBraiders(data)
+      } catch (error) {
+        console.error('Error loading braiders:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadBraiders()
+  }, [])
+
+  // Get available distritos from actual braider data
+  const availableDistritos = Array.from(new Set(
+    braiders
+      .filter(b => b.district)
+      .map(b => b.district!)
+  )).sort()
+  
+  // Get available concelhos based on selected distrito and actual data
+  const availableConcelhos = selectedDistrito !== "all" 
+    ? Array.from(new Set(
+        braiders
+          .filter(b => b.district === selectedDistrito && b.concelho)
+          .map(b => b.concelho!)
+      )).sort()
+    : []
+
+  // Get available freguesias based on selected concelho and actual data
+  const availableFreguesias = selectedDistrito !== "all" && selectedConcelho !== "all" 
+    ? Array.from(new Set(
+        braiders
+          .filter(b => b.district === selectedDistrito && b.concelho === selectedConcelho && b.freguesia)
+          .map(b => b.freguesia!)
+      )).sort()
+    : []
+
+  // Clear child filters when parent changes
+  useEffect(() => {
+    if (selectedDistrito === "all") {
+      setSelectedConcelho("all")
+      setSelectedFreguesia("all")
+    }
+  }, [selectedDistrito])
+
+  useEffect(() => {
+    if (selectedConcelho === "all") {
+      setSelectedFreguesia("all")
+    }
+  }, [selectedConcelho])
+
+  // Enhanced filtering with Portuguese location hierarchy
+  const filteredBraiders = braiders.filter((braider) => {
     const matchesSearch = 
       braider.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       braider.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      braider.bio.toLowerCase().includes(searchTerm.toLowerCase())
+      braider.bio.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (braider.district && braider.district.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (braider.concelho && braider.concelho.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (braider.freguesia && braider.freguesia.toLowerCase().includes(searchTerm.toLowerCase()))
     
     const matchesFilter = selectedFilter === "all" || braider.status === selectedFilter
     
-    return matchesSearch && matchesFilter
+    const matchesDistrito = selectedDistrito === "all" || braider.district === selectedDistrito
+    const matchesConcelho = selectedConcelho === "all" || braider.concelho === selectedConcelho  
+    const matchesFreguesia = selectedFreguesia === "all" || braider.freguesia === selectedFreguesia
+    
+    return matchesSearch && matchesFilter && matchesDistrito && matchesConcelho && matchesFreguesia
   })
 
-  // Sort braiders
+  // Enhanced sorting with location option
   const sortedBraiders = [...filteredBraiders].sort((a, b) => {
     switch (sortBy) {
       case "name":
@@ -38,13 +116,24 @@ export default function BraidersPage() {
         return a.location.localeCompare(b.location)
       case "services":
         return b.services.length - a.services.length
+      case "experience":
+        const getExperienceWeight = (exp?: string) => {
+          if (!exp) return 0
+          if (exp === "iniciante") return 1
+          if (exp === "1-2") return 2
+          if (exp === "3-5") return 3
+          if (exp === "6-10") return 4
+          if (exp === "10+") return 5
+          return 0
+        }
+        return getExperienceWeight(b.yearsExperience) - getExperienceWeight(a.yearsExperience)
       default:
         return 0
     }
   })
 
-  const approvedCount = allBraiders.filter(b => b.status === 'approved').length
-  const totalServices = allBraiders.reduce((sum, b) => sum + b.services.length, 0)
+  const approvedCount = braiders.filter(b => b.status === 'approved').length
+  const totalServices = braiders.reduce((sum, b) => sum + b.services.length, 0)
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
@@ -52,6 +141,14 @@ export default function BraidersPage() {
       
       {/* Modern Hero Section */}
       <div className="relative bg-gradient-to-r from-brand-800 via-brand-700 to-brand-600 text-white overflow-hidden">
+        {loading && (
+          <div className="absolute inset-0 bg-gradient-to-r from-brand-800 via-brand-700 to-brand-600 flex items-center justify-center z-10">
+            <div className="text-center text-white">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+              <p className="text-lg">Carregando trancistas...</p>
+            </div>
+          </div>
+        )}
         <div className="absolute inset-0 bg-black/20" />
         <div className="absolute inset-0 bg-[url('/pattern.svg')] opacity-10" />
         <div className="relative container mx-auto px-4 py-16 md:py-24">
@@ -116,12 +213,12 @@ export default function BraidersPage() {
                 </div>
 
                 {/* Filters and Sort */}
-                <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
                   
                   {/* Filter Buttons */}
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-wrap">
                     <SlidersHorizontal className="h-5 w-5 text-gray-600" />
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       <Button
                         variant={selectedFilter === "all" ? "default" : "outline"}
                         size="sm"
@@ -161,18 +258,93 @@ export default function BraidersPage() {
                     </div>
                   </div>
 
-                  {/* Sort Options */}
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-gray-600">Ordenar por:</span>
-                    <select 
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
-                      className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-accent-500 focus:border-accent-500"
-                    >
-                      <option value="name">Nome</option>
-                      <option value="location">Localização</option>
-                      <option value="services">Nº de Serviços</option>
-                    </select>
+                  {/* Portuguese Location Filters and Sort */}
+                  <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center justify-between">
+                    
+                    {/* Portuguese Location Hierarchy */}
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <MapPin className="h-5 w-5 text-gray-600" />
+                      
+                      {/* Distrito Filter */}
+                      <div className="flex flex-col">
+                        <span className="text-xs text-gray-500 mb-1">Distrito</span>
+                        <Select value={selectedDistrito} onValueChange={setSelectedDistrito}>
+                          <SelectTrigger className="w-40 bg-gray-50 border-gray-200 rounded-xl">
+                            <SelectValue placeholder="Distrito" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todos</SelectItem>
+                            {availableDistritos.map((distrito) => (
+                              <SelectItem key={distrito} value={distrito}>
+                                {distrito}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Concelho Filter */}
+                      <div className="flex flex-col">
+                        <span className="text-xs text-gray-500 mb-1">Concelho</span>
+                        <Select 
+                          value={selectedConcelho} 
+                          onValueChange={setSelectedConcelho}
+                          disabled={selectedDistrito === "all"}
+                        >
+                          <SelectTrigger className="w-40 bg-gray-50 border-gray-200 rounded-xl">
+                            <SelectValue placeholder="Concelho" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todos</SelectItem>
+                            {availableConcelhos.map((concelho) => (
+                              <SelectItem key={concelho} value={concelho}>
+                                {concelho}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Freguesia Filter */}
+                      {availableFreguesias.length > 0 && (
+                        <div className="flex flex-col">
+                          <span className="text-xs text-gray-500 mb-1">Freguesia</span>
+                          <Select 
+                            value={selectedFreguesia} 
+                            onValueChange={setSelectedFreguesia}
+                            disabled={selectedConcelho === "all"}
+                          >
+                            <SelectTrigger className="w-40 bg-gray-50 border-gray-200 rounded-xl">
+                              <SelectValue placeholder="Freguesia" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Todas</SelectItem>
+                              {availableFreguesias.map((freguesia) => (
+                                <SelectItem key={freguesia} value={freguesia}>
+                                  {freguesia}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Sort Options */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-gray-600">Ordenar por:</span>
+                      <Select value={sortBy} onValueChange={setSortBy}>
+                        <SelectTrigger className="w-40 bg-gray-50 border-gray-200 rounded-xl">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="name">Nome</SelectItem>
+                          <SelectItem value="location">Localização</SelectItem>
+                          <SelectItem value="services">Nº de Serviços</SelectItem>
+                          <SelectItem value="experience">Experiência</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -182,44 +354,92 @@ export default function BraidersPage() {
           {/* Results Section */}
           <div className="space-y-6">
             
-            {/* Results Count */}
-            <div className="flex items-center justify-between">
+            {/* Results Count and Filters Summary */}
+            <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="flex items-center gap-3">
                 <h2 className="text-2xl font-bold font-heading text-gray-900">
-                  {sortedBraiders.length === 0 ? "Nenhuma trancista encontrada" : "Nossas Trancistas"}
+                  {loading ? "Carregando..." : sortedBraiders.length === 0 ? "Nenhuma trancista encontrada" : "Nossas Trancistas"}
                 </h2>
                 <Badge variant="secondary" className="bg-accent-100 text-accent-700 px-3 py-1">
                   {sortedBraiders.length} {sortedBraiders.length === 1 ? "resultado" : "resultados"}
                 </Badge>
+                
+                {/* Location filter badges */}
+                {selectedDistrito !== "all" && (
+                  <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50">
+                    📍 {selectedDistrito}
+                  </Badge>
+                )}
+                {selectedConcelho !== "all" && (
+                  <Badge variant="outline" className="border-green-200 text-green-700 bg-green-50">
+                    🏘️ {selectedConcelho}
+                  </Badge>
+                )}
+                {selectedFreguesia !== "all" && (
+                  <Badge variant="outline" className="border-purple-200 text-purple-700 bg-purple-50">
+                    🏡 {selectedFreguesia}
+                  </Badge>
+                )}
               </div>
               
-              {searchTerm && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSearchTerm("")}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  Limpar busca
-                </Button>
-              )}
+              <div className="flex gap-2">
+                {(searchTerm || selectedDistrito !== "all" || selectedConcelho !== "all" || selectedFreguesia !== "all") && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSearchTerm("")
+                      setSelectedDistrito("all")
+                      setSelectedConcelho("all")
+                      setSelectedFreguesia("all")
+                      setSelectedFilter("all")
+                    }}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <Filter className="h-4 w-4 mr-2" />
+                    Limpar filtros
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Braiders Grid */}
-            {sortedBraiders.length === 0 ? (
+            {loading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <Card key={i} className="bg-white/90 backdrop-blur-sm shadow-lg rounded-3xl border-0 animate-pulse">
+                    <CardContent className="p-6">
+                      <div className="bg-gray-200 h-48 rounded-2xl mb-4"></div>
+                      <div className="space-y-2">
+                        <div className="bg-gray-200 h-4 rounded w-3/4"></div>
+                        <div className="bg-gray-200 h-4 rounded w-1/2"></div>
+                        <div className="bg-gray-200 h-3 rounded w-full"></div>
+                        <div className="bg-gray-200 h-3 rounded w-2/3"></div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : sortedBraiders.length === 0 ? (
               <Card className="bg-white/90 backdrop-blur-sm shadow-lg rounded-3xl border-0">
                 <CardContent className="text-center py-16">
                   <div className="text-6xl mb-6">🔍</div>
                   <h3 className="text-2xl font-bold text-gray-900 mb-4">Nenhuma trancista encontrada</h3>
                   <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                    {searchTerm 
-                      ? `Não encontramos trancistas que correspondem à busca "${searchTerm}". Tente outros termos.`
-                      : "Não há trancistas disponíveis no momento com os filtros selecionados."
+                    {searchTerm || selectedDistrito !== "all" || selectedConcelho !== "all" || selectedFreguesia !== "all"
+                      ? "Não encontramos trancistas que correspondem aos filtros selecionados. Tente ajustar os filtros."
+                      : "Não há trancistas disponíveis no momento."
                     }
                   </p>
-                  {searchTerm && (
+                  {(searchTerm || selectedDistrito !== "all" || selectedConcelho !== "all" || selectedFreguesia !== "all") && (
                     <Button 
-                      onClick={() => setSearchTerm("")}
+                      onClick={() => {
+                        setSearchTerm("")
+                        setSelectedDistrito("all")
+                        setSelectedConcelho("all")
+                        setSelectedFreguesia("all")
+                        setSelectedFilter("all")
+                      }}
                       className="bg-accent-500 hover:bg-accent-600 text-white rounded-full"
                     >
                       Ver todas as trancistas
@@ -241,7 +461,7 @@ export default function BraidersPage() {
             <CardContent className="text-center p-12">
               <h3 className="text-3xl font-bold font-heading mb-4">Você é uma Trancista?</h3>
               <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
-                Junte-se à nossa comunidade de profissionais e conecte-se com novos clientes. 
+                Junte-se à nossa comunidade de {approvedCount} profissionais verificadas e conecte-se com novos clientes. 
                 Cadastre-se agora e faça parte da Wilnara Tranças!
               </p>
               <BraiderRegisterButton 

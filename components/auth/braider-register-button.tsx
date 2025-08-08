@@ -89,7 +89,7 @@ export default function BraiderRegisterButton({
     switch (braiderStatus.status) {
       case "approved":
         return (
-          <Link href="/dashboard/braider">
+          <Link href="/braider-dashboard">
             <Button 
               variant={variant}
               className={className}
@@ -103,7 +103,7 @@ export default function BraiderRegisterButton({
       
       case "pending":
         return (
-          <Link href="/profile/braider-status">
+          <Link href="/profile">
             <Button 
               variant="outline"
               className="border-yellow-300 text-yellow-700 hover:bg-yellow-50"

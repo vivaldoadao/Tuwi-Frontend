@@ -596,23 +596,13 @@ export async function getAllBraiders(
           location: braider.location || 'Localização não informada',
           contactEmail: userData?.email || 'email-nao-disponivel@exemplo.com',
           contactPhone: braider.contact_phone || '',
-          profileImageUrl: braider.profile_image_url || '/placeholder.svg?height=200&width=200&text=T',
+          profileImageUrl: '/placeholder.svg?height=200&width=200&text=T',
           services: [], // Will load separately if needed
           portfolioImages: braider.portfolio_images || [],
           status: braider.status || 'pending',
           averageRating: parseFloat(braider.average_rating || '0'),
           totalReviews: parseInt(braider.total_reviews || '0'),
-          createdAt: braider.created_at || new Date().toISOString(),
-          district: braider.district,
-          concelho: braider.concelho,
-          freguesia: braider.freguesia,
-          whatsapp: braider.whatsapp,
-          instagram: braider.instagram,
-          address: braider.address,
-          postalCode: braider.postal_code,
-          servesHome: braider.serves_home || false,
-          servesStudio: braider.serves_studio || false,
-          servesSalon: braider.serves_salon || false
+          createdAt: braider.created_at || new Date().toISOString()
         })
       })
     }
@@ -633,272 +623,18 @@ export async function getAllBraidersLegacy(): Promise<Braider[]> {
   return braiders // Return all braiders for testing, regardless of status
 }
 
-// Function to try creating a braider record if user matches mock data
-async function tryCreateBraiderForUser(userId: string): Promise<Braider | null> {
-  try {
-    // Get user data
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single()
-
-    if (userError || !userData) {
-      console.log('User not found in users table:', userError)
-      return null
-    }
-
-    console.log('Found user:', userData.email, 'Role:', userData.role)
-
-    // Check if this user's email matches any of the mock braider emails or known braider emails
-    const mockBraiderEmails = [
-      'ana.trancista@example.com',
-      'bia.trancista@example.com', 
-      'carla.estilos@example.com',
-      'maria@example.com',
-      'ana@example.com',
-      'joana@example.com',
-      'camila@example.com',
-      'znattechnology95@gmail.com'  // Add the current user
-    ]
-
-    console.log('Checking if user email matches known braiders:', userData.email)
-
-    if (mockBraiderEmails.includes(userData.email)) {
-      console.log('User email matches known braider data. Checking if braider record exists...')
-      
-      // Check if braider record already exists (might be with different user_id or contact_email)
-      const { data: existingBraider } = await supabase
-        .from('braiders')
-        .select('*')
-        .or(`contact_email.eq.${userData.email},user_id.eq.${userId}`)
-        .single()
-
-      if (existingBraider) {
-        console.log('Found existing braider record:', existingBraider.id)
-        
-        // Update the braider record with the correct user_id and contact_email
-        const { error: updateError } = await supabase
-          .from('braiders')
-          .update({ 
-            user_id: userId,
-            contact_email: userData.email 
-          })
-          .eq('id', existingBraider.id)
-
-        if (updateError) {
-          console.error('Error updating braider user_id:', updateError)
-          return null
-        }
-
-        // Also update user role to braider
-        await supabase
-          .from('users')
-          .update({ role: 'braider' })
-          .eq('id', userId)
-
-        console.log('Successfully linked user to existing braider record')
-        
-        // Return the updated braider data (avoiding infinite recursion)
-        return await getBraiderDirectly(existingBraider.id)
-      } else {
-        console.log('No existing braider record found, need to create one')
-        // For znattechnology95@gmail.com, create a new braider record
-        if (userData.email === 'znattechnology95@gmail.com') {
-          return await createBraiderForZnaTechnology(userId, userData)
-        }
-      }
-    }
-
-    // If no matching email or existing braider, user needs to register as braider
-    console.log('User does not match mock braider data or no existing braider record found')
-    return null
-
-  } catch (error) {
-    console.error('Error in tryCreateBraiderForUser:', error)
-    return null
-  }
-}
-
-// Helper function to get braider data directly by ID (avoids recursion)
-async function getBraiderDirectly(braiderId: string): Promise<Braider | null> {
-  try {
-    const { data, error } = await supabase
-      .from('braiders')
-      .select('*')
-      .eq('id', braiderId)
-      .single()
-
-    if (error || !data) {
-      console.error('Error fetching braider directly:', error)
-      return null
-    }
-
-    // Get the user's information
-    const { data: userData } = await supabase
-      .from('users')
-      .select('id, name, email')
-      .eq('id', data.user_id)
-      .single()
-
-    // Get services for this braider
-    const { data: servicesData } = await supabase
-      .from('services')
-      .select('*')
-      .eq('braider_id', data.id)
-
-    return {
-      id: data.id,
-      name: userData?.name || data.name || `Trancista ${data.id.slice(0, 8)}`,
-      bio: data.bio || '',
-      location: data.location || 'Localização não informada',
-      contactEmail: data.contact_email || userData?.email || 'email@teste.com',
-      contactPhone: data.contact_phone || '',
-      profileImageUrl: data.profile_image_url || '/placeholder.svg?height=200&width=200&text=T',
-      status: data.status || 'approved',
-      services: (servicesData || []).map(service => ({
-        id: service.id,
-        name: service.name,
-        description: service.description || '',
-        price: service.price,
-        durationMinutes: service.duration_minutes,
-        imageUrl: service.image_url || '/placeholder.svg?height=300&width=400&text=Serviço',
-      }))
-    }
-  } catch (error) {
-    console.error('Error in getBraiderDirectly:', error)
-    return null
-  }
-}
-
-// Helper function to create braider record for ZnaTechnology user
-async function createBraiderForZnaTechnology(userId: string, userData: any): Promise<Braider | null> {
-  try {
-    console.log('Creating braider record for ZnaTechnology user')
-    
-    const { data: newBraider, error } = await supabase
-      .from('braiders')
-      .insert({
-        user_id: userId,
-        name: userData.name || 'ZnaTechnology Trancista',
-        bio: 'Trancista especializada em tranças modernas e estilos contemporâneos.',
-        location: 'Lisboa, Portugal',
-        contact_phone: '+351 91234-5678',
-        contact_email: userData.email,
-        status: 'approved',
-        portfolio_images: ['/placeholder.svg?height=300&width=400&text=Portfolio+ZNA'],
-        average_rating: 4.5,
-        total_reviews: 0
-      })
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Error creating braider for ZnaTechnology:', error)
-      return null
-    }
-
-    console.log('Successfully created braider record:', newBraider.id)
-    
-    // Create some sample services
-    await supabase
-      .from('services')
-      .insert([
-        {
-          braider_id: newBraider.id,
-          name: 'Box Braids Premium',
-          description: 'Box braids de alta qualidade com acabamento profissional.',
-          price: 300.00,
-          duration_minutes: 240,
-          image_url: '/placeholder.svg?height=150&width=200&text=Box+Braids+Premium'
-        },
-        {
-          braider_id: newBraider.id,
-          name: 'Tranças Africanas Modernas',
-          description: 'Estilos modernos de tranças africanas personalizadas.',
-          price: 250.00,
-          duration_minutes: 180,
-          image_url: '/placeholder.svg?height=150&width=200&text=Trancas+Modernas'
-        }
-      ])
-
-    return await getBraiderDirectly(newBraider.id)
-  } catch (error) {
-    console.error('Error in createBraiderForZnaTechnology:', error)
-    return null
-  }
-}
-
 export async function getBraiderByUserId(userId: string): Promise<Braider | null> {
   try {
-    console.log('=== getBraiderByUserId START ===')
-    console.log('Fetching braider for userId:', userId)
-    console.log('Current user context - Supabase client initialized:', !!supabase)
-    
-    // Test basic access to braiders table
-    console.log('Testing basic access to braiders table...')
-    const { data: testAccess, error: accessError } = await supabase
-      .from('braiders')
-      .select('count(*)')
-      .limit(1)
-    
-    console.log('Basic access test result:', { testAccess, accessError })
-    
-    if (accessError) {
-      console.error('BASIC ACCESS FAILED - RLS Issue?', accessError)
-      console.error('Access error code:', accessError.code)
-      console.error('Access error message:', accessError.message)
-      console.error('Access error details:', accessError.details)
-      console.error('Access error hint:', accessError.hint)
-      
-      // Try with service client instead
-      return await getBraiderByUserIdWithServiceClient(userId)
-    }
-    
-    // First check what braiders exist in the table
-    console.log('Fetching all braiders...')
-    const { data: allBraiders, error: allBraidersError } = await supabase
-      .from('braiders')
-      .select('id, user_id, contact_email, status')
-      .limit(10)
-    
-    console.log('All braiders result:', { count: allBraiders?.length, error: allBraidersError })
-    if (allBraidersError) {
-      console.error('Error fetching all braiders:', allBraidersError)
-    } else {
-      console.log('All braiders in database:', allBraiders)
-    }
-    
-    console.log('Now searching for specific braider...')
     const { data, error } = await supabase
       .from('braiders')
       .select('*')
       .eq('user_id', userId)
       .single()
 
-    console.log('Specific braider search result:', { found: !!data, error: !!error })
-
     if (error) {
       console.error('Error fetching braider by user_id:', error)
-      console.error('Error code:', error.code)
-      console.error('Error message:', error.message)
-      console.error('Error details:', error.details)
-      console.error('Error hint:', error.hint)
-      
-      // If no braider found, user may not be registered as braider yet or not approved
-      if (error.code === 'PGRST116') {
-        console.log('No approved braider found for this user_id. User may not be registered as a braider or awaiting approval.')
-        
-        // Check if we can create a braider record based on user's email
-        const braiderData = await tryCreateBraiderForUser(userId)
-        if (braiderData) {
-          return braiderData
-        }
-      }
       return null
     }
-
-    console.log('Braider found:', data?.id)
 
     // Get the user's information
     const { data: userData } = await supabase
@@ -920,7 +656,7 @@ export async function getBraiderByUserId(userId: string): Promise<Braider | null
       location: data.location || 'Localização não informada',
       contactEmail: data.contact_email || userData?.email || '',
       contactPhone: data.contact_phone || '',
-      profileImageUrl: data.profile_image_url || '/placeholder.svg?height=200&width=200&text=T',
+      profileImageUrl: '/placeholder.svg?height=200&width=200&text=T',
       services: (servicesData || []).map((service: any) => ({
         id: service.id,
         name: service.name,
@@ -987,7 +723,7 @@ export async function getBraiderById(id: string): Promise<Braider | null> {
       location: data.location || 'Localização não informada',
       contactEmail: userData?.email || 'email-nao-disponivel@exemplo.com',
       contactPhone: data.contact_phone || '',
-      profileImageUrl: data.profile_image_url || '/placeholder.svg?height=200&width=200&text=T',
+      profileImageUrl: '/placeholder.svg?height=200&width=200&text=T',
       services: (servicesData || []).map((service: any) => ({
         id: service.id,
         name: service.name,
@@ -1000,173 +736,10 @@ export async function getBraiderById(id: string): Promise<Braider | null> {
       status: data.status || 'pending',
       averageRating: parseFloat(data.average_rating || '0'),
       totalReviews: parseInt(data.total_reviews || '0'),
-      createdAt: data.created_at || new Date().toISOString(),
-      district: data.district,
-      concelho: data.concelho,
-      freguesia: data.freguesia,
-      whatsapp: data.whatsapp,
-      instagram: data.instagram,
-      address: data.address,
-      postalCode: data.postal_code,
-      servesHome: data.serves_home || false,
-      servesStudio: data.serves_studio || false,
-      servesSalon: data.serves_salon || false
+      createdAt: data.created_at || new Date().toISOString()
     }
   } catch (error) {
     console.error('Unexpected error fetching braider:', error)
-    return null
-  }
-}
-
-// Fallback function using service client to bypass RLS
-async function getBraiderByUserIdWithServiceClient(userId: string): Promise<Braider | null> {
-  try {
-    console.log('=== Using Service Client Fallback ===')
-    
-    // Create service client with admin privileges
-    const serviceClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-    
-    console.log('Service client created, testing access...')
-    
-    // Test basic access with service client
-    const { data: testAccess, error: testError } = await serviceClient
-      .from('braiders')
-      .select('count(*)')
-      .limit(1)
-    
-    console.log('Service client test access:', { testAccess, testError })
-    
-    if (testError) {
-      console.error('Service client also failed:', testError)
-      return null
-    }
-    
-    // Try to find existing braider
-    const { data: existingBraider, error: findError } = await serviceClient
-      .from('braiders')
-      .select('*')
-      .eq('user_id', userId)
-      .single()
-    
-    console.log('Service client braider search:', { found: !!existingBraider, error: findError })
-    
-    if (existingBraider && !findError) {
-      console.log('Found existing braider with service client:', existingBraider.id)
-      return await formatBraiderResponse(existingBraider, serviceClient)
-    }
-    
-    // If not found, try to create one for known users
-    console.log('No existing braider found, checking for auto-creation...')
-    
-    const { data: userData } = await serviceClient
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single()
-    
-    if (userData && userData.email === 'znattechnology95@gmail.com') {
-      console.log('Creating braider for ZnaTechnology user via service client...')
-      return await createBraiderWithServiceClient(userId, userData, serviceClient)
-    }
-    
-    console.log('No auto-creation available for this user')
-    return null
-    
-  } catch (error) {
-    console.error('Error in service client fallback:', error)
-    return null
-  }
-}
-
-// Helper to format braider response
-async function formatBraiderResponse(braiderData: any, client: any): Promise<Braider> {
-  // Get user info
-  const { data: userData } = await client
-    .from('users')
-    .select('id, name, email')
-    .eq('id', braiderData.user_id)
-    .single()
-
-  // Get services
-  const { data: servicesData } = await client
-    .from('services')
-    .select('*')
-    .eq('braider_id', braiderData.id)
-
-  return {
-    id: braiderData.id,
-    name: userData?.name || braiderData.name || `Trancista ${braiderData.id.slice(0, 8)}`,
-    bio: braiderData.bio || '',
-    location: braiderData.location || 'Localização não informada',
-    contactEmail: braiderData.contact_email || userData?.email || 'email@teste.com',
-    contactPhone: braiderData.contact_phone || '',
-    profileImageUrl: braiderData.profile_image_url || '/placeholder.svg?height=200&width=200&text=T',
-    status: braiderData.status || 'approved',
-    services: (servicesData || []).map((service: any) => ({
-      id: service.id,
-      name: service.name,
-      description: service.description || '',
-      price: service.price,
-      durationMinutes: service.duration_minutes,
-      imageUrl: service.image_url || '/placeholder.svg?height=300&width=400&text=Serviço',
-    }))
-  }
-}
-
-// Helper to create braider with service client
-async function createBraiderWithServiceClient(userId: string, userData: any, serviceClient: any): Promise<Braider | null> {
-  try {
-    const { data: newBraider, error } = await serviceClient
-      .from('braiders')
-      .insert({
-        user_id: userId,
-        bio: 'Trancista especializada em tranças modernas e estilos contemporâneos.',
-        location: 'Lisboa, Portugal',
-        contact_phone: '+351 91234-5678',
-        contact_email: userData.email,
-        status: 'approved',
-        portfolio_images: ['/placeholder.svg?height=300&width=400&text=Portfolio+ZNA'],
-        average_rating: 4.5,
-        total_reviews: 0
-      })
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Error creating braider with service client:', error)
-      return null
-    }
-
-    console.log('Successfully created braider with service client:', newBraider.id)
-    
-    // Create sample services
-    await serviceClient
-      .from('services')
-      .insert([
-        {
-          braider_id: newBraider.id,
-          name: 'Box Braids Premium',
-          description: 'Box braids de alta qualidade com acabamento profissional.',
-          price: 300.00,
-          duration_minutes: 240,
-          image_url: '/placeholder.svg?height=150&width=200&text=Box+Braids+Premium'
-        },
-        {
-          braider_id: newBraider.id,
-          name: 'Tranças Africanas Modernas',
-          description: 'Estilos modernos de tranças africanas personalizadas.',
-          price: 250.00,
-          duration_minutes: 180,
-          image_url: '/placeholder.svg?height=150&width=200&text=Trancas+Modernas'
-        }
-      ])
-
-    return await formatBraiderResponse(newBraider, serviceClient)
-  } catch (error) {
-    console.error('Error in createBraiderWithServiceClient:', error)
     return null
   }
 }
@@ -1557,7 +1130,39 @@ export async function getBraiderBookings(braiderId: string): Promise<Booking[]> 
   }
 }
 
-// createBooking function removed - now handled via API route
+export async function createBooking(bookingData: Omit<Booking, 'id' | 'createdAt'>): Promise<{success: boolean, error?: string, bookingId?: string}> {
+  try {
+    const { data, error } = await supabase
+      .from('bookings')
+      .insert([{
+        service_id: bookingData.serviceId,
+        client_id: 'user-customer-001', // TODO: Get from session
+        braider_id: bookingData.braiderId,
+        booking_date: bookingData.date,
+        booking_time: bookingData.time,
+        service_type: bookingData.bookingType,
+        client_name: bookingData.clientName,
+        client_email: bookingData.clientEmail,
+        client_phone: bookingData.clientPhone,
+        client_address: bookingData.clientAddress,
+        status: 'pending',
+        total_amount: 0, // TODO: Calculate from service price
+        notes: ''
+      }])
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error creating booking:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, bookingId: data.id }
+  } catch (error) {
+    console.error('Unexpected error creating booking:', error)
+    return { success: false, error: 'Erro inesperado ao criar agendamento' }
+  }
+}
 
 export async function updateBookingStatus(
   bookingId: string, 
@@ -1587,52 +1192,6 @@ export async function updateBookingStatus(
   } catch (error) {
     console.error('Unexpected error updating booking status:', error)
     return { success: false, error: 'Erro inesperado ao atualizar agendamento' }
-  }
-}
-
-// Função compatível com a interface da página de agendamento
-export async function addBooking(
-  booking: Omit<Booking, "id" | "status" | "createdAt">,
-  availabilityId?: string
-): Promise<{ success: boolean; message: string; booking?: Booking }> {
-  try {
-    // Use API route to handle booking creation server-side
-    const response = await fetch('/api/bookings', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ...booking,
-        availabilityId
-      })
-    })
-
-    const result = await response.json()
-
-    if (!result.success) {
-      return { success: false, message: result.error || "Erro ao criar agendamento" }
-    }
-
-    // Retornar sucesso com a estrutura esperada
-    const newBooking: Booking = {
-      ...booking,
-      id: result.bookingId || `booking-${Date.now()}`,
-      status: "Pendente",
-      createdAt: new Date().toISOString(),
-    }
-
-    return { 
-      success: true, 
-      message: result.message || "Agendamento realizado com sucesso!", 
-      booking: newBooking 
-    }
-  } catch (error) {
-    console.error('Erro inesperado ao realizar agendamento:', error)
-    return { 
-      success: false, 
-      message: "Erro inesperado ao processar agendamento. Tente novamente." 
-    }
   }
 }
 

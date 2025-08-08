@@ -33,20 +33,25 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import {
-  addBooking,
   getBraiderById,
-  getBraiderAvailabilities,
+  getBraiderAvailability,
+  addBooking,
   type Service,
   type BraiderAvailability,
-} from "@/lib/data"
+  type Braider,
+} from "@/lib/data-supabase"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
+import ServiceDetailModal from "@/components/service-detail-modal"
 
 export default function BookServicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const braider = getBraiderById(id)
   const router = useRouter()
   const { notifyBookingConfirmed } = useNotificationHelpers()
+  
+  // Estado da trancista
+  const [braider, setBraider] = useState<Braider | null>(null)
+  const [braiderLoading, setBraiderLoading] = useState(true)
 
   // Estados principais
   const [currentStep, setCurrentStep] = useState(1)
@@ -67,23 +72,20 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set())
-
-  if (!braider) {
-    notFound()
-  }
-
-  const selectedService = braider.services.find(s => s.id === selectedServiceId)
-  const selectedTime = availableTimes.find(t => t.id === selectedAvailabilityId)
   
-  // Mock rating data
-  const rating = 4.8
-  const reviewCount = 156
+  // Estados para modal e paginação
+  const [selectedServiceForModal, setSelectedServiceForModal] = useState<Service | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const servicesPerPage = 8
 
   // Função para carregar datas disponíveis
   const loadAvailableDates = useCallback(async () => {
+    if (!braider) return
+    
     try {
       // Buscar todas as disponibilidades da trancista
-      const allAvailabilities = await getBraiderAvailabilities(braider.id)
+      const allAvailabilities = await getBraiderAvailability(braider.id)
       
       // Filtrar apenas as não reservadas e criar Set de datas únicas
       const dates = new Set(
@@ -96,12 +98,96 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
     } catch (error) {
       console.error('Erro ao carregar datas disponíveis:', error)
     }
-  }, [braider.id])
+  }, [braider])
+
+  // Função para buscar horários disponíveis
+  const fetchAvailableTimes = useCallback(
+    async (selectedDate: Date | undefined) => {
+      if (!selectedDate || !braider) {
+        setAvailableTimes([])
+        setSelectedAvailabilityId(undefined)
+        return
+      }
+      setLoading(true)
+      try {
+        const formattedDate = format(selectedDate, "yyyy-MM-dd")
+        // Para agora, usar os dados do mês/ano da data selecionada
+        const selectedMonth = selectedDate.getMonth() + 1
+        const selectedYear = selectedDate.getFullYear()
+        const availabilities = await getBraiderAvailability(braider.id, selectedMonth, selectedYear)
+        
+        // Filtrar apenas para a data específica e não reservadas
+        const unbookedAvailabilities = availabilities.filter((avail) => 
+          !avail.isBooked && avail.date === formattedDate
+        )
+        setAvailableTimes(unbookedAvailabilities)
+        setSelectedAvailabilityId(undefined)
+      } catch (error) {
+        console.error('Erro ao carregar horários:', error)
+        setAvailableTimes([])
+      } finally {
+        setLoading(false)
+      }
+    },
+    [braider],
+  )
+
+  // Carregar dados da trancista
+  useEffect(() => {
+    async function loadBraider() {
+      try {
+        setBraiderLoading(true)
+        const braiderData = await getBraiderById(id)
+        if (!braiderData) {
+          notFound()
+        }
+        setBraider(braiderData)
+      } catch (error) {
+        console.error('Erro ao carregar trancista:', error)
+        notFound()
+      } finally {
+        setBraiderLoading(false)
+      }
+    }
+    
+    if (id) {
+      loadBraider()
+    }
+  }, [id])
 
   // Carregar datas disponíveis ao montar o componente
   useEffect(() => {
     loadAvailableDates()
   }, [loadAvailableDates])
+
+  useEffect(() => {
+    fetchAvailableTimes(date)
+  }, [date, fetchAvailableTimes])
+
+  if (braiderLoading) {
+    return (
+      <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
+        <SiteHeader />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-600 mx-auto mb-4"></div>
+            <p className="text-lg text-gray-600">Carregando agendamento...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!braider) {
+    notFound()
+  }
+
+  const selectedService = braider.services.find(s => s.id === selectedServiceId)
+  const selectedTime = availableTimes.find(t => t.id === selectedAvailabilityId)
+  
+  // Mock rating data
+  const rating = 4.8
+  const reviewCount = 156
 
   // Função para verificar se uma data tem disponibilidade
   const hasAvailability = (date: Date) => {
@@ -109,28 +195,27 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
     return availableDates.has(dateStr)
   }
 
-  // Função para buscar horários disponíveis
-  const fetchAvailableTimes = useCallback(
-    async (selectedDate: Date | undefined) => {
-      if (!selectedDate) {
-        setAvailableTimes([])
-        setSelectedAvailabilityId(undefined)
-        return
-      }
-      setLoading(true)
-      const formattedDate = format(selectedDate, "yyyy-MM-dd")
-      const availabilities = await getBraiderAvailabilities(braider.id, formattedDate)
-      const unbookedAvailabilities = availabilities.filter((avail) => !avail.isBooked)
-      setAvailableTimes(unbookedAvailabilities)
-      setSelectedAvailabilityId(undefined)
-      setLoading(false)
-    },
-    [braider.id],
-  )
+  // Funções para modal e paginação
+  const openServiceModal = (service: Service) => {
+    setSelectedServiceForModal(service)
+    setIsModalOpen(true)
+  }
 
-  useEffect(() => {
-    fetchAvailableTimes(date)
-  }, [date, fetchAvailableTimes])
+  const closeServiceModal = () => {
+    setIsModalOpen(false)
+    setSelectedServiceForModal(null)
+  }
+
+  const selectServiceFromModal = (serviceId: string) => {
+    setSelectedServiceId(serviceId)
+    closeServiceModal()
+  }
+
+  // Cálculos de paginação
+  const totalPages = Math.ceil((braider?.services?.length || 0) / servicesPerPage)
+  const startIndex = (currentPage - 1) * servicesPerPage
+  const endIndex = startIndex + servicesPerPage
+  const currentServices = braider?.services?.slice(startIndex, endIndex) || []
 
   // Funções de navegação entre steps
   const nextStep = () => {
@@ -265,46 +350,138 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
               <p className="text-gray-600">Selecione o serviço que você deseja realizar</p>
             </div>
             
-            <div className="grid gap-4">
-              {braider.services.map((service) => (
+            {/* Services Grid with Pagination - 4 columns, compact */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {currentServices.map((service) => (
                 <Card 
                   key={service.id}
                   className={cn(
-                    "cursor-pointer border-2 transition-all duration-300 hover:shadow-lg",
+                    "group cursor-pointer border-2 transition-all duration-300 hover:shadow-lg hover:scale-[1.02]",
                     selectedServiceId === service.id 
-                      ? "border-accent-500 bg-accent-50" 
+                      ? "border-accent-500 bg-accent-50 shadow-md" 
                       : "border-gray-200 hover:border-accent-300"
                   )}
-                  onClick={() => setSelectedServiceId(service.id)}
                 >
-                  <CardContent className="flex items-center gap-4 p-6">
-                    <Image
-                      src={service.imageUrl || "/placeholder.svg?height=80&width=80&text=Servico"}
-                      alt={service.name}
-                      width={80}
-                      height={80}
-                      className="rounded-xl object-cover shadow-md"
-                      unoptimized={true}
-                    />
-                    <div className="flex-1">
-                      <h4 className="text-xl font-bold font-heading text-gray-900 mb-2">{service.name}</h4>
-                      <p className="text-gray-600 mb-3">{service.description}</p>
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-1 text-gray-500">
-                          <Clock className="h-4 w-4" />
-                          <span className="text-sm">{service.durationMinutes} min</span>
-                        </div>
-                        <div className="text-2xl font-bold text-accent-600">
+                  <CardContent className="p-0">
+                    {/* Service Image - Smaller */}
+                    <div className="relative h-32 overflow-hidden rounded-t-xl">
+                      <Image
+                        src={service.imageUrl || "/placeholder.svg?height=150&width=300&text=Serviço"}
+                        alt={service.name}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        unoptimized={true}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                      
+                      {/* Price Badge - Smaller */}
+                      <div className="absolute top-2 right-2">
+                        <Badge className="bg-accent-500 text-white text-sm font-bold px-2 py-1">
                           €{service.price.toFixed(0)}
+                        </Badge>
+                      </div>
+                      
+                      {/* Selected Indicator */}
+                      {selectedServiceId === service.id && (
+                        <div className="absolute top-2 left-2">
+                          <CheckCircle className="h-5 w-5 text-accent-500 bg-white rounded-full" />
                         </div>
+                      )}
+                    </div>
+
+                    {/* Service Info - Compact */}
+                    <div className="p-4 space-y-3">
+                      <div>
+                        <h4 className="text-lg font-bold font-heading text-gray-900 mb-1 group-hover:text-accent-600 transition-colors line-clamp-1">
+                          {service.name}
+                        </h4>
+                        <p className="text-gray-600 text-xs overflow-hidden leading-tight" style={{
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical'
+                        }}>
+                          {service.description || "Serviço profissional"}
+                        </p>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <Clock className="h-3 w-3" />
+                        <span className="text-xs font-medium">{service.durationMinutes}min</span>
+                      </div>
+
+                      {/* Action Buttons - Compact */}
+                      <div className="flex gap-2 pt-2 border-t">
+                        <Button
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            openServiceModal(service)
+                          }}
+                          className="flex-1 text-xs h-8"
+                        >
+                          Detalhes
+                        </Button>
+                        <Button
+                          onClick={() => setSelectedServiceId(service.id)}
+                          className={cn(
+                            "flex-1 text-xs h-8",
+                            selectedServiceId === service.id
+                              ? "bg-accent-600 hover:bg-accent-700"
+                              : "bg-accent-500 hover:bg-accent-600"
+                          )}
+                        >
+                          {selectedServiceId === service.id ? "✓" : "Escolher"}
+                        </Button>
                       </div>
                     </div>
-                    {selectedServiceId === service.id && (
-                      <CheckCircle className="h-6 w-6 text-accent-500" />
-                    )}
                   </CardContent>
                 </Card>
               ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-4 mt-8">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Anterior
+                </Button>
+                
+                <div className="flex gap-2">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                      className={cn(
+                        "w-10 h-10",
+                        currentPage === page && "bg-accent-500 hover:bg-accent-600"
+                      )}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Próxima
+                </Button>
+              </div>
+            )}
+
+            {/* Services Summary */}
+            <div className="text-center text-sm text-gray-500 mt-4">
+              Mostrando {startIndex + 1}-{Math.min(endIndex, braider?.services?.length || 0)} de {braider?.services?.length || 0} serviços
             </div>
           </div>
         )
@@ -824,6 +1001,17 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
 
         </div>
       </main>
+
+      {/* Service Detail Modal */}
+      <ServiceDetailModal
+        service={selectedServiceForModal}
+        braiderName={braider?.name}
+        braiderRating={rating}
+        braiderReviews={reviewCount}
+        isOpen={isModalOpen}
+        onClose={closeServiceModal}
+        onSelectService={selectServiceFromModal}
+      />
 
       {/* Modern Footer */}
       <footer className="bg-gradient-to-r from-brand-800 via-brand-700 to-brand-600 text-white py-12 mt-16">
