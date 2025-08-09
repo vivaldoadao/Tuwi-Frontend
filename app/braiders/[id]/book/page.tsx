@@ -35,6 +35,7 @@ import { Calendar } from "@/components/ui/calendar"
 import {
   getBraiderById,
   getBraiderAvailability,
+  getAllBraiderAvailability,
   addBooking,
   type Service,
   type BraiderAvailability,
@@ -84,8 +85,8 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
     if (!braider) return
     
     try {
-      // Buscar todas as disponibilidades da trancista
-      const allAvailabilities = await getBraiderAvailability(braider.id)
+      // Buscar todas as disponibilidades da trancista (incluindo ocupadas)
+      const allAvailabilities = await getAllBraiderAvailability(braider.id)
       
       // Filtrar apenas as não reservadas e criar Set de datas únicas
       const dates = new Set(
@@ -100,7 +101,7 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
     }
   }, [braider])
 
-  // Função para buscar horários disponíveis
+  // Função para buscar todos os horários (livres e ocupados)
   const fetchAvailableTimes = useCallback(
     async (selectedDate: Date | undefined) => {
       if (!selectedDate || !braider) {
@@ -114,13 +115,20 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
         // Para agora, usar os dados do mês/ano da data selecionada
         const selectedMonth = selectedDate.getMonth() + 1
         const selectedYear = selectedDate.getFullYear()
-        const availabilities = await getBraiderAvailability(braider.id, selectedMonth, selectedYear)
         
-        // Filtrar apenas para a data específica e não reservadas
-        const unbookedAvailabilities = availabilities.filter((avail) => 
-          !avail.isBooked && avail.date === formattedDate
+        // Usar a nova função que retorna TODOS os horários (livres e ocupados)
+        const allAvailabilities = await getAllBraiderAvailability(braider.id, selectedMonth, selectedYear)
+        
+        // Filtrar apenas para a data específica (mas manter tanto livres quanto ocupados)
+        const dayAvailabilities = allAvailabilities.filter((avail) => 
+          avail.date === formattedDate
         )
-        setAvailableTimes(unbookedAvailabilities)
+        
+        console.log(`📅 Horários para ${formattedDate}:`, dayAvailabilities.map(avail => 
+          `${avail.startTime}-${avail.endTime} ${avail.isBooked ? '🔒 OCUPADO' : '✅ LIVRE'}`
+        ))
+        
+        setAvailableTimes(dayAvailabilities)
         setSelectedAvailabilityId(undefined)
       } catch (error) {
         console.error('Erro ao carregar horários:', error)
@@ -566,32 +574,49 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
                       {availableTimes.map((time) => (
                         <Button
                           key={time.id}
-                          variant={selectedAvailabilityId === time.id ? "default" : "outline"}
+                          variant={
+                            time.isBooked 
+                              ? "outline" 
+                              : selectedAvailabilityId === time.id 
+                                ? "default" 
+                                : "outline"
+                          }
+                          disabled={time.isBooked}
                           className={cn(
                             "justify-between h-auto p-4 text-left",
-                            selectedAvailabilityId === time.id
-                              ? "bg-accent-500 hover:bg-accent-600 text-white border-accent-500"
-                              : "hover:bg-accent-50 hover:border-accent-300 text-gray-700"
+                            time.isBooked
+                              ? "bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed opacity-60"
+                              : selectedAvailabilityId === time.id
+                                ? "bg-accent-500 hover:bg-accent-600 text-white border-accent-500"
+                                : "hover:bg-accent-50 hover:border-accent-300 text-gray-700"
                           )}
-                          onClick={() => setSelectedAvailabilityId(time.id)}
+                          onClick={() => !time.isBooked && setSelectedAvailabilityId(time.id)}
                         >
                           <div className="flex items-center gap-3">
                             <Clock className="h-4 w-4" />
                             <div>
-                              <div className="font-semibold">
+                              <div className="font-semibold flex items-center gap-2">
                                 {time.startTime} - {time.endTime}
+                                {time.isBooked && (
+                                  <span className="text-red-500 text-xs font-normal">
+                                    🔒 Ocupado
+                                  </span>
+                                )}
                               </div>
                               <div className="text-xs opacity-75">
-                                {(() => {
-                                  const [startHour] = time.startTime.split(':').map(Number)
-                                  if (startHour < 12) return 'Manhã'
-                                  if (startHour < 18) return 'Tarde'
-                                  return 'Noite'
-                                })()}
+                                {time.isBooked 
+                                  ? "Horário não disponível"
+                                  : (() => {
+                                      const [startHour] = time.startTime.split(':').map(Number)
+                                      if (startHour < 12) return 'Manhã'
+                                      if (startHour < 18) return 'Tarde'
+                                      return 'Noite'
+                                    })()
+                                }
                               </div>
                             </div>
                           </div>
-                          {selectedAvailabilityId === time.id && (
+                          {selectedAvailabilityId === time.id && !time.isBooked && (
                             <CheckCircle className="h-5 w-5" />
                           )}
                         </Button>

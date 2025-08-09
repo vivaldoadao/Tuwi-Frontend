@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer'
-import { passwordResetTemplate, emailVerificationTemplate, welcomeTemplate, orderConfirmationTemplate, orderTrackingTemplate, braiderApprovedTemplate, braiderRejectedTemplate } from './email-templates'
+import { passwordResetTemplate, emailVerificationTemplate, welcomeTemplate, orderConfirmationTemplate, orderTrackingTemplate, braiderApprovedTemplate, braiderRejectedTemplate, bookingConfirmedTemplate, bookingRejectedTemplate } from './email-templates'
 
 // Email configuration
 const transporter = nodemailer.createTransport({
@@ -285,6 +285,90 @@ export const sendBraiderRejectionEmail = async (
     return true
   } catch (error) {
     console.error('❌ Failed to send braider rejection email:', error)
+    return false
+  }
+}
+
+// Send booking confirmation email to client
+export const sendBookingConfirmationEmail = async (
+  email: string,
+  bookingDetails: {
+    clientName: string
+    braiderName: string
+    serviceName: string
+    date: string
+    time: string
+    location: string
+    bookingType: 'domicilio' | 'trancista'
+    price: number
+    duration: number
+    clientPhone?: string
+    clientAddress?: string
+    braiderPhone?: string
+    specialInstructions?: string
+  }
+): Promise<boolean> => {
+  try {
+    const htmlContent = bookingConfirmedTemplate(bookingDetails)
+    
+    const mailOptions = {
+      from: {
+        name: 'Wilnara Tranças',
+        address: process.env.EMAIL_FROM || process.env.EMAIL_SERVER_USER || 'noreply@wilnaratracas.com'
+      },
+      to: email,
+      subject: `✅ Agendamento Confirmado com ${bookingDetails.braiderName} - Wilnara Tranças`,
+      html: htmlContent,
+      text: `Olá, ${bookingDetails.clientName}!\n\nSeu agendamento foi confirmado!\n\nTrancista: ${bookingDetails.braiderName}\nServiço: ${bookingDetails.serviceName}\nData: ${bookingDetails.date}\nHorário: ${bookingDetails.time}\nLocal: ${bookingDetails.location}\nValor: €${bookingDetails.price.toFixed(2)}\n\nWilnara Tranças`
+    }
+
+    const result = await transporter.sendMail(mailOptions)
+    console.log('✅ Booking confirmation email sent successfully:', result.messageId)
+    return true
+  } catch (error) {
+    console.error('❌ Failed to send booking confirmation email:', error)
+    return false
+  }
+}
+
+// Send booking rejection email to client
+export const sendBookingRejectionEmail = async (
+  email: string,
+  bookingDetails: {
+    clientName: string
+    braiderName: string
+    serviceName: string
+    date: string
+    time: string
+    location: string
+    bookingType: 'domicilio' | 'trancista'
+    price: number
+    duration: number
+    clientPhone?: string
+    clientAddress?: string
+    braiderPhone?: string
+    specialInstructions?: string
+  }
+): Promise<boolean> => {
+  try {
+    const htmlContent = bookingRejectedTemplate(bookingDetails)
+    
+    const mailOptions = {
+      from: {
+        name: 'Wilnara Tranças',
+        address: process.env.EMAIL_FROM || process.env.EMAIL_SERVER_USER || 'noreply@wilnaratracas.com'
+      },
+      to: email,
+      subject: `❌ Agendamento com ${bookingDetails.braiderName} - Wilnara Tranças`,
+      html: htmlContent,
+      text: `Olá, ${bookingDetails.clientName}!\n\nInfelizmente, seu agendamento não pôde ser confirmado.\n\nTrancista: ${bookingDetails.braiderName}\nServiço: ${bookingDetails.serviceName}\nData solicitada: ${bookingDetails.date}\nHorário solicitado: ${bookingDetails.time}\n\nPor favor, tente outros horários ou trancistas.\n\nWilnara Tranças`
+    }
+
+    const result = await transporter.sendMail(mailOptions)
+    console.log('✅ Booking rejection email sent successfully:', result.messageId)
+    return true
+  } catch (error) {
+    console.error('❌ Failed to send booking rejection email:', error)
     return false
   }
 }

@@ -885,3 +885,280 @@ export const braiderRejectedTemplate = ({ braiderName, reason, submissionDate, r
   
   return baseTemplate(content, `Atualização da Sua Solicitação - Wilnara Tranças`)
 }
+
+// Booking confirmation interface
+interface BookingNotificationProps {
+  clientName: string
+  braiderName: string
+  serviceName: string
+  date: string
+  time: string
+  location: string
+  bookingType: 'domicilio' | 'trancista'
+  price: number
+  duration: number
+  clientPhone?: string
+  clientAddress?: string
+  braiderPhone?: string
+  specialInstructions?: string
+}
+
+// Booking confirmed template (sent to client)
+export const bookingConfirmedTemplate = ({ 
+  clientName, 
+  braiderName, 
+  serviceName, 
+  date, 
+  time, 
+  location, 
+  bookingType, 
+  price, 
+  duration,
+  clientPhone,
+  clientAddress,
+  braiderPhone,
+  specialInstructions
+}: BookingNotificationProps) => {
+  const content = `
+    <div style="text-align: center; margin-bottom: 40px;">
+        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #10B981 0%, #059669 100%); border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+            <span style="font-size: 32px; color: white;">✅</span>
+        </div>
+        <h2 style="color: #10B981; font-size: 28px; font-weight: 700; margin: 0 0 10px;">
+            🎉 Agendamento Confirmado!
+        </h2>
+        <p style="color: #6b7280; font-size: 16px; margin: 0;">
+            Sua consulta foi aprovada pela trancista
+        </p>
+    </div>
+
+    <div class="greeting">Olá, ${clientName}! 👋</div>
+    
+    <div class="message">
+        <p>Excelentes notícias! Sua consulta com a <strong>${braiderName}</strong> foi <strong>confirmada</strong>! 🎊</p>
+        
+        <p>Estamos ansiosos para cuidar dos seus cabelos com todo o carinho e profissionalismo que você merece.</p>
+    </div>
+
+    <!-- Booking Details -->
+    <div style="background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%); border-radius: 12px; padding: 25px; margin: 30px 0; color: white;">
+        <h3 style="color: white; font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+            📅 Detalhes do Agendamento
+        </h3>
+        <div style="background: rgba(255,255,255,0.15); border-radius: 8px; padding: 20px;">
+            <div style="margin-bottom: 15px;">
+                <strong>Serviço:</strong> ${serviceName}
+            </div>
+            <div style="margin-bottom: 15px;">
+                <strong>Data:</strong> ${formatBookingDate(date)}
+            </div>
+            <div style="margin-bottom: 15px;">
+                <strong>Horário:</strong> ${time}
+            </div>
+            <div style="margin-bottom: 15px;">
+                <strong>Duração:</strong> ${duration} minutos
+            </div>
+            <div style="margin-bottom: 15px;">
+                <strong>Local:</strong> ${bookingType === 'domicilio' ? '🏠 Ao Domicílio' : '💺 No Salão'} - ${location}
+            </div>
+            <div style="margin-bottom: 15px;">
+                <strong>Trancista:</strong> ${braiderName}
+            </div>
+            ${braiderPhone ? `<div style="margin-bottom: 15px;"><strong>Telefone da Trancista:</strong> ${braiderPhone}</div>` : ''}
+            <div style="padding-top: 15px; margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.3);">
+                <strong style="font-size: 18px;">Valor: €${price.toFixed(2)}</strong>
+            </div>
+        </div>
+    </div>
+
+    ${bookingType === 'domicilio' && clientAddress ? `
+    <!-- Address Details -->
+    <div style="background: #f8fafc; border-radius: 12px; padding: 25px; margin: 30px 0; border: 1px solid #e2e8f0;">
+        <h3 style="color: #1f2937; font-size: 18px; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+            🏠 Endereço para Atendimento
+        </h3>
+        <div style="background: white; border-radius: 8px; padding: 20px;">
+            <p style="color: #1f2937; font-size: 16px; margin: 0;">${clientAddress}</p>
+        </div>
+    </div>
+    ` : ''}
+
+    ${specialInstructions ? `
+    <!-- Special Instructions -->
+    <div style="background: #fef7e0; border-radius: 12px; padding: 25px; margin: 30px 0; border: 1px solid #f59e0b;">
+        <h3 style="color: #92400e; font-size: 18px; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+            📝 Instruções Especiais
+        </h3>
+        <div style="background: white; border-radius: 8px; padding: 20px;">
+            <p style="color: #1f2937; font-size: 16px; margin: 0;">${specialInstructions}</p>
+        </div>
+    </div>
+    ` : ''}
+
+    <!-- Important Notes -->
+    <div style="background: linear-gradient(135deg, #06B6D4 0%, #0891B2 100%); border-radius: 12px; padding: 25px; margin: 30px 0; color: white;">
+        <h3 style="color: white; font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+            💡 Informações Importantes
+        </h3>
+        <div style="background: rgba(255,255,255,0.15); border-radius: 8px; padding: 20px;">
+            <div style="display: flex; align-items: start; gap: 12px; margin-bottom: 15px;">
+                <span style="background: rgba(255,255,255,0.2); padding: 6px; border-radius: 50%; min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">1</span>
+                <div>
+                    <strong>Chegue no horário:</strong>
+                    <p style="margin: 5px 0 0; opacity: 0.9; font-size: 14px;">Seja pontual para garantir o melhor atendimento</p>
+                </div>
+            </div>
+            <div style="display: flex; align-items: start; gap: 12px; margin-bottom: 15px;">
+                <span style="background: rgba(255,255,255,0.2); padding: 6px; border-radius: 50%; min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">2</span>
+                <div>
+                    <strong>Contato direto:</strong>
+                    <p style="margin: 5px 0 0; opacity: 0.9; font-size: 14px;">${braiderPhone ? `Entre em contacto com ${braiderName} pelo ${braiderPhone}` : 'A trancista entrará em contacto consigo'}</p>
+                </div>
+            </div>
+            <div style="display: flex; align-items: start; gap: 12px;">
+                <span style="background: rgba(255,255,255,0.2); padding: 6px; border-radius: 50%; min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">3</span>
+                <div>
+                    <strong>Cancelamentos:</strong>
+                    <p style="margin: 5px 0 0; opacity: 0.9; font-size: 14px;">Avise com pelo menos 2 horas de antecedência</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="message">
+        <p>Mal podemos esperar para deixar você ainda mais linda! 💜</p>
+        
+        <p><strong>Até breve!</strong></p>
+        <p><em>Equipe Wilnara Tranças</em></p>
+    </div>
+    
+    <div style="text-align: center; margin-top: 40px;">
+        <a href="${process.env.NEXTAUTH_URL || 'https://wilnaratracas.com'}/braiders" class="button" style="margin-right: 15px;">
+            👩‍🦱 Ver Trancistas
+        </a>
+        <a href="${process.env.NEXTAUTH_URL || 'https://wilnaratracas.com'}/dashboard" class="button" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%);">
+            📊 Meu Painel
+        </a>
+    </div>
+  `
+  
+  return baseTemplate(content, `✅ Agendamento Confirmado - Wilnara Tranças`)
+}
+
+// Booking rejected template (sent to client)
+export const bookingRejectedTemplate = ({ 
+  clientName, 
+  braiderName, 
+  serviceName, 
+  date, 
+  time, 
+  location, 
+  bookingType, 
+  price,
+  specialInstructions
+}: BookingNotificationProps) => {
+  const content = `
+    <div style="text-align: center; margin-bottom: 40px;">
+        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%); border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+            <span style="font-size: 32px; color: white;">❌</span>
+        </div>
+        <h2 style="color: #EF4444; font-size: 28px; font-weight: 700; margin: 0 0 10px;">
+            Agendamento Não Aprovado
+        </h2>
+        <p style="color: #6b7280; font-size: 16px; margin: 0;">
+            Infelizmente sua solicitação não pôde ser atendida
+        </p>
+    </div>
+
+    <div class="greeting">Olá, ${clientName}! 👋</div>
+    
+    <div class="message">
+        <p>Agradecemos o seu interesse nos nossos serviços e por escolher a <strong>Wilnara Tranças</strong>.</p>
+        
+        <p>Infelizmente, a trancista <strong>${braiderName}</strong> não conseguiu confirmar o seu agendamento para o horário solicitado.</p>
+    </div>
+
+    <!-- Booking Details -->
+    <div style="background: #fef2f2; border-radius: 12px; padding: 25px; margin: 30px 0; border: 1px solid #fecaca;">
+        <h3 style="color: #991b1b; font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+            📅 Detalhes da Solicitação
+        </h3>
+        <div style="background: white; border-radius: 8px; padding: 20px;">
+            <div style="margin-bottom: 15px; color: #374151;">
+                <strong>Serviço:</strong> ${serviceName}
+            </div>
+            <div style="margin-bottom: 15px; color: #374151;">
+                <strong>Data Solicitada:</strong> ${formatBookingDate(date)}
+            </div>
+            <div style="margin-bottom: 15px; color: #374151;">
+                <strong>Horário Solicitado:</strong> ${time}
+            </div>
+            <div style="margin-bottom: 15px; color: #374151;">
+                <strong>Local:</strong> ${bookingType === 'domicilio' ? '🏠 Ao Domicílio' : '💺 No Salão'} - ${location}
+            </div>
+            <div style="color: #374151;">
+                <strong>Trancista:</strong> ${braiderName}
+            </div>
+        </div>
+    </div>
+
+    <!-- Alternative Options -->
+    <div style="background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%); border-radius: 12px; padding: 25px; margin: 30px 0; color: white;">
+        <h3 style="color: white; font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+            💡 Próximos Passos
+        </h3>
+        <div style="background: rgba(255,255,255,0.15); border-radius: 8px; padding: 20px;">
+            <div style="display: flex; align-items: start; gap: 12px; margin-bottom: 15px;">
+                <span style="background: rgba(255,255,255,0.2); padding: 6px; border-radius: 50%; min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">1</span>
+                <div>
+                    <strong>Experimente outros horários:</strong>
+                    <p style="margin: 5px 0 0; opacity: 0.9; font-size: 14px;">A trancista pode ter disponibilidade em outros horários</p>
+                </div>
+            </div>
+            <div style="display: flex; align-items: start; gap: 12px; margin-bottom: 15px;">
+                <span style="background: rgba(255,255,255,0.2); padding: 6px; border-radius: 50%; min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">2</span>
+                <div>
+                    <strong>Outras trancistas:</strong>
+                    <p style="margin: 5px 0 0; opacity: 0.9; font-size: 14px;">Temos muitas profissionais talentosas disponíveis</p>
+                </div>
+            </div>
+            <div style="display: flex; align-items: start; gap: 12px;">
+                <span style="background: rgba(255,255,255,0.2); padding: 6px; border-radius: 50%; min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">3</span>
+                <div>
+                    <strong>Contacto direto:</strong>
+                    <p style="margin: 5px 0 0; opacity: 0.9; font-size: 14px;">Entre em contacto connosco para mais opções</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="message">
+        <p>Não desista! Estamos aqui para ajudá-la a encontrar o horário perfeito.</p>
+        
+        <p><strong>Continue tentando - vamos encontrar uma solução! 💜</strong></p>
+        <p><em>Equipe Wilnara Tranças</em></p>
+    </div>
+    
+    <div style="text-align: center; margin-top: 40px;">
+        <a href="${process.env.NEXTAUTH_URL || 'https://wilnaratracas.com'}/braiders" class="button" style="margin-right: 15px;">
+            👩‍🦱 Ver Outras Trancistas
+        </a>
+        <a href="${process.env.NEXTAUTH_URL || 'https://wilnaratracas.com'}/braiders" class="button" style="background: linear-gradient(135deg, #06B6D4 0%, #0891B2 100%);">
+            🔄 Tentar Novamente
+        </a>
+    </div>
+  `
+  
+  return baseTemplate(content, `❌ Agendamento Não Aprovado - Wilnara Tranças`)
+}
+
+// Helper function to format booking dates
+const formatBookingDate = (dateString: string) => {
+  const date = new Date(dateString)
+  return date.toLocaleDateString('pt-BR', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  })
+}

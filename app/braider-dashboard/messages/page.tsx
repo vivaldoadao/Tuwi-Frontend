@@ -2,42 +2,30 @@
 
 import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { BraiderDashboardContentWrapper } from "@/components/braider-dashboard-content-wrapper"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
 import { useAuth } from "@/context/auth-context"
 import { getBraiderById, type Braider } from "@/lib/data"
 import { 
   MessageSquare, 
   Search, 
   Send, 
-  User, 
-  Clock, 
   CheckCircle,
   Circle,
   Phone,
   Video,
-  MoreVertical,
   Paperclip,
   Smile,
   Image as ImageIcon,
-  ArrowLeft,
   Settings,
-  Archive,
-  Star,
-  Filter,
   Plus,
-  Calendar,
-  Award,
-  TrendingUp
+  Calendar
 } from "lucide-react"
 import Image from "next/image"
-import Link from "next/link"
 import { cn } from "@/lib/utils"
 
 // Mock conversations data for braiders - from client perspective
@@ -305,52 +293,42 @@ export default function BraiderMessagesPage() {
   }).length
 
   return (
-    <BraiderDashboardContentWrapper>
-      {/* Hero Section */}
-      <div className="bg-gradient-to-br from-green-500 via-teal-600 to-blue-600 py-12 text-white relative overflow-hidden rounded-2xl mb-8">
-        <div className="absolute inset-0 bg-black/10 backdrop-blur-3xl"></div>
-        <div className="container px-4 md:px-6 relative z-10">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                <MessageSquare className="h-8 w-8" />
-              </div>
-              <div>
-                <h1 className="text-4xl font-bold font-heading mb-2">
-                  Mensagens 💬
-                </h1>
-                <p className="text-white/90 text-lg">
-                  Converse com seus clientes
-                </p>
-                <p className="text-white/80 text-sm mt-1">
-                  Responda dúvidas, confirme agendamentos e ofereça suporte
-                </p>
-              </div>
+    <div className="space-y-6">
+      {/* Stats Header */}
+      <div className="mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-3xl font-bold font-heading text-gray-900 flex items-center gap-3">
+              <MessageSquare className="h-8 w-8 text-green-600" />
+              Mensagens 💬
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Converse com seus clientes e responda dúvidas
+            </p>
+          </div>
+          
+          {/* Quick Stats */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
+              <div className="text-lg font-bold text-green-700">{totalConversations}</div>
+              <div className="text-green-600 text-xs font-medium">Conversas</div>
             </div>
-            
-            {/* Quick Stats */}
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
-                <div className="text-2xl font-bold">{totalConversations}</div>
-                <div className="text-white/80 text-sm">Conversas</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
-                <div className="text-2xl font-bold">{unreadCount}</div>
-                <div className="text-white/80 text-sm">Não Lidas</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
-                <div className="text-2xl font-bold">{todayMessages}</div>
-                <div className="text-white/80 text-sm">Hoje</div>
-              </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center">
+              <div className="text-lg font-bold text-blue-700">{unreadCount}</div>
+              <div className="text-blue-600 text-xs font-medium">Não Lidas</div>
+            </div>
+            <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 text-center">
+              <div className="text-lg font-bold text-purple-700">{todayMessages}</div>
+              <div className="text-purple-600 text-xs font-medium">Hoje</div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-4 gap-6 h-[calc(100vh-400px)]">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-auto lg:h-[calc(100vh-300px)] lg:min-h-[600px]">
         {/* Conversations Sidebar */}
-        <div className="lg:col-span-1">
-          <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0 h-full flex flex-col">
+        <div className="lg:col-span-1 h-full lg:h-auto">
+          <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0 h-[350px] lg:h-full flex flex-col">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between mb-4">
                 <CardTitle className="text-lg font-bold font-heading text-gray-900 flex items-center gap-2">
@@ -376,49 +354,68 @@ export default function BraiderMessagesPage() {
             
             <CardContent className="flex-1 p-0">
               <ScrollArea className="h-full">
-                <div className="space-y-2 p-4">
+                <div className="space-y-3 p-4">
                   {filteredConversations.map((conversation) => (
                     <div
                       key={conversation.id}
                       onClick={() => setSelectedConversation(conversation)}
                       className={cn(
-                        "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 hover:bg-gray-100",
+                        "flex items-start gap-3 p-4 rounded-xl cursor-pointer transition-all duration-200 hover:bg-gray-100",
                         selectedConversation?.id === conversation.id ? "bg-green-50 border border-green-200" : ""
                       )}
                     >
-                      <div className="relative">
+                      <div className="relative flex-shrink-0">
                         <Image
                           src={conversation.participant.avatar}
                           alt={conversation.participant.name}
-                          width={40}
-                          height={40}
+                          width={48}
+                          height={48}
                           className="rounded-full object-cover"
                           unoptimized={true}
                         />
                         <div className={cn(
-                          "absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white",
+                          "absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white",
                           conversation.participant.isOnline ? "bg-green-500" : "bg-gray-400"
                         )} />
                       </div>
                       
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="font-semibold text-sm text-gray-900 truncate">
-                            {conversation.participant.name}
-                          </p>
-                          <span className="text-xs text-gray-500">
-                            {conversation.lastMessage.timestamp}
-                          </span>
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-bold text-sm text-gray-900 truncate leading-tight">
+                              {conversation.participant.name}
+                            </h4>
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <div className={cn(
+                                "w-2 h-2 rounded-full flex-shrink-0",
+                                conversation.participant.isOnline ? "bg-green-500" : "bg-gray-400"
+                              )} />
+                              <span className="text-xs text-gray-500 truncate">
+                                {conversation.participant.isOnline ? "Online" : conversation.participant.lastSeen}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                            <span className="text-xs text-gray-500 whitespace-nowrap">
+                              {conversation.lastMessage.timestamp}
+                            </span>
+                            {conversation.unreadCount > 0 && (
+                              <Badge className="bg-green-500 text-white text-xs h-5 min-w-[20px] flex items-center justify-center">
+                                {conversation.unreadCount}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs text-gray-600 truncate flex-1">
+                        
+                        <div className="w-full">
+                          <p className="text-xs text-gray-600 leading-relaxed overflow-hidden" 
+                             style={{
+                               display: '-webkit-box',
+                               WebkitLineClamp: 2,
+                               WebkitBoxOrient: 'vertical'
+                             }}>
                             {conversation.lastMessage.content}
                           </p>
-                          {conversation.unreadCount > 0 && (
-                            <Badge className="bg-green-500 text-white text-xs ml-2">
-                              {conversation.unreadCount}
-                            </Badge>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -430,9 +427,9 @@ export default function BraiderMessagesPage() {
         </div>
 
         {/* Chat Area */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-3 h-full">
           {selectedConversation ? (
-            <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0 h-full flex flex-col">
+            <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0 h-[450px] lg:h-full flex flex-col">
               {/* Chat Header */}
               <CardHeader className="pb-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
@@ -531,7 +528,7 @@ export default function BraiderMessagesPage() {
                       placeholder="Digite sua resposta..."
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyPress={(e) => {
+                      onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault()
                           handleSendMessage()
@@ -569,6 +566,6 @@ export default function BraiderMessagesPage() {
           )}
         </div>
       </div>
-    </BraiderDashboardContentWrapper>
+    </div>
   )
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import SiteHeader from "@/components/site-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,9 +10,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { useAuth } from "@/context/auth-context"
-import { getUserOrdersByEmail, getUserByEmail, type Order, type User } from "@/lib/data-supabase"
-import { getUserBookings, getBraiderById, type Booking, type Service } from "@/lib/data"
+import { getUserOrdersByEmail, getUserByEmail, getUserBookingsConfirmed, type Order, type User, type UserBooking } from "@/lib/data-supabase"
 import { 
   User as UserIcon, 
   MapPin, 
@@ -36,7 +37,15 @@ import {
   Euro,
   LogOut,
   Plus,
-  MessageSquare
+  MessageSquare,
+  Send,
+  Search,
+  Smile,
+  Paperclip,
+  Image as ImageIcon,
+  Video,
+  Circle,
+  MoreVertical
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -44,17 +53,99 @@ import { cn } from "@/lib/utils"
 import { UserOrdersSummary } from "@/components/user-orders-summary"
 import { toast } from "react-hot-toast"
 
+// Mock messages data
+const mockConversations = [
+  {
+    id: "conv-1",
+    participant: {
+      id: "braider-1",
+      name: "Sofia Santos",
+      avatar: "/placeholder.svg?height=50&width=50&text=SS",
+      role: "braider",
+      isOnline: true,
+      lastSeen: "Online"
+    },
+    lastMessage: {
+      content: "Olá! Posso ajudar com informações sobre os serviços de tranças.",
+      timestamp: "10:30",
+      isRead: false,
+      sender: "braider-1"
+    },
+    unreadCount: 2
+  },
+  {
+    id: "conv-2", 
+    participant: {
+      id: "braider-2",
+      name: "Maria Silva",
+      avatar: "/placeholder.svg?height=50&width=50&text=MS",
+      role: "braider",
+      isOnline: false,
+      lastSeen: "Há 1 hora"
+    },
+    lastMessage: {
+      content: "Perfeito! Vou confirmar o agendamento para amanhã às 14h.",
+      timestamp: "09:15",
+      isRead: true,
+      sender: "braider-2"
+    },
+    unreadCount: 0
+  }
+]
+
+const mockMessages = [
+  {
+    id: "msg-1",
+    conversationId: "conv-1",
+    senderId: "braider-1",
+    content: "Olá! Vi que você tem interesse nos meus serviços de tranças. Como posso ajudar?",
+    timestamp: "2024-01-20T09:00:00Z",
+    isRead: true,
+    type: "text"
+  },
+  {
+    id: "msg-2",
+    conversationId: "conv-1", 
+    senderId: "user-current",
+    content: "Oi Sofia! Gostaria de saber mais sobre o serviço de tranças nagô. Qual o valor e duração?",
+    timestamp: "2024-01-20T09:15:00Z",
+    isRead: true,
+    type: "text"
+  },
+  {
+    id: "msg-3",
+    conversationId: "conv-1",
+    senderId: "braider-1", 
+    content: "As tranças nagô custam €45 e levam aproximadamente 3 horas para fazer. Posso fazer ao domicílio ou você pode vir até mim.",
+    timestamp: "2024-01-20T09:30:00Z",
+    isRead: true,
+    type: "text"
+  }
+]
+
+type Conversation = typeof mockConversations[0]
+type Message = typeof mockMessages[0]
+
 export default function ProfilePage() {
   const { user } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [orders, setOrders] = useState<Order[]>([])
-  const [bookings, setBookings] = useState<Booking[]>([])
+  const [bookings, setBookings] = useState<UserBooking[]>([])
   const [loadingOrders, setLoadingOrders] = useState(true)
   const [loadingBookings, setLoadingBookings] = useState(true)
   const [loadingUser, setLoadingUser] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [dbUser, setDbUser] = useState<User | null>(null)
+  
+  // Messages state
+  const [conversations, setConversations] = useState<Conversation[]>(mockConversations)
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
+  const [messages, setMessages] = useState<Message[]>(mockMessages)
+  const [newMessage, setNewMessage] = useState("")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || "overview")
   const [userInfo, setUserInfo] = useState({
     name: "",
     email: "",
@@ -100,9 +191,10 @@ export default function ProfilePage() {
           setOrders(userOrders)
           setLoadingOrders(false)
 
-          // Load bookings
+          // Load confirmed bookings
           setLoadingBookings(true)
-          const userBookings = await getUserBookings(user.email)
+          const userBookings = await getUserBookingsConfirmed(user.email)
+          console.log('📅 User bookings loaded:', userBookings)
           setBookings(userBookings)
           setLoadingBookings(false)
         } catch (error) {
@@ -172,6 +264,75 @@ export default function ProfilePage() {
     router.push("/login")
   }
 
+  // Messages functions
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !selectedConversation) return
+
+    const message: Message = {
+      id: `msg-${Date.now()}`,
+      conversationId: selectedConversation.id,
+      senderId: "user-current",
+      content: newMessage,
+      timestamp: new Date().toISOString(),
+      isRead: false,
+      type: "text"
+    }
+
+    setMessages(prev => [...prev, message])
+    setNewMessage("")
+    
+    // Update conversation last message
+    setConversations(prev => prev.map(conv => 
+      conv.id === selectedConversation.id 
+        ? {
+            ...conv,
+            lastMessage: {
+              content: newMessage,
+              timestamp: new Date().toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
+              isRead: false,
+              sender: "user-current"
+            }
+          }
+        : conv
+    ))
+
+    // Simulate response after delay
+    setTimeout(() => {
+      const responseMessage: Message = {
+        id: `msg-${Date.now() + 1}`,
+        conversationId: selectedConversation.id,
+        senderId: selectedConversation.participant.id,
+        content: "Obrigada pela mensagem! Vou responder em breve.",
+        timestamp: new Date().toISOString(),
+        isRead: false,
+        type: "text"
+      }
+      setMessages(prev => [...prev, responseMessage])
+    }, 2000)
+  }
+
+  const filteredConversations = conversations.filter(conv =>
+    conv.participant.name.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  const conversationMessages = messages.filter(m => 
+    m.conversationId === selectedConversation?.id
+  )
+
+  const formatTimestamp = (timestamp: string) => {
+    return new Date(timestamp).toLocaleTimeString('pt-PT', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    })
+  }
+
+  // Set default conversation
+  useEffect(() => {
+    if (conversations.length > 0 && !selectedConversation) {
+      setSelectedConversation(conversations[0])
+    }
+  }, [conversations, selectedConversation])
+
   if (!user) {
     return null
   }
@@ -221,6 +382,7 @@ export default function ProfilePage() {
   const totalSpent = orders.reduce((sum, order) => sum + order.total, 0)
   const totalOrders = orders.length
   const totalBookings = bookings.length
+  const totalBookingSpent = bookings.reduce((sum, booking) => sum + (booking.service?.price || 0), 0)
   const favoriteItems = 12 // Mock data
 
   return (
@@ -273,7 +435,7 @@ export default function ProfilePage() {
               <div className="text-white/80 text-sm">Pedidos</div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 text-center">
-              <div className="text-2xl font-bold">€{totalSpent.toFixed(0)}</div>
+              <div className="text-2xl font-bold">€{(totalSpent + totalBookingSpent).toFixed(0)}</div>
               <div className="text-white/80 text-sm">Gasto Total</div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 text-center">
@@ -412,7 +574,7 @@ export default function ProfilePage() {
                       <Euro className="h-4 w-4 text-green-600" />
                       <span className="font-semibold text-gray-900">Total Gasto</span>
                     </div>
-                    <span className="text-lg font-bold text-green-600">€{totalSpent.toFixed(2)}</span>
+                    <span className="text-lg font-bold text-green-600">€{(totalSpent + totalBookingSpent).toFixed(2)}</span>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-blue-50 rounded-xl border border-blue-200">
                     <div className="flex items-center gap-2">
@@ -484,32 +646,61 @@ export default function ProfilePage() {
               </Card>
             </div>
 
-            {/* Main Content */}
-            <div className="lg:col-span-3 space-y-8">
-              {/* Orders Section */}
-              <UserOrdersSummary orders={orders} loading={loadingOrders} />
+            {/* Main Content with Tabs */}
+            <div className="lg:col-span-3">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-3 mb-6 bg-white/95 backdrop-blur-sm shadow-lg rounded-2xl p-2">
+                  <TabsTrigger 
+                    value="overview" 
+                    className="rounded-xl data-[state=active]:bg-purple-500 data-[state=active]:text-white font-semibold"
+                  >
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                    Visão Geral
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="bookings" 
+                    className="rounded-xl data-[state=active]:bg-purple-500 data-[state=active]:text-white font-semibold"
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Agendamentos
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="messages" 
+                    className="rounded-xl data-[state=active]:bg-purple-500 data-[state=active]:text-white font-semibold"
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Mensagens
+                  </TabsTrigger>
+                </TabsList>
 
-              {/* Bookings Section */}
-              <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-xl font-bold font-heading text-gray-900 flex items-center gap-2">
-                        <Calendar className="h-5 w-5" />
-                        Meus Agendamentos ({totalBookings})
-                      </CardTitle>
-                      <CardDescription>
-                        Acompanhe seus agendamentos de serviços
-                      </CardDescription>
-                    </div>
-                    <Button asChild className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl">
-                      <Link href="/braiders">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Novo Agendamento
-                      </Link>
-                    </Button>
-                  </div>
-                </CardHeader>
+                {/* Overview Tab */}
+                <TabsContent value="overview" className="space-y-6">
+                  {/* Orders Section */}
+                  <UserOrdersSummary orders={orders} loading={loadingOrders} />
+                </TabsContent>
+
+                {/* Bookings Tab */}
+                <TabsContent value="bookings" className="space-y-6">
+                  <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-xl font-bold font-heading text-gray-900 flex items-center gap-2">
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                            Agendamentos Confirmados ({totalBookings})
+                          </CardTitle>
+                          <CardDescription>
+                            Seus serviços confirmados com trancistas
+                          </CardDescription>
+                        </div>
+                        <Button asChild className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl">
+                          <Link href="/braiders">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Novo Agendamento
+                          </Link>
+                        </Button>
+                      </div>
+                    </CardHeader>
                 <CardContent>
                   {loadingBookings ? (
                     <div className="space-y-4">
@@ -521,9 +712,9 @@ export default function ProfilePage() {
                     </div>
                   ) : bookings.length === 0 ? (
                     <div className="text-center py-12">
-                      <Calendar className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                      <p className="text-gray-500 font-medium text-lg mb-2">Nenhum agendamento encontrado</p>
-                      <p className="text-gray-400 text-sm mb-6">Você ainda não agendou nenhum serviço</p>
+                      <CheckCircle className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                      <p className="text-gray-500 font-medium text-lg mb-2">Nenhum agendamento confirmado</p>
+                      <p className="text-gray-400 text-sm mb-6">Você ainda não tem agendamentos confirmados pelas trancistas</p>
                       <Button asChild className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl">
                         <Link href="/braiders">
                           <Award className="h-4 w-4 mr-2" />
@@ -534,8 +725,6 @@ export default function ProfilePage() {
                   ) : (
                     <div className="space-y-4">
                       {bookings.map((booking) => {
-                        const braider = getBraiderById(booking.braiderId)
-                        const service = braider?.services.find((s: Service) => s.id === booking.serviceId)
                         return (
                           <div key={booking.id} className="p-6 bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-2xl border border-gray-200 hover:shadow-lg transition-all duration-300">
                             <div className="flex items-start justify-between mb-4">
@@ -545,18 +734,24 @@ export default function ProfilePage() {
                                 </div>
                                 <div>
                                   <h4 className="font-bold text-lg text-gray-900">
-                                    {braider?.name || "Trancista Desconhecida"}
+                                    {booking.braider?.name || "Trancista Desconhecida"}
                                   </h4>
-                                  <p className="text-sm text-gray-600">{service?.name || "Serviço Desconhecido"}</p>
+                                  <p className="text-sm text-gray-600">{booking.service?.name || "Serviço Desconhecido"}</p>
                                   <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
                                     <span className="flex items-center gap-1">
                                       <Calendar className="h-3 w-3" />
-                                      {booking.date}
+                                      {new Date(booking.date).toLocaleDateString('pt-BR')}
                                     </span>
                                     <span className="flex items-center gap-1">
                                       <Clock className="h-3 w-3" />
                                       {booking.time}
                                     </span>
+                                    {booking.service?.price && (
+                                      <span className="flex items-center gap-1 text-green-600 font-semibold">
+                                        <Euro className="h-3 w-3" />
+                                        €{booking.service.price.toFixed(2)}
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -576,27 +771,285 @@ export default function ProfilePage() {
                                   <MapPin className="h-4 w-4 text-purple-600" />
                                 )}
                                 <span className="font-semibold">
-                                  {booking.bookingType === "domicilio" ? "Serviço ao Domicílio" : "Na Casa da Trancista"}
+                                  {booking.bookingType === "domicilio" ? "Serviço ao Domicílio" : "No Salão da Trancista"}
                                 </span>
                               </div>
                               {booking.bookingType === "domicilio" && booking.clientAddress && (
-                                <p className="text-sm text-gray-600 flex items-center gap-2">
+                                <p className="text-sm text-gray-600 flex items-center gap-2 mb-1">
                                   <MapPin className="h-3 w-3" />
                                   {booking.clientAddress}
                                 </p>
                               )}
-                              <p className="text-sm text-gray-600 flex items-center gap-2 mt-1">
-                                <Phone className="h-3 w-3" />
-                                {braider?.contactPhone || "N/A"}
-                              </p>
+                              {booking.braider?.location && booking.bookingType === "trancista" && (
+                                <p className="text-sm text-gray-600 flex items-center gap-2 mb-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {booking.braider.location}
+                                </p>
+                              )}
+                              {booking.braider?.contactPhone && (
+                                <p className="text-sm text-gray-600 flex items-center gap-2 mb-1">
+                                  <Phone className="h-3 w-3" />
+                                  {booking.braider.contactPhone}
+                                </p>
+                              )}
+                              {booking.service?.durationMinutes && (
+                                <p className="text-sm text-gray-500 flex items-center gap-2">
+                                  <Clock className="h-3 w-3" />
+                                  Duração: {booking.service.durationMinutes} minutos
+                                </p>
+                              )}
                             </div>
                           </div>
                         )
                       })}
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* Messages Tab */}
+                <TabsContent value="messages" className="space-y-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-auto lg:h-[calc(100vh-400px)] lg:min-h-[500px]">
+                    {/* Conversations Sidebar */}
+                    <div className="lg:col-span-1 h-full lg:h-auto">
+                      <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0 h-[300px] lg:h-full flex flex-col">
+                        <CardHeader className="pb-4">
+                          <div className="flex items-center justify-between mb-4">
+                            <CardTitle className="text-lg font-bold font-heading text-gray-900 flex items-center gap-2">
+                              <MessageSquare className="h-5 w-5" />
+                              Conversas
+                            </CardTitle>
+                            <Button size="icon" variant="outline" className="rounded-xl">
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          
+                          {/* Search */}
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input
+                              placeholder="Pesquisar conversas..."
+                              value={searchTerm}
+                              onChange={(e) => setSearchTerm(e.target.value)}
+                              className="pl-10 rounded-xl border-gray-200"
+                            />
+                          </div>
+                        </CardHeader>
+                        
+                        <CardContent className="flex-1 p-0">
+                          <ScrollArea className="h-full">
+                            <div className="space-y-3 p-4">
+                              {filteredConversations.map((conversation) => (
+                                <div
+                                  key={conversation.id}
+                                  onClick={() => setSelectedConversation(conversation)}
+                                  className={cn(
+                                    "flex items-start gap-3 p-4 rounded-xl cursor-pointer transition-all duration-200 hover:bg-gray-100",
+                                    selectedConversation?.id === conversation.id ? "bg-purple-50 border border-purple-200" : ""
+                                  )}
+                                >
+                                  <div className="relative flex-shrink-0">
+                                    <Image
+                                      src={conversation.participant.avatar}
+                                      alt={conversation.participant.name}
+                                      width={48}
+                                      height={48}
+                                      className="rounded-full object-cover"
+                                      unoptimized={true}
+                                    />
+                                    <div className={cn(
+                                      "absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white",
+                                      conversation.participant.isOnline ? "bg-green-500" : "bg-gray-400"
+                                    )} />
+                                  </div>
+                                  
+                                  <div className="flex-1 min-w-0 space-y-1">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="flex-1 min-w-0">
+                                        <h4 className="font-bold text-sm text-gray-900 truncate leading-tight">
+                                          {conversation.participant.name}
+                                        </h4>
+                                        <div className="flex items-center gap-1.5 mt-1">
+                                          <div className={cn(
+                                            "w-2 h-2 rounded-full flex-shrink-0",
+                                            conversation.participant.isOnline ? "bg-green-500" : "bg-gray-400"
+                                          )} />
+                                          <span className="text-xs text-gray-500 truncate">
+                                            {conversation.participant.isOnline ? "Online" : conversation.participant.lastSeen}
+                                          </span>
+                                        </div>
+                                      </div>
+                                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                        <span className="text-xs text-gray-500 whitespace-nowrap">
+                                          {conversation.lastMessage.timestamp}
+                                        </span>
+                                        {conversation.unreadCount > 0 && (
+                                          <Badge className="bg-purple-500 text-white text-xs h-5 min-w-[20px] flex items-center justify-center">
+                                            {conversation.unreadCount}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="w-full">
+                                      <p className="text-xs text-gray-600 leading-relaxed overflow-hidden" 
+                                         style={{
+                                           display: '-webkit-box',
+                                           WebkitLineClamp: 2,
+                                           WebkitBoxOrient: 'vertical'
+                                         }}>
+                                        {conversation.lastMessage.content}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Chat Area */}
+                    <div className="lg:col-span-3 h-full">
+                      {selectedConversation ? (
+                        <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0 h-[400px] lg:h-full flex flex-col">
+                          {/* Chat Header */}
+                          <CardHeader className="pb-4 border-b border-gray-200">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-4">
+                                <div className="relative">
+                                  <Image
+                                    src={selectedConversation.participant.avatar}
+                                    alt={selectedConversation.participant.name}
+                                    width={50}
+                                    height={50}
+                                    className="rounded-full object-cover"
+                                    unoptimized={true}
+                                  />
+                                  <div className={cn(
+                                    "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white",
+                                    selectedConversation.participant.isOnline ? "bg-green-500" : "bg-gray-400"
+                                  )} />
+                                </div>
+                                <div>
+                                  <h3 className="font-bold text-lg text-gray-900">
+                                    {selectedConversation.participant.name}
+                                  </h3>
+                                  <p className="text-sm text-gray-600">
+                                    {selectedConversation.participant.isOnline ? "Online" : selectedConversation.participant.lastSeen}
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-2">
+                                <Button size="icon" variant="outline" className="rounded-xl">
+                                  <Phone className="h-4 w-4" />
+                                </Button>
+                                <Button size="icon" variant="outline" className="rounded-xl">
+                                  <Video className="h-4 w-4" />
+                                </Button>
+                                <Button size="icon" variant="outline" className="rounded-xl">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardHeader>
+
+                          {/* Messages Area */}
+                          <CardContent className="flex-1 p-0 overflow-hidden">
+                            <ScrollArea className="h-full p-4">
+                              <div className="space-y-4">
+                                {conversationMessages.map((message) => (
+                                  <div
+                                    key={message.id}
+                                    className={cn(
+                                      "flex",
+                                      message.senderId === "user-current" ? "justify-end" : "justify-start"
+                                    )}
+                                  >
+                                    <div className={cn(
+                                      "max-w-[70%] p-3 rounded-2xl",
+                                      message.senderId === "user-current"
+                                        ? "bg-purple-500 text-white rounded-br-md"
+                                        : "bg-gray-100 text-gray-900 rounded-bl-md"
+                                    )}>
+                                      <p className="text-sm">{message.content}</p>
+                                      <div className={cn(
+                                        "flex items-center gap-1 mt-1 text-xs",
+                                        message.senderId === "user-current" ? "text-purple-100" : "text-gray-500"
+                                      )}>
+                                        <span>{formatTimestamp(message.timestamp)}</span>
+                                        {message.senderId === "user-current" && (
+                                          message.isRead ? (
+                                            <CheckCircle className="h-3 w-3" />
+                                          ) : (
+                                            <Circle className="h-3 w-3" />
+                                          )
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </ScrollArea>
+                          </CardContent>
+
+                          {/* Message Input */}
+                          <div className="p-4 border-t border-gray-200">
+                            <div className="flex items-center gap-3">
+                              <Button size="icon" variant="outline" className="rounded-xl shrink-0">
+                                <Paperclip className="h-4 w-4" />
+                              </Button>
+                              <Button size="icon" variant="outline" className="rounded-xl shrink-0">
+                                <ImageIcon className="h-4 w-4" />
+                              </Button>
+                              <div className="flex-1 relative">
+                                <Textarea
+                                  placeholder="Digite sua mensagem..."
+                                  value={newMessage}
+                                  onChange={(e) => setNewMessage(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                      e.preventDefault()
+                                      handleSendMessage()
+                                    }
+                                  }}
+                                  className="min-h-[40px] max-h-[120px] resize-none rounded-xl border-gray-200 pr-12"
+                                  rows={1}
+                                />
+                                <Button 
+                                  size="icon" 
+                                  variant="ghost" 
+                                  className="absolute right-2 top-1/2 transform -translate-y-1/2 rounded-xl"
+                                >
+                                  <Smile className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              <Button 
+                                onClick={handleSendMessage}
+                                disabled={!newMessage.trim()}
+                                className="bg-purple-500 hover:bg-purple-600 text-white rounded-xl shrink-0"
+                              >
+                                <Send className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </Card>
+                      ) : (
+                        <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0 h-full flex items-center justify-center">
+                          <div className="text-center">
+                            <MessageSquare className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">Selecione uma conversa</h3>
+                            <p className="text-gray-600">Escolha uma conversa da lista para começar a chatear</p>
+                          </div>
+                        </Card>
+                      )}
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
           </div>
         </div>

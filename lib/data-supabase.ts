@@ -1640,6 +1640,48 @@ export async function addBooking(
 // BRAIDER AVAILABILITY
 // ============================================================================
 
+// Get all availability slots (both free and booked) for display purposes
+export async function getAllBraiderAvailability(
+  braiderId: string, 
+  month?: number, 
+  year?: number
+): Promise<BraiderAvailability[]> {
+  try {
+    let query = supabase
+      .from('braider_availability')
+      .select('*')
+      .eq('braider_id', braiderId)
+      .gte('available_date', new Date().toISOString().split('T')[0])
+      .order('available_date', { ascending: true })
+      .order('start_time', { ascending: true })
+    
+    if (month && year) {
+      const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0]
+      const endDate = new Date(year, month, 0).toISOString().split('T')[0]
+      query = query.gte('available_date', startDate).lte('available_date', endDate)
+    }
+    
+    const { data, error } = await query
+    if (error) {
+      console.error('Error fetching all braider availability:', error)
+      return []
+    }
+    
+    return data.map(availability => ({
+      id: availability.id,
+      braiderId: availability.braider_id,
+      date: availability.available_date,
+      startTime: availability.start_time,
+      endTime: availability.end_time,
+      isBooked: availability.is_booked
+    }))
+  } catch (error) {
+    console.error('Unexpected error fetching all braider availability:', error)
+    return []
+  }
+}
+
+// Legacy function - only returns available (non-booked) slots  
 export async function getBraiderAvailability(
   braiderId: string, 
   month?: number, 
@@ -1678,6 +1720,66 @@ export async function getBraiderAvailability(
     }))
   } catch (error) {
     console.error('Unexpected error fetching braider availability:', error)
+    return []
+  }
+}
+
+// ============================================================================
+// USER BOOKINGS
+// ============================================================================
+
+export interface UserBooking {
+  id: string
+  braiderId: string
+  serviceId: string
+  clientName: string
+  clientEmail: string
+  clientPhone: string
+  clientAddress?: string
+  date: string
+  time: string
+  bookingType: 'domicilio' | 'trancista'
+  status: string
+  createdAt: string
+  service?: {
+    id: string
+    name: string
+    price: number
+    durationMinutes: number
+  }
+  braider?: {
+    id: string
+    name: string
+    contactPhone: string
+    location: string
+  }
+}
+
+// Get user's confirmed bookings
+export async function getUserBookingsConfirmed(userEmail: string): Promise<UserBooking[]> {
+  try {
+    const response = await fetch('/api/user/bookings', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      console.error('Error fetching user bookings:', response.status)
+      return []
+    }
+
+    const result = await response.json()
+    
+    if (result.success) {
+      return result.bookings || []
+    } else {
+      console.error('API error fetching user bookings:', result.error)
+      return []
+    }
+  } catch (error) {
+    console.error('Unexpected error fetching user bookings:', error)
     return []
   }
 }

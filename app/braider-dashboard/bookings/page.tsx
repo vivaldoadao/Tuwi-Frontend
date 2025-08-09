@@ -138,6 +138,10 @@ export default function BraiderBookingsPage() {
   }, [bookings, searchTerm, statusFilter, typeFilter])
 
   const handleUpdateBookingStatus = async (bookingId: string, newStatus: Booking["status"]) => {
+    console.log('🚀 Starting booking status update from frontend')
+    console.log('👤 Current user object:', user)
+    console.log('📋 Request details:', { bookingId, newStatus })
+    
     setLoading(true)
     try {
       const response = await fetch('/api/braiders/bookings', {
