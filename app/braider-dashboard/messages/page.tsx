@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useAuth } from "@/context/auth-context"
 import { getBraiderById, type Braider } from "@/lib/data"
+import { RealtimeChat } from "@/components/realtime-chat"
 import { 
   MessageSquare, 
   Search, 
@@ -325,6 +326,14 @@ export default function BraiderMessagesPage() {
         </div>
       </div>
 
+      <RealtimeChat 
+        colorTheme="green"
+        headerTitle="Mensagens dos Clientes"
+        className="h-auto lg:h-[calc(100vh-300px)] lg:min-h-[600px]"
+      />
+
+      {/* Hidden original chat content - keeping for reference */}
+      {false && (
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-auto lg:h-[calc(100vh-300px)] lg:min-h-[600px]">
         {/* Conversations Sidebar */}
         <div className="lg:col-span-1 h-full lg:h-auto">
@@ -566,6 +575,8 @@ export default function BraiderMessagesPage() {
           )}
         </div>
       </div>
+      )}
+      {/* End hidden original chat content */}
     </div>
   )
 }

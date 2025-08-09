@@ -9,6 +9,7 @@ import { FavoritesProvider } from "@/context/favorites-context"
 import { NotificationsProvider } from "@/context/notifications-context"
 import { ToastContainer } from "@/components/toast-container"
 import { Toaster } from "react-hot-toast"
+import PresenceProvider from "@/components/presence-provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -28,15 +29,17 @@ export default function RootLayout({
       <body className={inter.className}>
         <SessionProvider>
           <AuthProvider>
-            <NotificationsProvider>
-              <CartProvider>
-                <FavoritesProvider>
-                  {children}
-                  <ToastContainer />
-                  <Toaster position="top-right" />
-                </FavoritesProvider>
-              </CartProvider>
-            </NotificationsProvider>
+            <PresenceProvider>
+              <NotificationsProvider>
+                <CartProvider>
+                  <FavoritesProvider>
+                    {children}
+                    <ToastContainer />
+                    <Toaster position="top-right" />
+                  </FavoritesProvider>
+                </CartProvider>
+              </NotificationsProvider>
+            </PresenceProvider>
           </AuthProvider>
         </SessionProvider>
       </body>

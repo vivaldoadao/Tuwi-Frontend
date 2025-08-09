@@ -51,80 +51,10 @@ import Image from "next/image"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { UserOrdersSummary } from "@/components/user-orders-summary"
+import { RealtimeChat } from "@/components/realtime-chat"
 import { toast } from "react-hot-toast"
 
-// Mock messages data
-const mockConversations = [
-  {
-    id: "conv-1",
-    participant: {
-      id: "braider-1",
-      name: "Sofia Santos",
-      avatar: "/placeholder.svg?height=50&width=50&text=SS",
-      role: "braider",
-      isOnline: true,
-      lastSeen: "Online"
-    },
-    lastMessage: {
-      content: "Olá! Posso ajudar com informações sobre os serviços de tranças.",
-      timestamp: "10:30",
-      isRead: false,
-      sender: "braider-1"
-    },
-    unreadCount: 2
-  },
-  {
-    id: "conv-2", 
-    participant: {
-      id: "braider-2",
-      name: "Maria Silva",
-      avatar: "/placeholder.svg?height=50&width=50&text=MS",
-      role: "braider",
-      isOnline: false,
-      lastSeen: "Há 1 hora"
-    },
-    lastMessage: {
-      content: "Perfeito! Vou confirmar o agendamento para amanhã às 14h.",
-      timestamp: "09:15",
-      isRead: true,
-      sender: "braider-2"
-    },
-    unreadCount: 0
-  }
-]
-
-const mockMessages = [
-  {
-    id: "msg-1",
-    conversationId: "conv-1",
-    senderId: "braider-1",
-    content: "Olá! Vi que você tem interesse nos meus serviços de tranças. Como posso ajudar?",
-    timestamp: "2024-01-20T09:00:00Z",
-    isRead: true,
-    type: "text"
-  },
-  {
-    id: "msg-2",
-    conversationId: "conv-1", 
-    senderId: "user-current",
-    content: "Oi Sofia! Gostaria de saber mais sobre o serviço de tranças nagô. Qual o valor e duração?",
-    timestamp: "2024-01-20T09:15:00Z",
-    isRead: true,
-    type: "text"
-  },
-  {
-    id: "msg-3",
-    conversationId: "conv-1",
-    senderId: "braider-1", 
-    content: "As tranças nagô custam €45 e levam aproximadamente 3 horas para fazer. Posso fazer ao domicílio ou você pode vir até mim.",
-    timestamp: "2024-01-20T09:30:00Z",
-    isRead: true,
-    type: "text"
-  }
-]
-
-type Conversation = typeof mockConversations[0]
-type Message = typeof mockMessages[0]
+// Real-time chat is now handled by the RealtimeChat component
 
 export default function ProfilePage() {
   const { user } = useAuth()
@@ -139,12 +69,6 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const [dbUser, setDbUser] = useState<User | null>(null)
   
-  // Messages state
-  const [conversations, setConversations] = useState<Conversation[]>(mockConversations)
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
-  const [messages, setMessages] = useState<Message[]>(mockMessages)
-  const [newMessage, setNewMessage] = useState("")
-  const [searchTerm, setSearchTerm] = useState("")
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || "overview")
   const [userInfo, setUserInfo] = useState({
     name: "",
@@ -264,74 +188,7 @@ export default function ProfilePage() {
     router.push("/login")
   }
 
-  // Messages functions
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedConversation) return
-
-    const message: Message = {
-      id: `msg-${Date.now()}`,
-      conversationId: selectedConversation.id,
-      senderId: "user-current",
-      content: newMessage,
-      timestamp: new Date().toISOString(),
-      isRead: false,
-      type: "text"
-    }
-
-    setMessages(prev => [...prev, message])
-    setNewMessage("")
-    
-    // Update conversation last message
-    setConversations(prev => prev.map(conv => 
-      conv.id === selectedConversation.id 
-        ? {
-            ...conv,
-            lastMessage: {
-              content: newMessage,
-              timestamp: new Date().toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
-              isRead: false,
-              sender: "user-current"
-            }
-          }
-        : conv
-    ))
-
-    // Simulate response after delay
-    setTimeout(() => {
-      const responseMessage: Message = {
-        id: `msg-${Date.now() + 1}`,
-        conversationId: selectedConversation.id,
-        senderId: selectedConversation.participant.id,
-        content: "Obrigada pela mensagem! Vou responder em breve.",
-        timestamp: new Date().toISOString(),
-        isRead: false,
-        type: "text"
-      }
-      setMessages(prev => [...prev, responseMessage])
-    }, 2000)
-  }
-
-  const filteredConversations = conversations.filter(conv =>
-    conv.participant.name.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
-  const conversationMessages = messages.filter(m => 
-    m.conversationId === selectedConversation?.id
-  )
-
-  const formatTimestamp = (timestamp: string) => {
-    return new Date(timestamp).toLocaleTimeString('pt-PT', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    })
-  }
-
-  // Set default conversation
-  useEffect(() => {
-    if (conversations.length > 0 && !selectedConversation) {
-      setSelectedConversation(conversations[0])
-    }
-  }, [conversations, selectedConversation])
+  // Real-time chat functionality is now handled by the RealtimeChat component
 
   if (!user) {
     return null
@@ -810,6 +667,15 @@ export default function ProfilePage() {
 
                 {/* Messages Tab */}
                 <TabsContent value="messages" className="space-y-6">
+                  <RealtimeChat 
+                    colorTheme="purple"
+                    showHeader={false}
+                    className="h-auto lg:h-[calc(100vh-400px)] lg:min-h-[500px]"
+                  />
+                </TabsContent>
+
+                {/* Hidden original chat content - keeping for reference */}
+                {false && (
                   <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-auto lg:h-[calc(100vh-400px)] lg:min-h-[500px]">
                     {/* Conversations Sidebar */}
                     <div className="lg:col-span-1 h-full lg:h-auto">
@@ -1048,7 +914,8 @@ export default function ProfilePage() {
                       )}
                     </div>
                   </div>
-                </TabsContent>
+                )}
+                {/* End hidden original chat content */}
               </Tabs>
             </div>
           </div>

@@ -982,6 +982,7 @@ export async function getBraiderById(id: string): Promise<Braider | null> {
 
     return {
       id: data.id,
+      user_id: data.user_id, // Add user_id for conversation creation
       name: userData?.name || `Trancista ${data.id.slice(0, 8)}`,
       bio: data.bio || '',
       location: data.location || 'Localização não informada',
@@ -1011,7 +1012,7 @@ export async function getBraiderById(id: string): Promise<Braider | null> {
       servesHome: data.serves_home || false,
       servesStudio: data.serves_studio || false,
       servesSalon: data.serves_salon || false
-    }
+    } as any
   } catch (error) {
     console.error('Unexpected error fetching braider:', error)
     return null
