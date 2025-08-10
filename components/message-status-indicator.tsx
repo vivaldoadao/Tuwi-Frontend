@@ -1,6 +1,6 @@
 "use client"
 
-import { Check, CheckCheck, Clock, AlertCircle } from "lucide-react"
+import { Check, CheckCheck, Clock } from "lucide-react"
 
 interface MessageStatusIndicatorProps {
   status: 'sending' | 'sent' | 'delivered' | 'read' | null
@@ -13,54 +13,33 @@ export default function MessageStatusIndicator({
   isOwn = false, 
   className = "" 
 }: MessageStatusIndicatorProps) {
-  if (!isOwn || !status) return null
+  if (!isOwn) return null
+  
+  // Always show at least 'sent' status for own messages
+  const effectiveStatus = status || 'sent'
 
   const getStatusIcon = () => {
-    switch (status) {
+    switch (effectiveStatus) {
       case 'sending':
-        return (
-          <div className="flex items-center gap-1 text-gray-400 text-xs">
-            <Clock className="h-3 w-3 animate-pulse" />
-            <span>Enviando...</span>
-          </div>
-        )
+        return <Clock className="h-3 w-3 animate-pulse text-gray-400" />
       
       case 'sent':
-        return (
-          <div className="flex items-center gap-1 text-gray-400 text-xs">
-            <Check className="h-3 w-3" />
-            <span>Enviada</span>
-          </div>
-        )
+        return <Check className="h-3 w-3 text-gray-400" />
       
       case 'delivered':
-        return (
-          <div className="flex items-center gap-1 text-gray-500 text-xs">
-            <CheckCheck className="h-3 w-3" />
-            <span>Entregue</span>
-          </div>
-        )
+        return <CheckCheck className="h-3 w-3 text-gray-500" />
       
       case 'read':
-        return (
-          <div className="flex items-center gap-1 text-blue-500 text-xs">
-            <CheckCheck className="h-3 w-3" />
-            <span>Lida</span>
-          </div>
-        )
+        return <CheckCheck className="h-3 w-3 text-blue-500" />
       
       default:
-        return (
-          <div className="flex items-center gap-1 text-red-400 text-xs">
-            <AlertCircle className="h-3 w-3" />
-            <span>Erro</span>
-          </div>
-        )
+        // Fallback: show 'sent' status if no status provided but is own message
+        return <Check className="h-3 w-3 text-gray-400" />
     }
   }
 
   return (
-    <div className={`flex items-center justify-end mt-1 ${className}`}>
+    <div className={`inline-flex items-center ${className}`}>
       {getStatusIcon()}
     </div>
   )

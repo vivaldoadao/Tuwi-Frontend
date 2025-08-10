@@ -85,6 +85,10 @@ interface UseRealtimeChatReturn {
   // Message delivery status
   getMessageStatus: (messageId: string) => 'sending' | 'sent' | 'delivered' | 'read' | null
   
+  // Typing indicator functions
+  handleTyping: () => void
+  stopTyping: () => void
+  
   // Utility functions
   refreshConversations: () => Promise<void>
   refreshMessages: () => Promise<void>
@@ -115,6 +119,10 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
   const [isConnected, setIsConnected] = useState(false)
   const [typingUsers, setTypingUsers] = useState<string[]>([])
   const [messageDeliveryStatus, setMessageDeliveryStatus] = useState<Map<string, 'sending' | 'sent' | 'delivered' | 'read'>>(new Map())
+  
+  // Typing indicator state
+  const [isTyping, setIsTyping] = useState(false)
+  const typingTimeout = useRef<NodeJS.Timeout | null>(null)
   
   // Refs for managing subscriptions
   const conversationChannel = useRef<any>(null)
@@ -237,7 +245,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
         id: user!.id,
         name: user!.name || 'Você',
         email: user!.email || '',
-        avatar: `/placeholder.svg?height=40&width=40&text=${user!.name?.[0] || 'U'}`,
+        avatar: user!.image || `/placeholder.svg?height=40&width=40&text=${user!.name?.[0] || 'U'}`,
         isOnline: true,
         lastSeen: new Date().toISOString()
       }
@@ -273,7 +281,12 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
         throw new Error(data.error || 'Erro ao enviar mensagem')
       }
       
-      console.log('✅ Message sent:', data.message.id)
+      console.log('✅ Message sent successfully!')
+      console.log('📨 Message data:', data.message)
+      console.log('🆔 Message ID:', data.message.id)
+      console.log('📝 Message content:', data.message.content)
+      console.log('👤 Sender ID:', data.message.senderId)
+      console.log('💬 Conversation ID:', data.message.conversationId)
       
       // Replace temporary message with real one
       setMessages(prev => prev.map(msg => 
@@ -376,6 +389,62 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     return messageDeliveryStatus.get(messageId) || null
   }, [messageDeliveryStatus])
 
+  // Send typing indicator
+  const sendTypingIndicator = useCallback(async (typing: boolean) => {
+    if (!selectedConversation) return
+
+    try {
+      const response = await fetch(`/api/conversations/${selectedConversation.id}/typing`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          isTyping: typing
+        })
+      })
+      
+      if (!response.ok) {
+        console.error('Failed to send typing indicator')
+      }
+    } catch (error) {
+      console.error('Error sending typing indicator:', error)
+    }
+  }, [selectedConversation])
+
+  // Handle user typing
+  const handleTyping = useCallback(() => {
+    if (!selectedConversation) return
+
+    // Send typing indicator if not already typing
+    if (!isTyping) {
+      setIsTyping(true)
+      sendTypingIndicator(true)
+    }
+
+    // Clear previous timeout
+    if (typingTimeout.current) {
+      clearTimeout(typingTimeout.current)
+    }
+
+    // Set timeout to stop typing indicator after 3 seconds of inactivity
+    typingTimeout.current = setTimeout(() => {
+      setIsTyping(false)
+      sendTypingIndicator(false)
+    }, 3000)
+  }, [selectedConversation, isTyping, sendTypingIndicator])
+
+  // Stop typing indicator
+  const stopTyping = useCallback(() => {
+    if (typingTimeout.current) {
+      clearTimeout(typingTimeout.current)
+    }
+    if (isTyping) {
+      setIsTyping(false)
+      sendTypingIndicator(false)
+    }
+  }, [isTyping, sendTypingIndicator])
+
   // Set up real-time subscriptions
   useEffect(() => {
     if (!user) return
@@ -448,8 +517,18 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     }
 
     console.log('💬 Setting up message subscription for conversation:', selectedConversation.id)
+    console.log('👤 Current user ID:', user.id)
+    console.log('📋 Selected conversation:', selectedConversation)
+    
+    // Test Supabase connection
+    console.log('🔗 Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
+    console.log('🔑 Has Anon Key:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+    
+    // Test channel creation
+    console.log('📺 Creating channel:', `messages:${selectedConversation.id}`)
+    console.log('⚙️ Filter:', `conversation_id=eq.${selectedConversation.id}`)
 
-    // Subscribe to new messages in this conversation
+    // Subscribe to new messages and typing indicators in this conversation
     messageChannel.current = supabase
       .channel(`messages:${selectedConversation.id}`)
       .on('postgres_changes',
@@ -460,108 +539,100 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
           filter: `conversation_id=eq.${selectedConversation.id}`
         },
         async (payload) => {
-          console.log('📨 New message received:', payload.new)
+          console.log('📨 New message received via real-time:', payload)
           
           const newMessage = payload.new as any
           
+          // Skip if this message is from current user (already added optimistically)
+          if (newMessage.sender_id === user.id) {
+            console.log('⏭️ Skipping own message (already added optimistically)')
+            return
+          }
+          
+          console.log('🚀 Processing incoming message from other user immediately')
+          
           try {
-            // Fetch sender info directly instead of refetching all messages
-            const senderResponse = await fetch(`/api/users/${newMessage.sender_id}`)
-            let senderInfo = null
+            // Get sender info for the new message
+            const { data: senderData } = await supabase
+              .from('users')
+              .select('id, name, email, avatar_url')
+              .eq('id', newMessage.sender_id)
+              .single()
             
-            if (senderResponse.ok) {
-              const senderData = await senderResponse.json()
-              senderInfo = {
-                id: senderData.user.id,
-                name: senderData.user.name,
-                email: senderData.user.email,
-                avatar: `/placeholder.svg?height=40&width=40&text=${senderData.user.name?.[0] || 'U'}`,
-                isOnline: senderData.user.isOnline || false,
-                lastSeen: senderData.user.lastSeen || ''
-              }
-            }
-            
-            // Get sender presence info
-            const senderPresence = getUserPresence(newMessage.sender_id)
-            
-            // Create complete message with proper sender info and presence
+            // Create complete message object
             const completeMessage: ChatMessage = {
               id: newMessage.id,
               conversationId: newMessage.conversation_id,
               senderId: newMessage.sender_id,
               content: newMessage.content,
-              messageType: newMessage.message_type,
+              messageType: newMessage.message_type || 'text',
               attachments: newMessage.attachments || [],
               metadata: newMessage.metadata,
-              isDelivered: newMessage.is_delivered,
-              isRead: newMessage.is_read,
+              isDelivered: newMessage.is_delivered || false,
+              isRead: newMessage.is_read || false,
               readAt: newMessage.read_at,
               replyToMessageId: newMessage.reply_to_message_id,
-              isEdited: newMessage.is_edited,
+              isEdited: newMessage.is_edited || false,
               editedAt: newMessage.edited_at,
               timestamp: newMessage.created_at,
-              updatedAt: newMessage.updated_at,
+              updatedAt: newMessage.updated_at || newMessage.created_at,
               sender: {
-                id: newMessage.sender_id,
-                name: senderInfo?.name || 'Usuário',
-                email: senderInfo?.email || '',
-                avatar: senderInfo?.avatar || `/placeholder.svg?height=40&width=40&text=U`,
-                isOnline: senderPresence?.is_online || false,
-                lastSeen: senderPresence?.last_seen || ''
+                id: senderData?.id || newMessage.sender_id,
+                name: senderData?.name || 'Usuário',
+                email: senderData?.email || '',
+                avatar: senderData?.avatar_url || `/placeholder.svg?height=40&width=40&text=${senderData?.name?.[0] || 'U'}`,
+                isOnline: false, // Will be updated by presence system
+                lastSeen: new Date().toISOString()
               }
             }
             
+            console.log('✅ Adding new message to chat:', completeMessage.content)
+            
+            // Add message immediately to the list
             setMessages(prev => {
+              // Check if message already exists to prevent duplicates
               const exists = prev.some(m => m.id === completeMessage.id)
-              return exists ? prev : [...prev, completeMessage]
+              if (exists) {
+                console.log('⚠️ Message already exists, skipping')
+                return prev
+              }
+              
+              // Add new message at the end
+              const newMessages = [...prev, completeMessage]
+              console.log('📊 Total messages after adding:', newMessages.length)
+              return newMessages
             })
             
-            // Play notification sound if message is not from current user
-            if (completeMessage.senderId !== user.id) {
-              console.log('🔔 New message notification from:', completeMessage.sender.name)
-            }
-            return
+            // Play notification sound/effect for new message
+            console.log('🔔 New message notification from:', completeMessage.sender.name)
+            
+            // Update conversation list to show latest message
+            setConversations(prev => prev.map(conv => {
+              if (conv.id === selectedConversation.id) {
+                return {
+                  ...conv,
+                  lastMessage: {
+                    content: completeMessage.content,
+                    timestamp: new Date(completeMessage.timestamp).toLocaleTimeString('pt-PT', { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    }),
+                    isRead: false,
+                    sender: 'other'
+                  },
+                  unreadCount: conv.unreadCount + 1
+                }
+              }
+              return conv
+            }))
             
           } catch (error) {
-            console.error('❌ Error fetching sender info:', error)
-          }
-          
-          // Fallback: Use simplified message if API fetch fails
-          const formattedMessage: ChatMessage = {
-            id: newMessage.id,
-            conversationId: newMessage.conversation_id,
-            senderId: newMessage.sender_id,
-            content: newMessage.content,
-            messageType: newMessage.message_type,
-            attachments: newMessage.attachments || [],
-            metadata: newMessage.metadata,
-            isDelivered: newMessage.is_delivered,
-            isRead: newMessage.is_read,
-            readAt: newMessage.read_at,
-            replyToMessageId: newMessage.reply_to_message_id,
-            isEdited: newMessage.is_edited,
-            editedAt: newMessage.edited_at,
-            timestamp: newMessage.created_at,
-            updatedAt: newMessage.updated_at,
-            sender: {
-              id: newMessage.sender_id,
-              name: 'Usuário',
-              email: '',
-              avatar: `/placeholder.svg?height=40&width=40&text=U`,
-              isOnline: false,
-              lastSeen: ''
-            }
-          }
-          
-          setMessages(prev => {
-            // Avoid duplicates
-            const exists = prev.some(m => m.id === newMessage.id)
-            return exists ? prev : [...prev, formattedMessage]
-          })
-
-          // Play notification sound if message is not from current user
-          if (newMessage.sender_id !== user.id) {
-            console.log('🔔 New message notification')
+            console.error('❌ Error processing real-time message:', error)
+            // Fallback: refresh messages if direct processing fails
+            console.log('🔄 Falling back to refresh messages')
+            setTimeout(() => {
+              refreshMessages()
+            }, 100)
           }
         }
       )
@@ -584,8 +655,61 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
           ))
         }
       )
-      .subscribe((status) => {
+      .on('postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'typing_indicators',
+          filter: `conversation_id=eq.${selectedConversation.id}`
+        },
+        (payload) => {
+          console.log('⌨️ Typing indicator change:', payload)
+          
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            const typing = payload.new as any
+            if (typing.user_id !== user.id && typing.is_typing) {
+              // Add user to typing list if not current user and is typing
+              setTypingUsers(prev => {
+                if (!prev.includes(typing.user_id)) {
+                  return [...prev, typing.user_id]
+                }
+                return prev
+              })
+              
+              // Auto-remove after 5 seconds if no further updates
+              setTimeout(() => {
+                setTypingUsers(prev => prev.filter(id => id !== typing.user_id))
+              }, 5000)
+            }
+          } else if (payload.eventType === 'DELETE') {
+            const typing = payload.old as any
+            if (typing.user_id !== user.id) {
+              // Remove user from typing list
+              setTypingUsers(prev => prev.filter(id => id !== typing.user_id))
+            }
+          }
+        }
+      )
+      .subscribe((status, err) => {
         console.log('📡 Message subscription status:', status)
+        console.log('🔗 Channel name:', `messages:${selectedConversation.id}`)
+        console.log('👤 User ID:', user.id)
+        console.log('🕐 Timestamp:', new Date().toISOString())
+        
+        if (err) {
+          console.error('❌ Subscription error:', err)
+        }
+        
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Real-time message subscription ACTIVE!')
+          console.log('🎯 Listening for messages in conversation:', selectedConversation.id)
+          console.log('🚀 Ready to receive real-time messages!')
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Real-time message subscription FAILED!')
+          console.error('💡 Check: RLS policies, Supabase real-time settings')
+        } else if (status === 'CLOSED') {
+          console.warn('⚠️ Real-time message subscription CLOSED')
+        }
       })
 
     return () => {
@@ -642,6 +766,10 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     
     // Message delivery status
     getMessageStatus,
+    
+    // Typing indicator functions
+    handleTyping,
+    stopTyping,
     
     // Utility functions
     refreshConversations,

@@ -1872,6 +1872,7 @@ export type User = {
   email: string
   phone?: string
   role: 'customer' | 'braider' | 'admin'
+  avatar_url?: string
   createdAt: string
   isActive: boolean
   lastLogin?: string
@@ -2070,12 +2071,20 @@ export async function getUserByEmail(email: string): Promise<User | null> {
       return null
     }
 
+    console.log('✅ User data from database:', {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      avatar_url: data.avatar_url
+    })
+
     return {
       id: data.id,
       name: data.name || 'Nome não informado',
       email: data.email,
       phone: data.phone || undefined,
       role: data.role || 'customer',
+      avatar_url: data.avatar_url || undefined,
       createdAt: data.created_at,
       isActive: data.is_active ?? true,
       lastLogin: data.last_login || undefined

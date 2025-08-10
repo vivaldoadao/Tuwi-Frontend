@@ -14,29 +14,54 @@ export async function GET() {
 
     console.log('🔍 Debugging real-time setup...')
 
-    // Test 1: Check if real-time is enabled for tables
-    const { data: realtimeData, error: realtimeError } = await supabase.rpc('check_realtime_status')
+    // Test 1: Check if tables are in realtime publication
+    const { data: realtimeTables, error: rtTablesError } = await supabase
+      .from('pg_publication_tables')
+      .select('tablename')
+      .eq('pubname', 'supabase_realtime')
 
-    // Test 2: Get recent messages to see structure
+    console.log('📡 Tables in realtime publication:', realtimeTables)
+
+    // Test 2: Check RLS policies on messages table
+    const { data: messagePolicies, error: policiesError } = await supabase
+      .rpc('pg_policies', { table_name: 'messages' })
+      .then(() => ({ data: 'RLS function not available', error: null }))
+      .catch(() => ({ data: 'Could not check policies', error: null }))
+
+    // Test 3: Get recent messages to see structure
     const { data: recentMessages, error: messagesError } = await supabase
       .from('messages')
       .select('id, sender_id, content, created_at, conversation_id')
       .order('created_at', { ascending: false })
       .limit(5)
 
-    // Test 3: Get active conversations
+    // Test 4: Get active conversations
     const { data: activeConversations, error: convError } = await supabase
       .from('conversations')
       .select('id, participant_1_id, participant_2_id, last_message_content')
       .order('updated_at', { ascending: false })
       .limit(3)
 
+    // Test 5: Check typing_indicators table
+    const { data: typingIndicators, error: typingError } = await supabase
+      .from('typing_indicators')
+      .select('*')
+      .limit(3)
+
+    console.log('⌨️ Typing indicators:', typingIndicators)
+
     return NextResponse.json({
       success: true,
       debug_info: {
-        realtime_status: {
-          data: realtimeData,
-          error: realtimeError?.message
+        realtime_tables: {
+          data: realtimeTables,
+          error: rtTablesError?.message,
+          has_messages: realtimeTables?.some(t => t.tablename === 'messages'),
+          has_typing_indicators: realtimeTables?.some(t => t.tablename === 'typing_indicators')
+        },
+        rls_policies: {
+          data: messagePolicies,
+          error: policiesError?.message
         },
         recent_messages: {
           data: recentMessages,
@@ -48,11 +73,22 @@ export async function GET() {
           count: activeConversations?.length || 0,
           error: convError?.message
         },
+        typing_indicators: {
+          data: typingIndicators,
+          count: typingIndicators?.length || 0,
+          error: typingError?.message
+        },
         supabase_url: process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 30) + '...',
+        realtime_status: {
+          messages_enabled: realtimeTables?.some(t => t.tablename === 'messages') ? '✅' : '❌',
+          typing_enabled: realtimeTables?.some(t => t.tablename === 'typing_indicators') ? '✅' : '❌',
+          conversations_enabled: realtimeTables?.some(t => t.tablename === 'conversations') ? '✅' : '❌',
+        },
         realtime_recommendations: [
-          '1. Verify Supabase Real-time is enabled in project settings',
-          '2. Check RLS policies allow real-time subscriptions',
-          '3. Ensure messages table has real-time publication enabled'
+          realtimeTables?.some(t => t.tablename === 'messages') ? '✅ Messages table in realtime' : '❌ ADD messages table to realtime',
+          realtimeTables?.some(t => t.tablename === 'typing_indicators') ? '✅ Typing indicators in realtime' : '❌ ADD typing_indicators to realtime',
+          '3. Check browser console for real-time subscription logs',
+          '4. Verify RLS policies are not blocking real-time'
         ]
       }
     })

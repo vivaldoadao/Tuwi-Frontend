@@ -128,7 +128,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // Get sender information
     const { data: senders } = await serviceSupabase
       .from('users')
-      .select('id, name, email')
+      .select('id, name, email, avatar_url')
       .in('id', senderIds)
     
     // Create sender lookup
@@ -157,7 +157,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           id: sender?.id || msg.sender_id,
           name: sender?.name || 'Usuário',
           email: sender?.email || '',
-          avatar: `/placeholder.svg?height=40&width=40&text=${sender?.name?.[0] || 'U'}`
+          avatar: sender?.avatar_url || `/placeholder.svg?height=40&width=40&text=${sender?.name?.[0] || 'U'}`
         }
       }
     })

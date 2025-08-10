@@ -9,49 +9,37 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { useAuth } from "@/context/auth-context"
 import { getUserOrdersByEmail, getUserByEmail, getUserBookingsConfirmed, type Order, type User, type UserBooking } from "@/lib/data-supabase"
 import { 
-  User as UserIcon, 
   MapPin, 
   Home, 
-  ShoppingBag, 
   Calendar, 
   Clock, 
-  Heart, 
-  Mail, 
-  Phone, 
-  Edit3, 
-  Save, 
-  Camera,
-  Settings,
-  Award,
-  TrendingUp,
-  Activity,
   CheckCircle,
   XCircle,
   AlertCircle,
   Euro,
-  LogOut,
   Plus,
+  Award,
+  TrendingUp,
   MessageSquare,
-  Send,
-  Search,
-  Smile,
-  Paperclip,
-  Image as ImageIcon,
-  Video,
-  Circle,
-  MoreVertical
+  Phone,
+  User as UserIcon,
+  Mail,
+  Save,
+  Activity,
+  Heart,
+  ShoppingBag,
+  Edit3
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { UserOrdersSummary } from "@/components/user-orders-summary"
 import { RealtimeChat } from "@/components/realtime-chat"
+import AvatarWithInitials from "@/components/avatar-with-initials"
 import { toast } from "react-hot-toast"
 
 // Real-time chat is now handled by the RealtimeChat component
@@ -75,7 +63,8 @@ export default function ProfilePage() {
     email: "",
     phone: "",
     address: "Lisboa, Portugal", // This will remain static for now
-    bio: "Apaixonada por tranças e cuidados capilares afro-brasileiros." // This will remain static for now
+    bio: "Apaixonada por tranças e cuidados capilares afro-brasileiros.", // This will remain static for now
+    avatar: ""
   })
 
   useEffect(() => {
@@ -95,7 +84,8 @@ export default function ProfilePage() {
               email: dbUserData.email || "",
               phone: dbUserData.phone || "",
               address: "Lisboa, Portugal", // Static for now
-              bio: "Apaixonada por tranças e cuidados capilares afro-brasileiros." // Static for now
+              bio: "Apaixonada por tranças e cuidados capilares afro-brasileiros.", // Static for now
+              avatar: dbUserData.avatar_url || ""
             })
           } else {
             // Fallback to auth context data
@@ -104,7 +94,8 @@ export default function ProfilePage() {
               email: user.email || "",
               phone: "",
               address: "Lisboa, Portugal",
-              bio: "Apaixonada por tranças e cuidados capilares afro-brasileiros."
+              bio: "Apaixonada por tranças e cuidados capilares afro-brasileiros.",
+              avatar: ""
             })
           }
           setLoadingUser(false)
@@ -183,9 +174,27 @@ export default function ProfilePage() {
     }
   }
 
-  const handleLogout = () => {
-    // In a real app, you would handle logout here
-    router.push("/login")
+  const handleAvatarChange = async (newAvatarUrl: string) => {
+    // Update user info state with new avatar
+    setUserInfo(prev => ({ ...prev, avatar: newAvatarUrl }))
+    
+    // Update dbUser state as well
+    if (dbUser) {
+      setDbUser(prev => prev ? { ...prev, avatar_url: newAvatarUrl } : null)
+    }
+    
+    // Re-fetch user data from database to ensure consistency
+    try {
+      const updatedUser = await getUserByEmail(user!.email)
+      if (updatedUser && updatedUser.avatar_url) {
+        setDbUser(updatedUser)
+        setUserInfo(prev => ({ ...prev, avatar: updatedUser.avatar_url || "" }))
+      }
+    } catch (error) {
+      console.error('Error re-fetching user data after avatar upload:', error)
+    }
+    
+    toast.success('Avatar atualizado com sucesso! 🎉')
   }
 
   // Real-time chat functionality is now handled by the RealtimeChat component
@@ -252,17 +261,14 @@ export default function ProfilePage() {
         <div className="container px-4 md:px-6 relative z-10">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-6">
-              <div className="relative">
-                <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm border-4 border-white/30">
-                  <UserIcon className="h-12 w-12" />
-                </div>
-                <Button
-                  size="icon"
-                  className="absolute -bottom-2 -right-2 w-8 h-8 bg-white text-purple-500 hover:bg-gray-100 rounded-full shadow-lg"
-                >
-                  <Camera className="h-4 w-4" />
-                </Button>
-              </div>
+              <AvatarWithInitials
+                name={userInfo.name}
+                avatarUrl={dbUser?.avatar_url}
+                size="lg"
+                editable={true}
+                onAvatarChange={handleAvatarChange}
+                userEmail={user?.email}
+              />
               <div>
                 <h1 className="text-4xl font-bold font-heading mb-2">
                   {userInfo.name} 👋
@@ -456,51 +462,6 @@ export default function ProfilePage() {
                   </div>
                 </CardContent>
               </Card>
-
-              {/* Actions */}
-              <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0">
-                <CardHeader>
-                  <CardTitle className="text-lg font-bold font-heading text-gray-900 flex items-center gap-2">
-                    <Settings className="h-5 w-5" />
-                    Ações
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Button asChild variant="outline" className="w-full rounded-xl">
-                    <Link href="/products">
-                      <ShoppingBag className="h-4 w-4 mr-2" />
-                      Explorar Produtos
-                    </Link>
-                  </Button>
-                  <Button asChild variant="outline" className="w-full rounded-xl">
-                    <Link href="/braiders">
-                      <Award className="h-4 w-4 mr-2" />
-                      Encontrar Trancistas
-                    </Link>
-                  </Button>
-                  <Button asChild variant="outline" className="w-full rounded-xl">
-                    <Link href="/messages">
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      Minhas Mensagens
-                    </Link>
-                  </Button>
-                  <Button asChild variant="outline" className="w-full rounded-xl">
-                    <Link href="/favorites">
-                      <Heart className="h-4 w-4 mr-2" />
-                      Meus Favoritos
-                    </Link>
-                  </Button>
-                  <Separator />
-                  <Button
-                    onClick={handleLogout}
-                    variant="outline"
-                    className="w-full rounded-xl hover:bg-red-50 hover:border-red-300 hover:text-red-600"
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Sair da Conta
-                  </Button>
-                </CardContent>
-              </Card>
             </div>
 
             {/* Main Content with Tabs */}
@@ -674,248 +635,6 @@ export default function ProfilePage() {
                   />
                 </TabsContent>
 
-                {/* Hidden original chat content - keeping for reference */}
-                {false && (
-                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-auto lg:h-[calc(100vh-400px)] lg:min-h-[500px]">
-                    {/* Conversations Sidebar */}
-                    <div className="lg:col-span-1 h-full lg:h-auto">
-                      <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0 h-[300px] lg:h-full flex flex-col">
-                        <CardHeader className="pb-4">
-                          <div className="flex items-center justify-between mb-4">
-                            <CardTitle className="text-lg font-bold font-heading text-gray-900 flex items-center gap-2">
-                              <MessageSquare className="h-5 w-5" />
-                              Conversas
-                            </CardTitle>
-                            <Button size="icon" variant="outline" className="rounded-xl">
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          
-                          {/* Search */}
-                          <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            <Input
-                              placeholder="Pesquisar conversas..."
-                              value={searchTerm}
-                              onChange={(e) => setSearchTerm(e.target.value)}
-                              className="pl-10 rounded-xl border-gray-200"
-                            />
-                          </div>
-                        </CardHeader>
-                        
-                        <CardContent className="flex-1 p-0">
-                          <ScrollArea className="h-full">
-                            <div className="space-y-3 p-4">
-                              {filteredConversations.map((conversation) => (
-                                <div
-                                  key={conversation.id}
-                                  onClick={() => setSelectedConversation(conversation)}
-                                  className={cn(
-                                    "flex items-start gap-3 p-4 rounded-xl cursor-pointer transition-all duration-200 hover:bg-gray-100",
-                                    selectedConversation?.id === conversation.id ? "bg-purple-50 border border-purple-200" : ""
-                                  )}
-                                >
-                                  <div className="relative flex-shrink-0">
-                                    <Image
-                                      src={conversation.participant.avatar}
-                                      alt={conversation.participant.name}
-                                      width={48}
-                                      height={48}
-                                      className="rounded-full object-cover"
-                                      unoptimized={true}
-                                    />
-                                    <div className={cn(
-                                      "absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white",
-                                      conversation.participant.isOnline ? "bg-green-500" : "bg-gray-400"
-                                    )} />
-                                  </div>
-                                  
-                                  <div className="flex-1 min-w-0 space-y-1">
-                                    <div className="flex items-start justify-between gap-2">
-                                      <div className="flex-1 min-w-0">
-                                        <h4 className="font-bold text-sm text-gray-900 truncate leading-tight">
-                                          {conversation.participant.name}
-                                        </h4>
-                                        <div className="flex items-center gap-1.5 mt-1">
-                                          <div className={cn(
-                                            "w-2 h-2 rounded-full flex-shrink-0",
-                                            conversation.participant.isOnline ? "bg-green-500" : "bg-gray-400"
-                                          )} />
-                                          <span className="text-xs text-gray-500 truncate">
-                                            {conversation.participant.isOnline ? "Online" : conversation.participant.lastSeen}
-                                          </span>
-                                        </div>
-                                      </div>
-                                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                                        <span className="text-xs text-gray-500 whitespace-nowrap">
-                                          {conversation.lastMessage.timestamp}
-                                        </span>
-                                        {conversation.unreadCount > 0 && (
-                                          <Badge className="bg-purple-500 text-white text-xs h-5 min-w-[20px] flex items-center justify-center">
-                                            {conversation.unreadCount}
-                                          </Badge>
-                                        )}
-                                      </div>
-                                    </div>
-                                    
-                                    <div className="w-full">
-                                      <p className="text-xs text-gray-600 leading-relaxed overflow-hidden" 
-                                         style={{
-                                           display: '-webkit-box',
-                                           WebkitLineClamp: 2,
-                                           WebkitBoxOrient: 'vertical'
-                                         }}>
-                                        {conversation.lastMessage.content}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </ScrollArea>
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    {/* Chat Area */}
-                    <div className="lg:col-span-3 h-full">
-                      {selectedConversation ? (
-                        <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0 h-[400px] lg:h-full flex flex-col">
-                          {/* Chat Header */}
-                          <CardHeader className="pb-4 border-b border-gray-200">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-4">
-                                <div className="relative">
-                                  <Image
-                                    src={selectedConversation.participant.avatar}
-                                    alt={selectedConversation.participant.name}
-                                    width={50}
-                                    height={50}
-                                    className="rounded-full object-cover"
-                                    unoptimized={true}
-                                  />
-                                  <div className={cn(
-                                    "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white",
-                                    selectedConversation.participant.isOnline ? "bg-green-500" : "bg-gray-400"
-                                  )} />
-                                </div>
-                                <div>
-                                  <h3 className="font-bold text-lg text-gray-900">
-                                    {selectedConversation.participant.name}
-                                  </h3>
-                                  <p className="text-sm text-gray-600">
-                                    {selectedConversation.participant.isOnline ? "Online" : selectedConversation.participant.lastSeen}
-                                  </p>
-                                </div>
-                              </div>
-                              
-                              <div className="flex items-center gap-2">
-                                <Button size="icon" variant="outline" className="rounded-xl">
-                                  <Phone className="h-4 w-4" />
-                                </Button>
-                                <Button size="icon" variant="outline" className="rounded-xl">
-                                  <Video className="h-4 w-4" />
-                                </Button>
-                                <Button size="icon" variant="outline" className="rounded-xl">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          </CardHeader>
-
-                          {/* Messages Area */}
-                          <CardContent className="flex-1 p-0 overflow-hidden">
-                            <ScrollArea className="h-full p-4">
-                              <div className="space-y-4">
-                                {conversationMessages.map((message) => (
-                                  <div
-                                    key={message.id}
-                                    className={cn(
-                                      "flex",
-                                      message.senderId === "user-current" ? "justify-end" : "justify-start"
-                                    )}
-                                  >
-                                    <div className={cn(
-                                      "max-w-[70%] p-3 rounded-2xl",
-                                      message.senderId === "user-current"
-                                        ? "bg-purple-500 text-white rounded-br-md"
-                                        : "bg-gray-100 text-gray-900 rounded-bl-md"
-                                    )}>
-                                      <p className="text-sm">{message.content}</p>
-                                      <div className={cn(
-                                        "flex items-center gap-1 mt-1 text-xs",
-                                        message.senderId === "user-current" ? "text-purple-100" : "text-gray-500"
-                                      )}>
-                                        <span>{formatTimestamp(message.timestamp)}</span>
-                                        {message.senderId === "user-current" && (
-                                          message.isRead ? (
-                                            <CheckCircle className="h-3 w-3" />
-                                          ) : (
-                                            <Circle className="h-3 w-3" />
-                                          )
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </ScrollArea>
-                          </CardContent>
-
-                          {/* Message Input */}
-                          <div className="p-4 border-t border-gray-200">
-                            <div className="flex items-center gap-3">
-                              <Button size="icon" variant="outline" className="rounded-xl shrink-0">
-                                <Paperclip className="h-4 w-4" />
-                              </Button>
-                              <Button size="icon" variant="outline" className="rounded-xl shrink-0">
-                                <ImageIcon className="h-4 w-4" />
-                              </Button>
-                              <div className="flex-1 relative">
-                                <Textarea
-                                  placeholder="Digite sua mensagem..."
-                                  value={newMessage}
-                                  onChange={(e) => setNewMessage(e.target.value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && !e.shiftKey) {
-                                      e.preventDefault()
-                                      handleSendMessage()
-                                    }
-                                  }}
-                                  className="min-h-[40px] max-h-[120px] resize-none rounded-xl border-gray-200 pr-12"
-                                  rows={1}
-                                />
-                                <Button 
-                                  size="icon" 
-                                  variant="ghost" 
-                                  className="absolute right-2 top-1/2 transform -translate-y-1/2 rounded-xl"
-                                >
-                                  <Smile className="h-4 w-4" />
-                                </Button>
-                              </div>
-                              <Button 
-                                onClick={handleSendMessage}
-                                disabled={!newMessage.trim()}
-                                className="bg-purple-500 hover:bg-purple-600 text-white rounded-xl shrink-0"
-                              >
-                                <Send className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </Card>
-                      ) : (
-                        <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0 h-full flex items-center justify-center">
-                          <div className="text-center">
-                            <MessageSquare className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                            <h3 className="text-xl font-bold text-gray-900 mb-2">Selecione uma conversa</h3>
-                            <p className="text-gray-600">Escolha uma conversa da lista para começar a chatear</p>
-                          </div>
-                        </Card>
-                      )}
-                    </div>
-                  </div>
-                )}
-                {/* End hidden original chat content */}
               </Tabs>
             </div>
           </div>

@@ -11,21 +11,16 @@ import {
   MessageSquare, 
   Search, 
   Send, 
-  CheckCircle,
-  Circle,
   Phone,
   Video,
   Paperclip,
   Smile,
   Image as ImageIcon,
-  Settings,
   Plus,
   Loader2,
-  Upload,
   MoreVertical,
   AlertCircle
 } from "lucide-react"
-import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { useRealtimeChat } from "@/hooks/useRealtimeChat"
 import { useUserPresence } from "@/hooks/useUserPresence"
@@ -33,6 +28,7 @@ import { toast } from "react-hot-toast"
 import MessageStatusIndicator from "./message-status-indicator"
 import UserOnlineStatus from "./user-online-status"
 import TypingIndicator from "./typing-indicator"
+import AvatarWithInitials from "./avatar-with-initials"
 
 interface RealtimeChatProps {
   className?: string
@@ -64,15 +60,14 @@ export function RealtimeChat({
     loadMoreMessages,
     getMessageStatus,
     typingUsers,
-    markAsRead,
-    createConversation,
     isConnected,
     refreshConversations,
-    refreshMessages
+    handleTyping,
+    stopTyping
   } = useRealtimeChat()
 
   // Activate user presence system
-  const { getUserPresence } = useUserPresence()
+  useUserPresence()
 
   // Local state
   const [searchTerm, setSearchTerm] = useState("")
@@ -111,16 +106,27 @@ export function RealtimeChat({
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    if (messagesEndRef.current) {
+      const messagesContainer = messagesEndRef.current.parentElement?.parentElement
+      if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight
+      }
+    }
   }
 
   useEffect(() => {
-    scrollToBottom()
+    // Only scroll if user is near bottom to avoid interrupting reading
+    if (messages.length > 0) {
+      setTimeout(scrollToBottom, 100)
+    }
   }, [messages])
 
   // Handle send message
   const handleSendMessage = async () => {
     if (!newMessage.trim() || sendingMessage || !selectedConversation) return
+
+    // Stop typing indicator when sending message
+    stopTyping()
 
     const success = await sendMessage(newMessage.trim())
     if (success) {
@@ -135,6 +141,18 @@ export function RealtimeChat({
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSendMessage()
+    }
+  }
+
+  // Handle text area change
+  const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setNewMessage(e.target.value)
+    
+    // Trigger typing indicator when user types
+    if (e.target.value.trim()) {
+      handleTyping()
+    } else {
+      stopTyping()
     }
   }
 
@@ -182,9 +200,9 @@ export function RealtimeChat({
   }
 
   return (
-    <div className={cn("grid grid-cols-1 lg:grid-cols-4 gap-6 h-auto lg:h-[calc(100vh-200px)] lg:min-h-[600px]", className)}>
+    <div className={cn("grid grid-cols-1 lg:grid-cols-5 gap-6 h-auto lg:h-[calc(100vh-200px)] lg:min-h-[600px]", className)}>
       {/* Conversations Sidebar */}
-      <div className="lg:col-span-1 h-full lg:h-auto">
+      <div className="lg:col-span-2 h-full lg:h-auto">
         <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0 h-[350px] lg:h-full flex flex-col">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between mb-4">
@@ -233,18 +251,16 @@ export function RealtimeChat({
                       key={conversation.id}
                       onClick={() => handleConversationSelect(conversation)}
                       className={cn(
-                        "flex items-start gap-3 p-4 rounded-xl cursor-pointer transition-all duration-200 hover:bg-gray-100",
+                        "flex items-start gap-4 p-4 rounded-xl cursor-pointer transition-all duration-200 hover:bg-gray-100",
                         selectedConversation?.id === conversation.id ? `${theme.secondary} ${theme.border} border` : ""
                       )}
                     >
                       <div className="relative flex-shrink-0">
-                        <Image
-                          src={conversation.participant.avatar}
-                          alt={conversation.participant.name}
-                          width={48}
-                          height={48}
-                          className="rounded-full object-cover"
-                          unoptimized={true}
+                        <AvatarWithInitials
+                          name={conversation.participant.name}
+                          avatarUrl={conversation.participant.avatar}
+                          size="sm"
+                          className="w-12 h-12"
                         />
                         <div className="absolute -bottom-1 -right-1">
                           <UserOnlineStatus userId={conversation.participant.id} size="sm" />
@@ -254,7 +270,7 @@ export function RealtimeChat({
                       <div className="flex-1 min-w-0 space-y-1">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-sm text-gray-900 truncate leading-tight">
+                            <h4 className="font-bold text-base text-gray-900 truncate leading-tight">
                               {conversation.participant.name}
                             </h4>
                             <div className="flex items-center gap-1.5 mt-1">
@@ -262,7 +278,7 @@ export function RealtimeChat({
                                 "w-2 h-2 rounded-full flex-shrink-0",
                                 conversation.participant.isOnline ? "bg-green-500" : "bg-gray-400"
                               )} />
-                              <span className="text-xs text-gray-500 truncate">
+                              <span className="text-sm text-gray-500 truncate">
                                 {conversation.participant.isOnline ? "Online" : conversation.participant.lastSeen}
                               </span>
                             </div>
@@ -279,13 +295,8 @@ export function RealtimeChat({
                           </div>
                         </div>
                         
-                        <div className="w-full">
-                          <p className="text-xs text-gray-600 leading-relaxed overflow-hidden" 
-                             style={{
-                               display: '-webkit-box',
-                               WebkitLineClamp: 2,
-                               WebkitBoxOrient: 'vertical'
-                             }}>
+                        <div className="w-full mt-2">
+                          <p className="text-sm text-gray-600 leading-relaxed line-clamp-2 break-words">
                             {conversation.lastMessage.content}
                           </p>
                         </div>
@@ -306,19 +317,14 @@ export function RealtimeChat({
             {/* Chat Header */}
             <CardHeader className="pb-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                   <div className="relative">
-                    <Image
-                      src={selectedConversation.participant.avatar}
-                      alt={selectedConversation.participant.name}
-                      width={50}
-                      height={50}
-                      className="rounded-full object-cover"
-                      unoptimized={true}
+                    <AvatarWithInitials
+                      name={selectedConversation.participant.name}
+                      avatarUrl={selectedConversation.participant.avatar}
+                      size="sm"
+                      className="w-8 h-8"
                     />
-                    <div className="absolute -bottom-1 -right-1">
-                      <UserOnlineStatus userId={selectedConversation.participant.id} size="md" />
-                    </div>
                   </div>
                   <div>
                     <h3 className="font-bold text-lg text-gray-900">
@@ -350,8 +356,8 @@ export function RealtimeChat({
 
             {/* Messages Area */}
             <CardContent className="flex-1 p-0 overflow-hidden">
-              <ScrollArea className="h-full p-4">
-                <div className="space-y-4">
+              <div className="h-full overflow-y-auto p-4" style={{ maxHeight: '400px' }}>
+                <div className="space-y-3">
                   {loadingMessages && messages.length === 0 && (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin mr-2" />
@@ -391,25 +397,19 @@ export function RealtimeChat({
                       <div
                         key={message.id}
                         className={cn(
-                          "flex gap-2",
+                          "flex gap-2 mb-2",
                           isOwnMessage ? "justify-end" : "justify-start"
                         )}
                       >
                         {/* Avatar for other user */}
                         {!isOwnMessage && (
-                          <div className="relative">
-                            <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-300">
-                              <Image
-                                src={message.sender.avatar}
-                                alt={message.sender.name}
-                                width={32}
-                                height={32}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                            <div className="absolute -bottom-1 -right-1">
-                              <UserOnlineStatus userId={message.sender.id} size="sm" />
-                            </div>
+                          <div className="flex-shrink-0 mr-3">
+                            <AvatarWithInitials
+                              name={message.sender.name}
+                              avatarUrl={message.sender.avatar}
+                              size="sm"
+                              className="w-5 h-5"
+                            />
                           </div>
                         )}
                         
@@ -418,24 +418,26 @@ export function RealtimeChat({
                           isOwnMessage ? "items-end" : "items-start"
                         )}>
                           <div className={cn(
-                            "p-3 rounded-2xl",
+                            "px-3 py-2 rounded-2xl",
                             isOwnMessage
                               ? `${theme.primary} text-white rounded-br-md`
                               : "bg-gray-100 text-gray-900 rounded-bl-md"
                           )}>
-                            <p className="text-sm">{message.content}</p>
+                            <p className="text-sm leading-relaxed break-words">{message.content}</p>
                           </div>
                           
-                          {/* Message info and status */}
-                          <div className="flex items-center gap-1 mt-1 px-1">
-                            <span className="text-xs text-gray-500">
-                              {formatTimestamp(message.timestamp)}
-                            </span>
+                          {/* Timestamp and status outside bubble */}
+                          <div className={cn(
+                            "flex items-center gap-1 mt-1 text-xs px-1",
+                            isOwnMessage ? "text-gray-500" : "text-gray-400"
+                          )}>
+                            <span>{formatTimestamp(message.timestamp)}</span>
                             
                             {/* Message status for own messages */}
                             <MessageStatusIndicator 
                               status={messageStatus} 
-                              isOwn={isOwnMessage} 
+                              isOwn={isOwnMessage}
+                              className="ml-1" 
                             />
                           </div>
                         </div>
@@ -452,7 +454,7 @@ export function RealtimeChat({
                   )}
                   <div ref={messagesEndRef} />
                 </div>
-              </ScrollArea>
+              </div>
             </CardContent>
 
             {/* Message Input */}
@@ -484,7 +486,7 @@ export function RealtimeChat({
                   <Textarea
                     placeholder="Digite sua mensagem..."
                     value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
+                    onChange={handleMessageChange}
                     onKeyDown={handleKeyDown}
                     className="min-h-[40px] max-h-[120px] resize-none rounded-xl border-gray-200 pr-12"
                     rows={1}

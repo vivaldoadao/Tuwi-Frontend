@@ -110,6 +110,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             } else {
               console.log('User created successfully in Supabase')
             }
+          } else {
+            // Update existing user's Google avatar if it changed
+            if (user.image && user.image !== existingUser.avatar_url) {
+              const { error } = await supabase
+                .from('users')
+                .update({ 
+                  avatar_url: user.image,
+                  name: user.name || existingUser.name
+                })
+                .eq('email', user.email!)
+
+              if (error) {
+                console.error('Error updating user avatar from Google:', error)
+              } else {
+                console.log('✅ Updated user avatar from Google:', user.image)
+              }
+            }
           }
 
           token.role = existingUser?.role || 'customer'
