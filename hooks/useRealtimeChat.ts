@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { useAuth } from '@/context/auth-context'
 import { useUserPresence } from './useUserPresence'
+import { useWebSocket } from './useWebSocket'
 
 // Types
 interface ChatUser {
@@ -103,6 +104,23 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
   const { user } = useAuth()
   const { getUserPresence, getMultiplePresence } = useUserPresence()
   
+  // WebSocket integration
+  const {
+    isConnected: wsConnected,
+    isConnecting: wsConnecting,
+    error: wsError,
+    joinConversation: wsJoinConversation,
+    sendMessage: wsSendMessage,
+    sendTyping: wsSendTyping,
+    markAsRead: wsMarkAsRead,
+    onNewMessage,
+    onMessageSent,
+    onUserTyping,
+    onMessageRead,
+    onUserJoined,
+    onUserLeft
+  } = useWebSocket()
+  
   // State
   const [conversations, setConversations] = useState<ChatConversation[]>([])
   const [loadingConversations, setLoadingConversations] = useState(true)
@@ -120,6 +138,19 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
   const [typingUsers, setTypingUsers] = useState<string[]>([])
   const [messageDeliveryStatus, setMessageDeliveryStatus] = useState<Map<string, 'sending' | 'sent' | 'delivered' | 'read'>>(new Map())
   
+  // WebSocket state management
+  const [useWebSocketMode, setUseWebSocketMode] = useState(true)
+  const [wsConnectionStatus, setWsConnectionStatus] = useState<'connecting' | 'connected' | 'failed' | 'disabled'>('connecting')
+  
+  // Force WebSocket reconnection for testing
+  const forceWebSocketReconnect = useCallback(() => {
+    console.log('🔄 Forcing WebSocket reconnection...')
+    setUseWebSocketMode(false)
+    setTimeout(() => {
+      setUseWebSocketMode(true)
+    }, 1000)
+  }, [])
+  
   // Typing indicator state
   const [isTyping, setIsTyping] = useState(false)
   const typingTimeout = useRef<NodeJS.Timeout | null>(null)
@@ -128,6 +159,12 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
   const conversationChannel = useRef<any>(null)
   const messageChannel = useRef<any>(null)
   const messagesOffset = useRef(0)
+  
+  // Real-time fallback system
+  const [realtimeWorking, setRealtimeWorking] = useState(true)
+  const realtimeTestTimeout = useRef<NodeJS.Timeout | null>(null)
+  const lastMessageCheck = useRef<number>(0)
+  const pollingInterval = useRef<NodeJS.Timeout | null>(null)
 
   // Load conversations
   const refreshConversations = useCallback(async () => {
@@ -212,7 +249,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     }
   }, [selectedConversation, loadingMessages, hasMoreMessages])
 
-  // Send message with delivery status
+  // Send message with delivery status (now with WebSocket support)
   const sendMessage = useCallback(async (
     content: string, 
     messageType: ChatMessage['messageType'] = 'text',
@@ -223,6 +260,9 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
 
     // Generate temporary ID for optimistic update
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    
+    console.log('📤 Sending message via:', useWebSocketMode && wsConnected ? 'WebSocket' : 'HTTP API')
+    console.log('🔧 WebSocket mode:', { useWebSocketMode, wsConnected, wsConnecting, wsError })
     
     // Add optimistic message immediately
     const optimisticMessage: ChatMessage = {
@@ -262,6 +302,17 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     try {
       setSendingMessage(true)
       
+      // Try WebSocket first if available and connected
+      if (useWebSocketMode && wsConnected) {
+        console.log('🚀 Using WebSocket to send message')
+        wsSendMessage(content.trim(), selectedConversation.id, messageType, tempId)
+        
+        // WebSocket success is handled by onMessageSent callback
+        return true
+      }
+      
+      // Fallback to HTTP API
+      console.log('🔄 Using HTTP API to send message')
       const response = await fetch(`/api/conversations/${selectedConversation.id}/messages`, {
         method: 'POST',
         headers: {
@@ -287,6 +338,11 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
       console.log('📝 Message content:', data.message.content)
       console.log('👤 Sender ID:', data.message.senderId)
       console.log('💬 Conversation ID:', data.message.conversationId)
+      
+      // Test if real-time will deliver this message
+      if (realtimeWorking) {
+        testRealtimeWorking()
+      }
       
       // Replace temporary message with real one
       setMessages(prev => prev.map(msg => 
@@ -322,9 +378,18 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     }
   }, [selectedConversation, user])
 
-  // Mark message as read
+  // Mark message as read (now with WebSocket support)
   const markAsRead = useCallback(async (messageId: string): Promise<boolean> => {
     try {
+      // Use WebSocket if available
+      if (useWebSocketMode && wsConnected && selectedConversation) {
+        console.log('👁️ Marking message as read via WebSocket:', messageId)
+        wsMarkAsRead(messageId, selectedConversation.id)
+        return true
+      }
+
+      // Fallback to HTTP API
+      console.log('👁️ Marking message as read via HTTP API:', messageId)
       const response = await fetch(`/api/messages/${messageId}/read`, {
         method: 'PUT'
       })
@@ -346,7 +411,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
       console.error('❌ Error marking message as read:', error)
       return false
     }
-  }, [])
+  }, [useWebSocketMode, wsConnected, selectedConversation, wsMarkAsRead])
 
   // Create new conversation
   const createConversation = useCallback(async (
@@ -389,11 +454,20 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     return messageDeliveryStatus.get(messageId) || null
   }, [messageDeliveryStatus])
 
-  // Send typing indicator
+  // Send typing indicator (now with WebSocket support)
   const sendTypingIndicator = useCallback(async (typing: boolean) => {
     if (!selectedConversation) return
 
     try {
+      // Use WebSocket if available
+      if (useWebSocketMode && wsConnected) {
+        console.log('⌨️ Sending typing indicator via WebSocket:', typing)
+        wsSendTyping(selectedConversation.id, typing)
+        return
+      }
+
+      // Fallback to HTTP API
+      console.log('⌨️ Sending typing indicator via HTTP API:', typing)
       const response = await fetch(`/api/conversations/${selectedConversation.id}/typing`, {
         method: 'POST',
         headers: {
@@ -410,7 +484,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     } catch (error) {
       console.error('Error sending typing indicator:', error)
     }
-  }, [selectedConversation])
+  }, [selectedConversation, useWebSocketMode, wsConnected, wsSendTyping])
 
   // Handle user typing
   const handleTyping = useCallback(() => {
@@ -444,6 +518,81 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
       sendTypingIndicator(false)
     }
   }, [isTyping, sendTypingIndicator])
+
+  // Test if real-time is working by checking for new messages after sending
+  const testRealtimeWorking = useCallback(() => {
+    if (!selectedConversation) return
+
+    console.log('🧪 Testing if real-time is working...')
+    
+    // Clear existing timeout
+    if (realtimeTestTimeout.current) {
+      clearTimeout(realtimeTestTimeout.current)
+    }
+
+    // Set timeout to check if we received the message via real-time
+    realtimeTestTimeout.current = setTimeout(() => {
+      if (realtimeWorking) {
+        console.log('⚠️ Real-time test FAILED - no message received via subscription')
+        console.log('🔄 Switching to polling fallback')
+        setRealtimeWorking(false)
+        startPollingFallback()
+      }
+    }, 3000) // Wait 3 seconds for real-time message
+
+    // Record when we started the test
+    lastMessageCheck.current = Date.now()
+  }, [selectedConversation, realtimeWorking])
+
+  // Start polling fallback when real-time fails
+  const startPollingFallback = useCallback(() => {
+    if (!selectedConversation) return
+    
+    console.log('🔄 Starting polling fallback for messages')
+    
+    // Clear existing interval
+    if (pollingInterval.current) {
+      clearInterval(pollingInterval.current)
+    }
+
+    // Poll every 2 seconds for new messages
+    pollingInterval.current = setInterval(async () => {
+      try {
+        console.log('🔍 Polling for new messages...')
+        
+        const response = await fetch(
+          `/api/conversations/${selectedConversation.id}/messages?limit=5&offset=0`
+        )
+        const data = await response.json()
+        
+        if (response.ok && data.messages?.length > 0) {
+          const latestMessage = data.messages[data.messages.length - 1]
+          
+          // Check if this is a new message we haven't seen
+          setMessages(prev => {
+            const exists = prev.some(m => m.id === latestMessage.id)
+            if (!exists && latestMessage.senderId !== user?.id) {
+              console.log('📨 New message found via polling:', latestMessage.content)
+              return [...prev, latestMessage]
+            }
+            return prev
+          })
+        }
+      } catch (error) {
+        console.error('❌ Error polling for messages:', error)
+      }
+    }, 2000) // Poll every 2 seconds
+  }, [selectedConversation, user?.id])
+
+  // Stop polling when real-time works again
+  const stopPollingFallback = useCallback(() => {
+    console.log('✅ Real-time working again - stopping polling fallback')
+    
+    if (pollingInterval.current) {
+      clearInterval(pollingInterval.current)
+      pollingInterval.current = null
+    }
+  }, [])
 
   // Set up real-time subscriptions
   useEffect(() => {
@@ -542,6 +691,19 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
           console.log('📨 New message received via real-time:', payload)
           
           const newMessage = payload.new as any
+          
+          // Real-time is working! Cancel test and stop polling if active
+          if (realtimeTestTimeout.current) {
+            clearTimeout(realtimeTestTimeout.current)
+            realtimeTestTimeout.current = null
+            console.log('✅ Real-time test PASSED - message received via subscription!')
+          }
+          
+          if (!realtimeWorking) {
+            console.log('🔄 Real-time working again - stopping polling')
+            setRealtimeWorking(true)
+            stopPollingFallback()
+          }
           
           // Skip if this message is from current user (already added optimistically)
           if (newMessage.sender_id === user.id) {
@@ -718,8 +880,207 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
         supabase.removeChannel(messageChannel.current)
         messageChannel.current = null
       }
+      
+      // Cleanup fallback system
+      if (realtimeTestTimeout.current) {
+        clearTimeout(realtimeTestTimeout.current)
+        realtimeTestTimeout.current = null
+      }
+      
+      if (pollingInterval.current) {
+        clearInterval(pollingInterval.current)
+        pollingInterval.current = null
+      }
     }
   }, [selectedConversation, user])
+
+  // WebSocket event handlers
+  useEffect(() => {
+    if (!useWebSocketMode || !wsConnected) return
+
+    console.log('🔌 Setting up WebSocket event listeners')
+
+    // Handle new messages from WebSocket
+    const unsubscribeNewMessage = onNewMessage((message) => {
+      console.log('📨 New message from WebSocket:', message)
+      console.log('🔍 Current selected conversation:', selectedConversation?.id)
+      console.log('🔍 Message conversation:', message.conversationId)
+      console.log('🔍 Matches selected conversation:', selectedConversation?.id === message.conversationId)
+      
+      // Convert to our ChatMessage format
+      const chatMessage: ChatMessage = {
+        id: message.id,
+        conversationId: message.conversationId,
+        senderId: message.senderId,
+        content: message.content,
+        messageType: message.messageType,
+        attachments: [],
+        metadata: null,
+        isDelivered: true,
+        isRead: false,
+        readAt: undefined,
+        replyToMessageId: undefined,
+        isEdited: false,
+        editedAt: undefined,
+        timestamp: message.timestamp,
+        updatedAt: message.timestamp,
+        sender: {
+          id: message.sender.id,
+          name: message.sender.name,
+          email: message.sender.email,
+          avatar: message.sender.avatar_url || `/placeholder.svg?height=40&width=40&text=${message.sender.name?.[0] || 'U'}`,
+          isOnline: true,
+          lastSeen: new Date().toISOString()
+        }
+      }
+
+      console.log('🎯 Converted chatMessage:', chatMessage)
+
+      // Add to messages if not already exists
+      setMessages(prev => {
+        const exists = prev.some(m => m.id === chatMessage.id)
+        console.log('🔍 Message already exists:', exists)
+        console.log('🔍 Previous messages count:', prev.length)
+        console.log('🔍 Will add message:', !exists)
+        
+        const newMessages = exists ? prev : [...prev, chatMessage]
+        console.log('🔍 New messages count:', newMessages.length)
+        
+        return newMessages
+      })
+
+      // Update conversation last message
+      setConversations(prev => prev.map(conv => {
+        if (conv.id === message.conversationId) {
+          return {
+            ...conv,
+            lastMessage: {
+              content: message.content,
+              timestamp: new Date(message.timestamp).toLocaleTimeString('pt-PT', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              }),
+              isRead: false,
+              sender: 'other'
+            },
+            unreadCount: conv.unreadCount + 1
+          }
+        }
+        return conv
+      }))
+    })
+
+    // Handle message sent confirmation from WebSocket
+    const unsubscribeMessageSent = onMessageSent(({ tempId, message }) => {
+      console.log('✅ Message sent confirmation from WebSocket:', { tempId, message })
+      
+      // Replace temporary message with real one
+      setMessages(prev => prev.map(msg => 
+        msg.id === tempId 
+          ? {
+              ...msg,
+              id: message.id,
+              timestamp: message.timestamp,
+              isDelivered: true
+            }
+          : msg
+      ))
+      
+      // Update delivery status
+      setMessageDeliveryStatus(prev => {
+        const newMap = new Map(prev)
+        if (tempId) {
+          newMap.delete(tempId)
+        }
+        newMap.set(message.id, 'sent')
+        return newMap
+      })
+
+      setSendingMessage(false)
+    })
+
+    // Handle typing indicators from WebSocket
+    const unsubscribeUserTyping = onUserTyping((data) => {
+      console.log('⌨️ Typing indicator from WebSocket:', data)
+      
+      if (data.isTyping) {
+        setTypingUsers(prev => {
+          if (!prev.includes(data.userId)) {
+            return [...prev, data.userId]
+          }
+          return prev
+        })
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+          setTypingUsers(prev => prev.filter(id => id !== data.userId))
+        }, 5000)
+      } else {
+        setTypingUsers(prev => prev.filter(id => id !== data.userId))
+      }
+    })
+
+    // Handle message read confirmations
+    const unsubscribeMessageRead = onMessageRead(({ messageId, readBy, readAt }) => {
+      console.log('👁️ Message read from WebSocket:', { messageId, readBy, readAt })
+      
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, isRead: true, readAt }
+          : msg
+      ))
+      
+      setMessageDeliveryStatus(prev => {
+        const newMap = new Map(prev)
+        newMap.set(messageId, 'read')
+        return newMap
+      })
+    })
+
+    return () => {
+      if (unsubscribeNewMessage) unsubscribeNewMessage()
+      if (unsubscribeMessageSent) unsubscribeMessageSent()
+      if (unsubscribeUserTyping) unsubscribeUserTyping()
+      if (unsubscribeMessageRead) unsubscribeMessageRead()
+    }
+  }, [useWebSocketMode, wsConnected, onNewMessage, onMessageSent, onUserTyping, onMessageRead])
+
+  // Join conversation via WebSocket when selected
+  useEffect(() => {
+    if (!selectedConversation || !useWebSocketMode || !wsConnected) return
+
+    console.log(`🏠 Joining WebSocket conversation: ${selectedConversation.id}`)
+    wsJoinConversation(selectedConversation.id)
+  }, [selectedConversation, useWebSocketMode, wsConnected, wsJoinConversation])
+
+  // Update connection status based on WebSocket state
+  useEffect(() => {
+    if (useWebSocketMode) {
+      if (wsConnecting) {
+        setWsConnectionStatus('connecting')
+        setIsConnected(false)
+      } else if (wsConnected) {
+        setWsConnectionStatus('connected')
+        setIsConnected(true)
+        console.log('🎉 WebSocket successfully connected! Real-time messaging active.')
+      } else if (wsError) {
+        setWsConnectionStatus('failed')
+        setIsConnected(false)
+        
+        // WebSocket failed, fall back to Supabase real-time + polling
+        console.log('🔄 WebSocket failed, falling back to Supabase real-time + polling immediately')
+        setUseWebSocketMode(false)
+      }
+    }
+  }, [useWebSocketMode, wsConnecting, wsConnected, wsError])
+
+  // Global debug function for testing WebSocket
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).forceWebSocketReconnect = forceWebSocketReconnect
+      console.log('🐛 Debug function available: window.forceWebSocketReconnect()')
+    }
+  }, [forceWebSocketReconnect])
 
   // Load initial data
   useEffect(() => {
