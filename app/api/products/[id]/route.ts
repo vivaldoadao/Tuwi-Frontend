@@ -4,14 +4,10 @@ import { createClient } from '@/lib/supabase/server'
 import { productSchema } from '@/lib/validations'
 import { z } from 'zod'
 
-interface RouteParams {
-  params: Promise<{ id: string }>
-}
-
 // GET /api/products/[id] - Get single product
 export async function GET(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params
@@ -44,7 +40,7 @@ export async function GET(
 // PUT /api/products/[id] - Update product (admin only)
 export async function PUT(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -104,7 +100,7 @@ export async function PUT(
 // DELETE /api/products/[id] - Delete product (admin only)
 export async function DELETE(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()

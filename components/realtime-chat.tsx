@@ -7,6 +7,23 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { 
   MessageSquare, 
   Search, 
@@ -19,7 +36,8 @@ import {
   Plus,
   Loader2,
   MoreVertical,
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useRealtimeChat } from "@/hooks/useRealtimeChat"
@@ -72,6 +90,8 @@ export function RealtimeChat({
   // Local state
   const [searchTerm, setSearchTerm] = useState("")
   const [newMessage, setNewMessage] = useState("")
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deletingConversation, setDeletingConversation] = useState(false)
   
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -120,6 +140,42 @@ export function RealtimeChat({
       setTimeout(scrollToBottom, 100)
     }
   }, [messages])
+
+  // Handle delete conversation
+  const handleDeleteConversation = async () => {
+    if (!selectedConversation) return
+
+    try {
+      setDeletingConversation(true)
+      
+      const response = await fetch(`/api/conversations/${selectedConversation.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao deletar conversa')
+      }
+
+      toast.success("Conversa deletada com sucesso!")
+      
+      // Clear selected conversation and refresh conversations list
+      setSelectedConversation(null)
+      await refreshConversations()
+      
+      setShowDeleteDialog(false)
+
+    } catch (error) {
+      console.error('Error deleting conversation:', error)
+      toast.error(error instanceof Error ? error.message : 'Erro ao deletar conversa')
+    } finally {
+      setDeletingConversation(false)
+    }
+  }
 
   // Handle send message
   const handleSendMessage = async () => {
@@ -347,9 +403,23 @@ export function RealtimeChat({
                   <Button size="icon" variant="outline" className="rounded-xl">
                     <Video className="h-4 w-4" />
                   </Button>
-                  <Button size="icon" variant="outline" className="rounded-xl">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="icon" variant="outline" className="rounded-xl">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                        onClick={() => setShowDeleteDialog(true)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Deletar Conversa
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </CardHeader>
@@ -524,6 +594,42 @@ export function RealtimeChat({
           </Card>
         )}
       </div>
+
+      {/* Delete Conversation Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deletar Conversa</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja deletar esta conversa com{" "}
+              <strong>{selectedConversation?.participant.name}</strong>? 
+              Esta ação não pode ser desfeita e todas as mensagens serão permanentemente removidas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingConversation}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConversation}
+              disabled={deletingConversation}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              {deletingConversation ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Deletando...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Deletar Conversa
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -5,8 +5,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Heart, Users, Award, ShoppingBag, Sparkles } from "lucide-react"
+import { getAboutContent } from "@/lib/cms-content"
 
-export default function AboutPage() {
+// 🚀 ISR CONFIGURATION
+export const revalidate = 3600 // 1 hora
+
+export default async function AboutPage() {
+  const content = await getAboutContent()
   return (
     <SiteLayout>
       {/* Hero Section */}
@@ -19,14 +24,10 @@ export default function AboutPage() {
               Nossa História
             </Badge>
             <h1 className="text-4xl md:text-6xl font-bold font-heading mb-6">
-              Sobre a{" "}
-              <span className="bg-gradient-to-r from-accent-300 to-accent-400 bg-clip-text text-transparent">
-                Wilnara Tranças
-              </span>
+              {content.heroTitle}
             </h1>
             <p className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto leading-relaxed">
-              Uma jornada de paixão pela arte das tranças, conectando tradição e modernidade 
-              para realçar a beleza natural de cada mulher.
+              {content.heroSubtitle}
             </p>
           </div>
         </div>
@@ -40,22 +41,17 @@ export default function AboutPage() {
           <div className="grid md:grid-cols-2 gap-12 items-center mb-20">
             <div className="space-y-6">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 font-heading">
-                Nossa Missão
+                {content.missionTitle}
               </h2>
-              <p className="text-lg text-gray-700 leading-relaxed">
-                Bem-vindo à <strong>Wilnara Tranças</strong>, seu destino online para postiços femininos de alta qualidade e tranças
-                artesanais. Nascemos da paixão por realçar a beleza natural e a individualidade de cada mulher, oferecendo
-                produtos que combinam tradição, modernidade e estilo.
-              </p>
-              <p className="text-lg text-gray-700 leading-relaxed">
-                Nossa missão é empoderar você a expressar sua identidade através de penteados versáteis e deslumbrantes.
-                Acreditamos que cada trança e cada postiço contam uma história, e estamos aqui para ajudar você a criar a sua.
-              </p>
+              <div 
+                className="text-lg text-gray-700 leading-relaxed prose prose-lg max-w-none"
+                dangerouslySetInnerHTML={{ __html: content.missionContent }}
+              />
             </div>
             <div className="relative">
               <div className="bg-gradient-to-br from-accent-100 to-brand-100 rounded-3xl p-8 shadow-lg">
                 <Image
-                  src="/placeholder.svg?height=400&width=400&text=Nossa+História"
+                  src={content.missionImage}
                   alt="História da Wilnara Tranças"
                   width={400}
                   height={400}
@@ -77,44 +73,33 @@ export default function AboutPage() {
             </div>
             
             <div className="grid md:grid-cols-3 gap-8">
-              <Card className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 border-0 rounded-3xl overflow-hidden group">
-                <CardContent className="p-8 text-center">
-                  <div className="bg-gradient-to-br from-accent-500 to-accent-600 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
-                    <Heart className="h-8 w-8 text-white" />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">Paixão pela Arte</h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    Cada trança é criada com amor e dedicação, respeitando as tradições ancestrais 
-                    e abraçando técnicas modernas para resultados excepcionais.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 border-0 rounded-3xl overflow-hidden group">
-                <CardContent className="p-8 text-center">
-                  <div className="bg-gradient-to-br from-brand-500 to-brand-600 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
-                    <Award className="h-8 w-8 text-white" />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">Qualidade Premium</h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    Trabalhamos apenas com materiais de primeira linha e técnicas que garantem 
-                    durabilidade, conforto e um acabamento impecável em cada produto.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 border-0 rounded-3xl overflow-hidden group">
-                <CardContent className="p-8 text-center">
-                  <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
-                    <Users className="h-8 w-8 text-white" />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">Comunidade Forte</h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    Mais que uma loja, somos uma comunidade que celebra a diversidade, 
-                    conecta pessoas e fortalece a autoestima através da beleza autêntica.
-                  </p>
-                </CardContent>
-              </Card>
+              {content.values.map((value, index) => {
+                const iconMap: Record<string, any> = {
+                  'Heart': Heart,
+                  'Award': Award, 
+                  'Users': Users
+                }
+                const IconComponent = iconMap[value.icon] || Heart
+                const colorClasses = [
+                  'from-accent-500 to-accent-600',
+                  'from-brand-500 to-brand-600',
+                  'from-purple-500 to-purple-600'
+                ]
+                
+                return (
+                  <Card key={index} className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 border-0 rounded-3xl overflow-hidden group">
+                    <CardContent className="p-8 text-center">
+                      <div className={`bg-gradient-to-br ${colorClasses[index % 3]} rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300`}>
+                        <IconComponent className="h-8 w-8 text-white" />
+                      </div>
+                      <h3 className="text-xl font-bold text-gray-900 mb-4">{value.title}</h3>
+                      <p className="text-gray-600 leading-relaxed">
+                        {value.description}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )
+              })}
             </div>
           </div>
 
@@ -130,30 +115,25 @@ export default function AboutPage() {
             </div>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              <div className="text-center">
-                <div className="bg-white rounded-2xl p-6 shadow-md">
-                  <div className="text-3xl md:text-4xl font-bold text-accent-600 mb-2">500+</div>
-                  <div className="text-sm text-gray-600">Clientes Satisfeitas</div>
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="bg-white rounded-2xl p-6 shadow-md">
-                  <div className="text-3xl md:text-4xl font-bold text-brand-600 mb-2">50+</div>
-                  <div className="text-sm text-gray-600">Produtos Únicos</div>
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="bg-white rounded-2xl p-6 shadow-md">
-                  <div className="text-3xl md:text-4xl font-bold text-purple-600 mb-2">4.9</div>
-                  <div className="text-sm text-gray-600">Avaliação Média</div>
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="bg-white rounded-2xl p-6 shadow-md">
-                  <div className="text-3xl md:text-4xl font-bold text-green-600 mb-2">3+</div>
-                  <div className="text-sm text-gray-600">Anos de Experiência</div>
-                </div>
-              </div>
+              {content.statistics.map((stat, index) => {
+                const colorMap: Record<string, string> = {
+                  'accent': 'text-accent-600',
+                  'brand': 'text-brand-600',
+                  'purple': 'text-purple-600',
+                  'green': 'text-green-600'
+                }
+                
+                return (
+                  <div key={index} className="text-center">
+                    <div className="bg-white rounded-2xl p-6 shadow-md">
+                      <div className={`text-3xl md:text-4xl font-bold mb-2 ${colorMap[stat.color] || 'text-gray-600'}`}>
+                        {stat.value}
+                      </div>
+                      <div className="text-sm text-gray-600">{stat.label}</div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
 

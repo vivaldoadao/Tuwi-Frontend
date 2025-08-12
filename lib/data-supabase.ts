@@ -32,6 +32,14 @@ export type Braider = {
   averageRating?: number
   totalReviews?: number
   createdAt: string
+  // Campos adicionais do sistema de promoções
+  email?: string
+  specialties?: string[]
+  isVerified?: boolean
+  district?: string
+  concelho?: string
+  freguesia?: string
+  user_id?: string
 }
 
 const supabase = createClient()
@@ -603,9 +611,14 @@ export async function getAllBraiders(
           averageRating: parseFloat(braider.average_rating || '0'),
           totalReviews: parseInt(braider.total_reviews || '0'),
           createdAt: braider.created_at || new Date().toISOString(),
+          // Campos adicionais para sistema de promoções
+          email: userData?.email || 'email-nao-disponivel@exemplo.com',
+          specialties: braider.specialties || [],
+          isVerified: braider.is_verified || false,
           district: braider.district,
           concelho: braider.concelho,
           freguesia: braider.freguesia,
+          user_id: braider.user_id,
           whatsapp: braider.whatsapp,
           instagram: braider.instagram,
           address: braider.address,

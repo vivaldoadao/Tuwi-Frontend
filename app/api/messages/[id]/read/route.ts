@@ -10,17 +10,15 @@ const getServiceClient = () => {
   )
 }
 
-interface RouteParams {
-  params: {
-    id: string
-  }
-}
-
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PUT(
+  request: NextRequest, 
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     console.log('🚀 Starting mark message as read API...')
     
-    const messageId = params.id
+    const { id } = await params
+    const messageId = id
     
     // Get the current user session
     const session = await auth()
@@ -63,7 +61,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         conversation_id,
         sender_id,
         is_read,
-        conversations!inner(participant_1_id, participant_2_id)
+        conversations(participant_1_id, participant_2_id)
       `)
       .eq('id', messageId)
       .single()
@@ -76,9 +74,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // Verify user has access to this conversation
-    const conversation = message.conversations
-    const isParticipant = conversation.participant_1_id === userData.id || 
-                         conversation.participant_2_id === userData.id
+    const conversation = Array.isArray(message.conversations) ? message.conversations[0] : message.conversations
+    const isParticipant = conversation?.participant_1_id === userData.id || 
+                         conversation?.participant_2_id === userData.id
 
     if (!isParticipant) {
       return NextResponse.json(

@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { Package, ShoppingCart, Users, BarChart3, Bell, Plus, Eye, Settings, ChevronRight, Clock, ArrowUpRight } from "lucide-react"
+import { Package, ShoppingCart, Users, BarChart3, Bell, Plus, Eye, Settings, ChevronRight, Clock, ArrowUpRight, DollarSign } from "lucide-react"
 import { useEffect, useState } from "react"
 import { getDashboardStats, type DashboardStats } from "@/lib/data-supabase"
 import { AdminGuard } from "@/components/role-guard"
@@ -118,10 +118,10 @@ export default function DashboardOverviewPage() {
                     <span className="text-sm font-medium">Produtos</span>
                   </Link>
                 </Button>
-                <Button asChild variant="outline" className="h-20 flex-col gap-2 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all">
-                  <Link href="/dashboard/settings">
-                    <Settings className="h-6 w-6" />
-                    <span className="text-sm font-medium">Configurações</span>
+                <Button asChild variant="outline" className="h-20 flex-col gap-2 rounded-xl hover:bg-green-50 hover:border-green-300 transition-all">
+                  <Link href="/dashboard/commissions">
+                    <DollarSign className="h-6 w-6" />
+                    <span className="text-sm font-medium">Comissões</span>
                   </Link>
                 </Button>
               </div>
@@ -315,6 +315,13 @@ export default function DashboardOverviewPage() {
                 <Link href="/dashboard/orders" className="flex items-center gap-3">
                   <ShoppingCart className="h-4 w-4" />
                   <span>Ver Todos os Pedidos</span>
+                </Link>
+              </Button>
+              
+              <Button asChild variant="ghost" className="w-full justify-start rounded-xl hover:bg-purple-100">
+                <Link href="/dashboard/commissions" className="flex items-center gap-3">
+                  <DollarSign className="h-4 w-4" />
+                  <span>Gestão de Comissões</span>
                 </Link>
               </Button>
               

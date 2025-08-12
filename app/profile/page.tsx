@@ -32,7 +32,8 @@ import {
   Activity,
   Heart,
   ShoppingBag,
-  Edit3
+  Edit3,
+  MessageCircle
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -52,6 +53,7 @@ export default function ProfilePage() {
   const [bookings, setBookings] = useState<UserBooking[]>([])
   const [loadingOrders, setLoadingOrders] = useState(true)
   const [loadingBookings, setLoadingBookings] = useState(true)
+  const [startingConversation, setStartingConversation] = useState<string | null>(null)
   const [loadingUser, setLoadingUser] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -240,6 +242,50 @@ export default function ProfilePage() {
         return "bg-red-100 text-red-700 border-red-200"
       default:
         return "bg-gray-100 text-gray-700 border-gray-200"
+    }
+  }
+
+  // Handle start conversation from booking
+  const handleStartConversationFromBooking = async (booking: UserBooking) => {
+    if (!user || !booking.braider) {
+      toast.error("Dados insuficientes para iniciar conversa")
+      return
+    }
+
+    try {
+      setStartingConversation(booking.id)
+      
+      // Create or get conversation with the braider
+      const response = await fetch('/api/conversations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          participantId: booking.braider.id, // Use braider's ID directly
+          initialMessage: `Olá ${booking.braider.name}! Tenho um agendamento confirmado para ${booking.service?.name} no dia ${new Date(booking.date).toLocaleDateString('pt-BR')} às ${booking.time}. Gostaria de conversar sobre os detalhes.`
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao iniciar conversa')
+      }
+
+      toast.success("Conversa iniciada! Mudando para aba de mensagens...")
+      
+      // Switch to messages tab programmatically
+      setTimeout(() => {
+        // Use router to navigate to messages tab without reload
+        router.push('/profile?tab=messages')
+      }, 1000)
+
+    } catch (error) {
+      console.error('Error starting conversation from booking:', error)
+      toast.error(error instanceof Error ? error.message : 'Erro ao iniciar conversa')
+    } finally {
+      setStartingConversation(null)
     }
   }
 
@@ -617,6 +663,29 @@ export default function ProfilePage() {
                                 </p>
                               )}
                             </div>
+
+                            {/* Action Button - Only for confirmed bookings */}
+                            {booking.status === "Confirmado" && (
+                              <div className="mt-4 pt-4 border-t border-gray-200">
+                                <Button
+                                  onClick={() => handleStartConversationFromBooking(booking)}
+                                  disabled={startingConversation === booking.id}
+                                  className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-300"
+                                >
+                                  {startingConversation === booking.id ? (
+                                    <>
+                                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                                      Iniciando conversa...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <MessageCircle className="mr-2 h-4 w-4" />
+                                      Conversar com {booking.braider?.name || 'trancista'}
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         )
                       })}

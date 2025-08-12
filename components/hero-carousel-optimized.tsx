@@ -6,48 +6,11 @@ import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, ShoppingBag, Users, ChevronDown } from "lucide-react"
+import { getHeroSlides, type HeroSlideData } from "@/lib/cms-content"
 
-interface HeroSlide {
+interface HeroSlide extends HeroSlideData {
   id: string
-  title: string
-  subtitle: string
-  description: string
-  imageUrl: string
-  ctaText: string
-  ctaLink: string
-  secondaryCtaText?: string
-  secondaryCtaLink?: string
 }
-
-const heroSlides: HeroSlide[] = [
-  {
-    id: "1",
-    title: "WILNARA TRANÇAS",
-    subtitle: "Box Braids Elegantes",
-    description: "Realce sua beleza natural com nossas box braids profissionais. Estilo, conforto e durabilidade em cada fio trançado com perfeição.",
-    imageUrl: "/hero-braids.png",
-    ctaText: "Compre Agora",
-    ctaLink: "/products",
-    secondaryCtaText: "Ver Trancistas",
-    secondaryCtaLink: "/braiders"
-  },
-  {
-    id: "2", 
-    title: "WILNARA TRANÇAS",
-    subtitle: "Goddess Braids Luxuosas",
-    description: "Transforme seu visual com nossas goddess braids artesanais. Cada trança é uma obra de arte que celebra sua individualidade.",
-    imageUrl: "/hero-braids.png",
-    ctaText: "Explorar Estilos",
-    ctaLink: "/products",
-    secondaryCtaText: "Agendar Serviço",
-    secondaryCtaLink: "/braiders"
-  },
-  {
-    id: "3",
-    title: "WILNARA TRANÇAS", 
-    subtitle: "Twist Braids Modernas",
-    description: "Descubra a versatilidade dos twist braids. Proteção capilar e estilo combinados para um visual autêntico e contemporâneo.",
-    imageUrl: "/hero-braids.png",
     ctaText: "Ver Coleção",
     ctaLink: "/products",
     secondaryCtaText: "Encontrar Profissional",

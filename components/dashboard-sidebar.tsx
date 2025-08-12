@@ -2,7 +2,7 @@
 import * as React from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { Home, ShoppingCart, Package, Settings, ChevronDown, User2, Users, UserCheck, Bell, LogOut } from "lucide-react"
+import { Home, ShoppingCart, Package, Settings, ChevronDown, User2, Users, UserCheck, Bell, LogOut, DollarSign, FileText, TrendingUp } from "lucide-react"
 import { signOut } from "next-auth/react"
 
 import {
@@ -70,9 +70,24 @@ export function DashboardSidebar() {
       icon: Users,
     },
     {
+      title: "Comissões",
+      href: "/dashboard/commissions",
+      icon: DollarSign,
+    },
+    {
+      title: "Promoções",
+      href: "/dashboard/promotions",
+      icon: TrendingUp,
+    },
+    {
       title: "Usuários",
       href: "/dashboard/users",
       icon: UserCheck,
+    },
+    {
+      title: "Gestão de Conteúdo",
+      href: "/dashboard/content",
+      icon: FileText,
     },
     {
       title: "Configurações",

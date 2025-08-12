@@ -10,13 +10,10 @@ const getServiceClient = () => {
   )
 }
 
-interface RouteParams {
-  params: {
-    id: string
-  }
-}
-
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export async function POST(
+  request: NextRequest, 
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     console.log('🚀 Starting typing indicator API...')
     

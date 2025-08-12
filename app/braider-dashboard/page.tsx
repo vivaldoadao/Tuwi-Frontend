@@ -4,12 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { CalendarCheck, Users, TrendingUp, Clock, Star, Calendar, Eye, MapPin, CheckCircle, Euro, BarChart3, Activity, Bell, Plus, Settings, ChevronRight, AlertCircle } from "lucide-react"
+import { CalendarCheck, Users, TrendingUp, Clock, Star, Calendar, Eye, MapPin, CheckCircle, Euro, BarChart3, Activity, Bell, Plus, ChevronRight, AlertCircle, DollarSign } from "lucide-react"
 import { getBraiderBookings, getBraiderById, type Booking } from "@/lib/data"
 import { useEffect, useState } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { BraiderGuard } from "@/components/role-guard"
+import { BraiderEarningsDashboard } from "@/components/braider-earnings-dashboard"
 import { useAuth } from "@/context/auth-context"
 import Link from "next/link"
 import Image from "next/image"
@@ -210,6 +211,17 @@ export default function BraiderDashboardOverviewPage() {
         </Card>
       </div>
 
+      {/* Earnings Dashboard Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold font-heading text-gray-900">💰 Ganhos e Comissões</h2>
+          <Badge variant="secondary" className="bg-green-100 text-green-700 px-3 py-1">
+            Sistema Ativo
+          </Badge>
+        </div>
+        <BraiderEarningsDashboard braiderId={braiderId} />
+      </div>
+
       {/* Dashboard Content Grid */}
       <div className="grid gap-8 lg:grid-cols-3">
         {/* Main Content Column */}
@@ -237,10 +249,10 @@ export default function BraiderDashboardOverviewPage() {
                     <span className="text-sm font-medium">Agendamentos</span>
                   </Link>
                 </Button>
-                <Button asChild variant="outline" className="h-20 flex-col gap-2 rounded-xl hover:bg-accent-50 hover:border-accent-300 transition-all">
-                  <Link href="/braider-dashboard/services">
-                    <Settings className="h-6 w-6" />
-                    <span className="text-sm font-medium">Serviços</span>
+                <Button asChild variant="outline" className="h-20 flex-col gap-2 rounded-xl hover:bg-green-50 hover:border-green-300 transition-all">
+                  <Link href="/braider-dashboard/earnings">
+                    <DollarSign className="h-6 w-6" />
+                    <span className="text-sm font-medium">Meus Ganhos</span>
                   </Link>
                 </Button>
                 <Button asChild variant="outline" className="h-20 flex-col gap-2 rounded-xl hover:bg-accent-50 hover:border-accent-300 transition-all">

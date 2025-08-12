@@ -187,7 +187,7 @@ export default function BraiderMessagesPage() {
   const [loading, setLoading] = useState(false)
 
   // Get conversation ID from URL params
-  const conversationId = searchParams.get('conversation')
+  const conversationId = searchParams?.get('conversation')
 
   useEffect(() => {
     if (!user) {

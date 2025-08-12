@@ -28,6 +28,33 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Check for existing booking conflicts (same client, same date/time)
+    const { data: existingBookings, error: conflictError } = await serviceClient
+      .from('bookings')
+      .select('id, status, booking_date, booking_time')
+      .eq('client_email', bookingData.clientEmail)
+      .eq('booking_date', bookingData.date)
+      .eq('booking_time', bookingData.time)
+      .in('status', ['pending', 'confirmed']) // Check both pending and confirmed
+
+    if (conflictError) {
+      console.error('Error checking for booking conflicts:', conflictError)
+      return NextResponse.json(
+        { success: false, error: 'Erro ao verificar conflitos de agendamento' },
+        { status: 500 }
+      )
+    }
+
+    if (existingBookings && existingBookings.length > 0) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Você já possui um agendamento neste mesmo dia e horário. Por favor, escolha outro horário.' 
+        },
+        { status: 409 } // Conflict status code
+      )
+    }
+
     // Create the booking
     const { data, error } = await serviceClient
       .from('bookings')

@@ -1,7 +1,7 @@
 "use client"
 import Link from "next/link"
 import Image from "next/image"
-import { Home, CalendarCheck, UserCog, ChevronDown, CalendarDays, Briefcase, MessageSquare } from "lucide-react"
+import { Home, CalendarCheck, UserCog, ChevronDown, CalendarDays, Briefcase, MessageSquare, DollarSign, TrendingUp } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -50,6 +50,16 @@ export function BraiderDashboardSidebar({ braider }: BraiderDashboardSidebarProp
       title: "Mensagens",
       href: "/braider-dashboard/messages" as const,
       icon: MessageSquare,
+    },
+    {
+      title: "Meus Ganhos",
+      href: "/braider-dashboard/earnings" as const,
+      icon: DollarSign,
+    },
+    {
+      title: "Destacar Perfil",
+      href: "/braider-dashboard/promotions" as const,
+      icon: TrendingUp,
     },
     {
       title: "Minha Disponibilidade",

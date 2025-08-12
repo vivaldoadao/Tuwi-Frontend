@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { getBraiderById } from "@/lib/data-supabase"
 import { useFavorites } from "@/context/favorites-context"
-import { MapPin, Phone, Mail, Clock, ChevronLeft, ChevronRight, Star, Calendar, Heart, Share2, ArrowLeft, MessageCircle } from "lucide-react"
+import { MapPin, Phone, Mail, Clock, ChevronLeft, ChevronRight, Star, Calendar, Heart, Share2, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect, use } from "react"
 import { Braider, Service } from "@/lib/data"
@@ -30,7 +30,6 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
   const servicesPerPage = 8
   const { user } = useAuth()
   const router = useRouter()
-  const [startingConversation, setStartingConversation] = useState(false)
   
   console.log('BraiderDetailPage - Received ID:', id)
   
@@ -124,54 +123,6 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
     setCurrentPage(page)
   }
 
-  // Handle start conversation
-  const handleStartConversation = async () => {
-    if (!user) {
-      toast.error("Faça login para iniciar uma conversa")
-      router.push("/auth/signin")
-      return
-    }
-
-    if (!braider) {
-      toast.error("Erro ao carregar dados da trancista")
-      return
-    }
-
-    try {
-      setStartingConversation(true)
-      
-      // Create or get conversation with the braider
-      const response = await fetch('/api/conversations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          participantId: (braider as any).user_id || braider.id, // Use braider's user_id or fallback to braider.id
-          initialMessage: `Olá ${braider.name}, gostaria de saber mais sobre os seus serviços!`
-        })
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Erro ao iniciar conversa')
-      }
-
-      toast.success("Conversa iniciada! Redirecionando...")
-      
-      // Redirect to user chat page with messages tab
-      setTimeout(() => {
-        router.push('/profile?tab=messages')
-      }, 1000)
-
-    } catch (error) {
-      console.error('Error starting conversation:', error)
-      toast.error(error instanceof Error ? error.message : 'Erro ao iniciar conversa')
-    } finally {
-      setStartingConversation(false)
-    }
-  }
 
   // Mock data for enhanced features
   const rating = 4.8
@@ -297,25 +248,8 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
                       {/* Primary Actions */}
                       <div className="flex gap-3">
                         <Button
-                          onClick={handleStartConversation}
-                          disabled={startingConversation}
-                          className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-                        >
-                          {startingConversation ? (
-                            <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
-                              Iniciando...
-                            </>
-                          ) : (
-                            <>
-                              <MessageCircle className="mr-2 h-4 w-4" />
-                              Iniciar Conversa
-                            </>
-                          )}
-                        </Button>
-                        <Button
                           asChild
-                          className="flex-1 bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white px-6 py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+                          className="w-full bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white px-6 py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
                         >
                           <Link href={`/braiders/${braider.id}/book`}>
                             <Calendar className="mr-2 h-4 w-4" />

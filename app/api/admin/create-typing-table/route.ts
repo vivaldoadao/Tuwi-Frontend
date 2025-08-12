@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('❌ Error creating typing_indicators table:', error)
       return NextResponse.json(
-        { success: false, error: error.message },
+        { success: false, error: String(error) },
         { status: 500 }
       )
     }
