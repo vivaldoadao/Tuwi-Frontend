@@ -140,9 +140,9 @@ export default function BraidersPage() {
       <SiteHeader />
       
       {/* Modern Hero Section */}
-      <div className="relative bg-gradient-to-r from-brand-800 via-brand-700 to-brand-600 text-white overflow-hidden">
+      <div className="relative bg-gradient-to-r from-brand-700 via-brand-800 to-accent-700 text-white overflow-hidden">
         {loading && (
-          <div className="absolute inset-0 bg-gradient-to-r from-brand-800 via-brand-700 to-brand-600 flex items-center justify-center z-10">
+          <div className="absolute inset-0 bg-gradient-to-r from-brand-700 via-brand-800 to-accent-700 flex items-center justify-center z-10">
             <div className="text-center text-white">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
               <p className="text-lg">Carregando trancistas...</p>
@@ -155,7 +155,7 @@ export default function BraidersPage() {
           <div className="text-center space-y-6">
             <h1 className="text-4xl md:text-6xl font-bold font-heading mb-4">
               Encontre sua{" "}
-              <span className="bg-gradient-to-r from-accent-300 to-accent-400 bg-clip-text text-transparent">
+              <span className="text-accent-200">
                 Trancista Ideal
               </span>
             </h1>
@@ -181,7 +181,7 @@ export default function BraidersPage() {
               <Card className="bg-white/10 backdrop-blur-md border-white/20 text-white">
                 <CardContent className="text-center p-6">
                   <div className="flex items-center justify-center gap-1 mb-2">
-                    <Star className="h-6 w-6 fill-accent-400 text-accent-400" />
+                    <Star className="h-6 w-6 fill-accent-200 text-accent-200" />
                     <span className="text-3xl font-bold">4.8</span>
                   </div>
                   <div className="text-sm text-white/80">Avaliação Média</div>
@@ -208,7 +208,7 @@ export default function BraidersPage() {
                     placeholder="Buscar por nome, localidade ou especialidade..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-12 h-14 text-lg bg-gray-50 border-gray-200 rounded-2xl focus:ring-accent-500 focus:border-accent-500 transition-all duration-300"
+                    className="pl-12 h-14 text-lg bg-gray-50 border-gray-200 rounded-2xl focus:ring-brand-500 focus:border-brand-500 transition-all duration-300"
                   />
                 </div>
 
@@ -225,8 +225,8 @@ export default function BraidersPage() {
                         onClick={() => setSelectedFilter("all")}
                         className={`rounded-full ${
                           selectedFilter === "all" 
-                            ? "bg-accent-500 hover:bg-accent-600 text-white" 
-                            : "hover:bg-accent-50 hover:text-accent-700"
+                            ? "bg-brand-500 hover:bg-brand-600 text-white" 
+                            : "hover:bg-brand-50 hover:text-brand-700"
                         }`}
                       >
                         Todas
@@ -237,8 +237,8 @@ export default function BraidersPage() {
                         onClick={() => setSelectedFilter("approved")}
                         className={`rounded-full ${
                           selectedFilter === "approved" 
-                            ? "bg-accent-500 hover:bg-accent-600 text-white" 
-                            : "hover:bg-accent-50 hover:text-accent-700"
+                            ? "bg-brand-500 hover:bg-brand-600 text-white" 
+                            : "hover:bg-brand-50 hover:text-brand-700"
                         }`}
                       >
                         Verificadas
@@ -249,8 +249,8 @@ export default function BraidersPage() {
                         onClick={() => setSelectedFilter("pending")}
                         className={`rounded-full ${
                           selectedFilter === "pending" 
-                            ? "bg-accent-500 hover:bg-accent-600 text-white" 
-                            : "hover:bg-accent-50 hover:text-accent-700"
+                            ? "bg-brand-500 hover:bg-brand-600 text-white" 
+                            : "hover:bg-brand-50 hover:text-brand-700"
                         }`}
                       >
                         Novas
@@ -360,7 +360,7 @@ export default function BraidersPage() {
                 <h2 className="text-2xl font-bold font-heading text-gray-900">
                   {loading ? "Carregando..." : sortedBraiders.length === 0 ? "Nenhuma trancista encontrada" : "Nossas Trancistas"}
                 </h2>
-                <Badge variant="secondary" className="bg-accent-100 text-accent-700 px-3 py-1">
+                <Badge variant="secondary" className="bg-brand-100 text-brand-700 px-3 py-1">
                   {sortedBraiders.length} {sortedBraiders.length === 1 ? "resultado" : "resultados"}
                 </Badge>
                 
@@ -440,7 +440,7 @@ export default function BraidersPage() {
                         setSelectedFreguesia("all")
                         setSelectedFilter("all")
                       }}
-                      className="bg-accent-500 hover:bg-accent-600 text-white rounded-full"
+                      className="bg-brand-500 hover:bg-brand-600 text-white rounded-full"
                     >
                       Ver todas as trancistas
                     </Button>
@@ -457,7 +457,7 @@ export default function BraidersPage() {
           </div>
 
           {/* Call to Action Section */}
-          <Card className="bg-gradient-to-r from-accent-500 to-accent-600 text-white shadow-2xl rounded-3xl border-0 overflow-hidden mt-16">
+          <Card className="bg-gradient-to-r from-brand-600 to-accent-600 text-white shadow-2xl rounded-3xl border-0 overflow-hidden mt-16">
             <CardContent className="text-center p-12">
               <h3 className="text-3xl font-bold font-heading mb-4">Você é uma Trancista?</h3>
               <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
@@ -466,7 +466,7 @@ export default function BraidersPage() {
               </p>
               <BraiderRegisterButton 
                 variant="default"
-                className="bg-white text-accent-600 hover:bg-gray-100 px-8 py-4 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
+                className="bg-white text-brand-600 hover:bg-gray-100 px-8 py-4 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
               />
             </CardContent>
           </Card>
@@ -475,7 +475,7 @@ export default function BraidersPage() {
       </main>
 
       {/* Modern Footer */}
-      <footer className="bg-gradient-to-r from-brand-800 via-brand-700 to-brand-600 text-white py-12 mt-16">
+      <footer className="bg-gradient-to-r from-brand-800 to-brand-900 text-white py-12 mt-16">
         <div className="container mx-auto px-4 text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
             <Image
@@ -486,7 +486,7 @@ export default function BraidersPage() {
               className="rounded-full"
               unoptimized={true}
             />
-            <span className="text-2xl font-bold font-heading text-accent-300">WILNARA TRANÇAS</span>
+            <span className="text-2xl font-bold font-heading text-brand-200">WILNARA TRANÇAS</span>
           </div>
           <p className="text-white/80">
             © {new Date().getFullYear()} Wilnara Tranças. Todos os direitos reservados.

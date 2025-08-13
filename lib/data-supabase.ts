@@ -1190,7 +1190,7 @@ export async function getFeaturedBraiders(): Promise<Braider[]> {
     const { braiders } = await getAllBraiders(1, 10, undefined, 'approved')
     return braiders
       .sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0))
-      .slice(0, 2)
+      .slice(0, 4) // Mostrar 4 trancistas em destaque (adequado para início)
   } catch (error) {
     console.error('Unexpected error fetching featured braiders:', error)
     return []

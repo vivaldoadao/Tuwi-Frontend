@@ -116,21 +116,21 @@ export function PromotedBraidersSection({
     switch (type) {
       case 'profile_highlight':
         return (
-          <Badge className="bg-purple-100 text-purple-800 border-purple-200">
+          <Badge className="bg-brand-100 text-brand-800 border-brand-200">
             <Crown className="h-3 w-3 mr-1" />
             Destaque
           </Badge>
         )
       case 'combo_package':
         return (
-          <Badge className="bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 border-purple-200">
+          <Badge className="bg-gradient-to-r from-brand-100 to-accent-100 text-brand-800 border-brand-200">
             <Sparkles className="h-3 w-3 mr-1" />
             Premium
           </Badge>
         )
       default:
         return (
-          <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+          <Badge className="bg-gray-100 text-gray-800 border-gray-200">
             <TrendingUp className="h-3 w-3 mr-1" />
             Promovido
           </Badge>
@@ -175,15 +175,15 @@ export function PromotedBraidersSection({
   }
 
   if (promotedBraiders.length === 0) {
-    return null // Não mostrar seção se não há perfis promovidos
+    return null // Será tratado pelo fallback na homepage
   }
 
   return (
     <div className={`space-y-6 ${className}`}>
       {showTitle && (
         <div className="text-center">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-2">
-            <Crown className="h-8 w-8 text-purple-600" />
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-brand-600 to-brand-700 bg-clip-text text-transparent mb-2 flex items-center justify-center gap-2">
+            <Crown className="h-8 w-8 text-brand-600" />
             Trancistas em Destaque
           </h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
@@ -196,7 +196,7 @@ export function PromotedBraidersSection({
         {promotedBraiders.map((braider) => (
           <Card 
             key={braider.id} 
-            className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-2 border-purple-100 hover:border-purple-200"
+            className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-200 hover:border-brand-300"
           >
             <CardContent className="p-6">
               {/* Badge de Promoção */}
@@ -217,10 +217,10 @@ export function PromotedBraidersSection({
                     src={braider.profileImageUrl || '/placeholder-avatar.png'}
                     alt={braider.name}
                     fill
-                    className="rounded-full object-cover border-4 border-purple-100 group-hover:border-purple-200 transition-colors"
+                    className="rounded-full object-cover border-4 border-gray-100 group-hover:border-brand-200 transition-colors"
                   />
                   {/* Indicador de destaque */}
-                  <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                  <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-r from-brand-500 to-accent-500 rounded-full flex items-center justify-center">
                     <Crown className="h-3 w-3 text-white" />
                   </div>
                 </div>
@@ -260,7 +260,7 @@ export function PromotedBraidersSection({
                       <Badge 
                         key={index}
                         variant="outline" 
-                        className="text-xs bg-purple-50 text-purple-700 border-purple-200"
+                        className="text-xs bg-gray-50 text-gray-700 border-gray-200"
                       >
                         {specialty}
                       </Badge>
@@ -289,7 +289,7 @@ export function PromotedBraidersSection({
               {/* Botão de Ação */}
               <Button
                 asChild
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white group-hover:shadow-lg"
+                className="w-full bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-800 text-white group-hover:shadow-lg"
                 onClick={() => handleBraiderClick(braider)}
               >
                 <Link href={`/braiders/${braider.id}`}>

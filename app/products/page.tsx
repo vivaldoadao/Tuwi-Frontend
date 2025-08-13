@@ -25,7 +25,7 @@ export default async function ProductsPage() {
       <SiteHeader />
       
       {/* Hero Section */}
-      <div className="relative bg-gradient-to-r from-brand-800 via-brand-700 to-brand-600 text-white">
+      <div className="relative bg-gradient-to-r from-brand-700 via-brand-800 to-accent-700 text-white">
         <div className="absolute inset-0 bg-black/20" />
         <div className="relative container mx-auto px-4 py-16">
           <div className="text-center space-y-4">
@@ -69,7 +69,7 @@ export default async function ProductsPage() {
 
         </div>
       </main>
-      <footer className="bg-brand-primary text-white py-8">
+      <footer className="bg-gradient-to-r from-brand-800 to-brand-900 text-white py-8">
         <div className="container px-4 md:px-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Image
@@ -80,7 +80,7 @@ export default async function ProductsPage() {
               className="rounded-full"
               unoptimized={true}
             />
-            <span className="text-lg font-bold text-brand-accent">WILNARA TRANÇAS</span>
+            <span className="text-lg font-bold text-brand-200">WILNARA TRANÇAS</span>
           </div>
           <p className="text-sm text-white/80">
             © {new Date().getFullYear()} Wilnara Tranças. Todos os direitos reservados.

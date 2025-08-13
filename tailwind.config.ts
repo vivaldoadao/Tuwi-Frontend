@@ -58,37 +58,51 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Enhanced brand color system
+        // Elegant brand color system - Sage Green & Soft Blue theme
         brand: {
-          50: '#fdf8f6',
-          100: '#f2e8e5',
-          200: '#eaddd7',
-          300: '#e0cec7',
-          400: '#d2bab0',
-          500: '#c69c7e',
-          600: '#A0522D', // Current brand-background
-          700: '#8b4513',
-          800: '#5A2D2D', // Current brand-primary
-          900: '#3d1a1a',
-          950: '#2a1212',
+          50: '#f8faf9',
+          100: '#f0f4f1',
+          200: '#e1ebe3',
+          300: '#c8d6cc',
+          400: '#a8bfad',
+          500: '#84a98c', // Primary sage green
+          600: '#6b8e73',
+          700: '#52796f', // Deeper sage
+          800: '#354f52', // Dark sage
+          900: '#2f3e46',
+          950: '#1a2328',
         },
         accent: {
-          50: '#fefce8',
-          100: '#fef9c3',
-          200: '#fef08a',
-          300: '#fde047',
-          400: '#facc15',
-          500: '#DAA520', // Current brand-accent
-          600: '#ca8a04',
-          700: '#a16207',
-          800: '#854d0e',
-          900: '#713f12',
-          950: '#422006',
+          50: '#f0f9ff',
+          100: '#e0f2fe',
+          200: '#bae6fd',
+          300: '#7dd3fc',
+          400: '#38bdf8',
+          500: '#0ea5e9', // Soft blue accent
+          600: '#0284c7',
+          700: '#0369a1',
+          800: '#075985',
+          900: '#0c4a6e',
+          950: '#082f49',
+        },
+        // Warm support colors
+        secondary: {
+          50: '#fefbf3',
+          100: '#fef7e7',
+          200: '#fdecc4',
+          300: '#fbdc96',
+          400: '#f7c565',
+          500: '#f4b942', // Warm gold
+          600: '#e8a317',
+          700: '#c18314',
+          800: '#9a6617',
+          900: '#7c5318',
+          950: '#432a09',
         },
         // Keep legacy colors for backward compatibility
-        "brand-background": "#A0522D",
-        "brand-primary": "#5A2D2D", 
-        "brand-accent": "#DAA520"
+        "brand-background": "#84a98c",
+        "brand-primary": "#52796f", 
+        "brand-accent": "#0ea5e9"
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -106,7 +106,7 @@ export default async function HomePage() {
 
       {/* Featured Products Section */}
       <Section background="white" padding="md">
-        <h2 className="text-3xl md:text-4xl font-bold font-heading text-center mb-10 text-brand-800">
+        <h2 className="text-3xl md:text-4xl font-bold font-heading text-center mb-10 bg-gradient-to-r from-brand-600 via-brand-700 to-accent-600 bg-clip-text text-transparent">
           {homepageContent.productsTitle}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -118,66 +118,74 @@ export default async function HomePage() {
           <Button
             asChild
             variant="outline"
-            className="border-brand-600 text-brand-700 hover:bg-brand-600 hover:text-white px-8 py-3 text-lg font-semibold rounded-full transition-all duration-300 bg-transparent shadow-md hover:shadow-lg"
+            className="border-brand-500 text-brand-600 hover:bg-gradient-to-r hover:from-brand-500 hover:to-accent-500 hover:text-white px-8 py-3 text-lg font-semibold rounded-full transition-all duration-300 bg-transparent shadow-md hover:shadow-lg hover:border-transparent"
           >
             <Link href="/products">Ver Todos os Produtos</Link>
           </Button>
         </div>
       </Section>
 
-      {/* Promoted Braiders Section - Exibe perfis em destaque se sistema estiver ativo */}
-      {promotionSettings.system_enabled ? (
-        <Section background="gray" padding="md">
-          <PromotedBraidersSection limit={6} />
-        </Section>
-      ) : (
-        /* Featured Braiders Section - Fallback tradicional */
-        <Section background="gray" padding="md">
-          <h2 className="text-3xl md:text-4xl font-bold font-heading text-center mb-10 text-brand-800">
-            {homepageContent.braidersTitle}
-          </h2>
-          <p className="text-lg md:text-xl text-center max-w-3xl mx-auto mb-12 text-gray-700 leading-relaxed">
-            {homepageContent.braidersSubtitle}
-          </p>
+      {/* Featured Braiders Section - Sempre mostrar trancistas */}
+      <Section background="gray" padding="md">
+        <h2 className="text-3xl md:text-4xl font-bold font-heading text-center mb-10 bg-gradient-to-r from-brand-600 via-brand-700 to-accent-600 bg-clip-text text-transparent">
+          {homepageContent.braidersTitle}
+        </h2>
+        <p className="text-lg md:text-xl text-center max-w-3xl mx-auto mb-12 text-gray-700 leading-relaxed">
+          {homepageContent.braidersSubtitle}
+        </p>
+        
+        {/* Mostrar trancistas promovidas se sistema estiver ativo, senão mostrar tradicionais */}
+        {promotionSettings.system_enabled ? (
+          <div>
+            <PromotedBraidersSection limit={4} showTitle={false} />
+            {/* Garantir pelo menos 4 trancistas tradicionais sempre */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 justify-items-center mt-6">
+              {featuredBraiders.slice(0, 4).map((braider) => (
+                <BraiderCard key={braider.id} braider={braider} />
+              ))}
+            </div>
+          </div>
+        ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 justify-items-center">
-            {featuredBraiders.map((braider) => (
+            {featuredBraiders.slice(0, 4).map((braider) => (
               <BraiderCard key={braider.id} braider={braider} />
             ))}
           </div>
-          <div className="text-center mt-12">
-            <Button
-              asChild
-              variant="outline"
-              className="border-brand-600 text-brand-700 hover:bg-brand-600 hover:text-white px-8 py-3 text-lg font-semibold rounded-full transition-all duration-300 bg-transparent shadow-md hover:shadow-lg"
-            >
-              <Link href="/braiders">Ver Todas as Trancistas</Link>
-            </Button>
-          </div>
-        </Section>
-      )}
+        )}
+        
+        <div className="text-center mt-12">
+          <Button
+            asChild
+            variant="outline"
+            className="border-brand-500 text-brand-600 hover:bg-gradient-to-r hover:from-brand-500 hover:to-accent-500 hover:text-white px-8 py-3 text-lg font-semibold rounded-full transition-all duration-300 bg-transparent shadow-md hover:shadow-lg hover:border-transparent"
+          >
+            <Link href="/braiders">Ver Todas as Trancistas</Link>
+          </Button>
+        </div>
+      </Section>
 
       {/* Call to Action: Become a Braider */}
-      <Section background="brand" padding="md">
+      <Section className="bg-gradient-to-br from-brand-50 via-brand-100 to-accent-50" padding="md">
         <div className="text-center space-y-6">
-          <h2 className="text-3xl md:text-4xl font-bold font-heading text-accent-400">
+          <h2 className="text-3xl md:text-4xl font-bold font-heading bg-gradient-to-r from-brand-700 to-brand-800 bg-clip-text text-transparent">
             {homepageContent.ctaBraiderTitle}
           </h2>
-          <p className="text-lg md:text-xl max-w-3xl mx-auto text-white/90 leading-relaxed">
+          <p className="text-lg md:text-xl max-w-3xl mx-auto text-brand-700 leading-relaxed">
             {homepageContent.ctaBraiderSubtitle}
           </p>
           <BraiderRegisterButton 
-            className="bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white px-8 py-3 text-lg font-semibold rounded-full transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+            className="bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-800 text-white px-8 py-3 text-lg font-semibold rounded-full transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
           />
         </div>
       </Section>
 
       {/* About Us / Call to Action Section */}
-      <Section className="bg-brand-800 text-white" padding="md">
+      <Section className="bg-gradient-to-br from-brand-800 via-brand-900 to-slate-800 text-white" padding="md">
         <div className="text-center space-y-6">
-          <h2 className="text-3xl md:text-4xl font-bold font-heading text-accent-400">
+          <h2 className="text-3xl md:text-4xl font-bold font-heading bg-gradient-to-r from-accent-200 to-brand-200 bg-clip-text text-transparent">
             {homepageContent.aboutTitle}
           </h2>
-          <p className="text-lg md:text-xl max-w-3xl mx-auto text-white/90 leading-relaxed">
+          <p className="text-lg md:text-xl max-w-3xl mx-auto text-brand-100 leading-relaxed">
             {homepageContent.aboutSubtitle}
           </p>
           <Button
