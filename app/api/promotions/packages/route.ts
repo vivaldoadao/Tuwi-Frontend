@@ -25,13 +25,18 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url)
     const type = url.searchParams.get('type') // profile_highlight, hero_banner, combo
     const featured = url.searchParams.get('featured') // true/false
+    const admin = url.searchParams.get('admin') // true/false
 
     let query = serviceClient
       .from('promotion_packages')
       .select('*')
-      .eq('is_active', true)
       .order('sort_order')
       .order('price')
+
+    // Se não for admin, mostrar apenas pacotes ativos
+    if (admin !== 'true' || !await isAdmin()) {
+      query = query.eq('is_active', true)
+    }
 
     if (type) {
       query = query.eq('type', type)

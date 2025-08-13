@@ -91,8 +91,9 @@ export default async function HomePage() {
     getActiveHeroBanner()
   ])
 
-  // Decidir qual hero usar: promoção ou carousel padrão
-  const usePromotedHero = promotionSettings.system_enabled && activeHeroBanner
+  // Decidir qual hero usar: slides do CMS têm prioridade, depois promoções
+  const hasHeroSlides = heroSlides && heroSlides.length > 0
+  const usePromotedHero = !hasHeroSlides && promotionSettings.system_enabled && activeHeroBanner
 
   return (
     <SiteLayout>

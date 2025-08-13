@@ -19,6 +19,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Validar se userId é um UUID válido
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(userId)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid user ID format' },
+        { status: 400 }
+      )
+    }
+
     const supabase = getServiceClient()
 
     // Update user presence using RPC function with service role

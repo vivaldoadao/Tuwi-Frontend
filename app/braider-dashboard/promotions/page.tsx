@@ -23,11 +23,15 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
+  AlertTriangle,
   XCircle,
   Plus,
   Calendar,
   Target,
   BarChart3,
+  ShoppingCart,
+  CreditCard,
+  Zap,
   Loader2
 } from "lucide-react"
 import { useAuth } from "@/context/auth-context"
@@ -127,6 +131,16 @@ export default function BraiderPromotionsPage() {
   const [couponCode, setCouponCode] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'subscription'>('card')
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'quarterly' | 'yearly'>('monthly')
+  
+  // Estados para validação de duplicatas
+  const [existingActivePromotions, setExistingActivePromotions] = useState<MyPromotion[]>([])
+  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false)
+  const [duplicatePromotion, setDuplicatePromotion] = useState<MyPromotion | null>(null)
+  
+  // Estados para extensão de promoções
+  const [isExtendModalOpen, setIsExtendModalOpen] = useState(false)
+  const [promotionToExtend, setPromotionToExtend] = useState<MyPromotion | null>(null)
+  const [extensionDays, setExtensionDays] = useState(7)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -203,7 +217,134 @@ export default function BraiderPromotionsPage() {
     }
   }
 
+  // Verificar se já existe promoção ativa do mesmo tipo
+  const checkForExistingPromotion = (packageType: string) => {
+    const now = new Date()
+    const existing = myPromotions.find(promo => 
+      promo.type === packageType && 
+      promo.status === 'active' && 
+      new Date(promo.end_date) > now
+    )
+    
+    if (existing) {
+      setDuplicatePromotion(existing)
+      
+      // Para profile_highlight, bloquear completamente
+      if (packageType === 'profile_highlight') {
+        toast.error(`Você já possui uma promoção de "Destaque de Perfil" ativa até ${new Date(existing.end_date).toLocaleDateString('pt-BR')}. Apenas uma promoção deste tipo pode estar ativa por vez.`)
+        return false
+      }
+      
+      // Para outros tipos, mostrar aviso mas permitir
+      if (packageType === 'hero_banner') {
+        setShowDuplicateWarning(true)
+        return 'warning'
+      }
+      
+      if (packageType === 'combo_package') {
+        setShowDuplicateWarning(true) 
+        return 'warning'
+      }
+    }
+    
+    return true
+  }
+
+  // Verificar status do pacote para o usuário
+  const getPackageStatus = (packageType: string) => {
+    const now = new Date()
+    const activePromotion = myPromotions.find(promo => 
+      promo.type === packageType && 
+      promo.status === 'active' && 
+      new Date(promo.end_date) > now
+    )
+    
+    const pendingPromotion = myPromotions.find(promo => 
+      promo.type === packageType && 
+      promo.status === 'pending'
+    )
+    
+    if (activePromotion) {
+      const daysLeft = Math.ceil((new Date(activePromotion.end_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+      return { 
+        status: 'active', 
+        promotion: activePromotion, 
+        daysLeft,
+        endDate: new Date(activePromotion.end_date).toLocaleDateString('pt-BR')
+      }
+    }
+    
+    if (pendingPromotion) {
+      return { 
+        status: 'pending', 
+        promotion: pendingPromotion 
+      }
+    }
+    
+    return { status: 'available' }
+  }
+
+  // Função para abrir modal de extensão
+  const handleExtendPromotion = (promotion: MyPromotion) => {
+    setPromotionToExtend(promotion)
+    setExtensionDays(7) // Default 7 dias
+    setIsExtendModalOpen(true)
+  }
+
+  // Função para submeter extensão
+  const handleSubmitExtension = async () => {
+    if (!promotionToExtend) return
+
+    try {
+      setSubmittingAction('extending-promotion')
+      
+      const response = await fetch('/api/promotions/extend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          promotion_id: promotionToExtend.id,
+          additional_days: extensionDays
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Falha ao estender promoção')
+      }
+
+      const result = await response.json()
+      toast.success(`Promoção estendida até ${result.new_end_date}!`)
+
+      // Atualizar a lista de promoções
+      setMyPromotions(prev => 
+        prev.map(promo => 
+          promo.id === promotionToExtend.id 
+            ? { ...promo, end_date: result.promotion.end_date }
+            : promo
+        )
+      )
+
+      setIsExtendModalOpen(false)
+      setPromotionToExtend(null)
+
+    } catch (error) {
+      console.error('Error extending promotion:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao estender promoção'
+      toast.error(errorMessage)
+    } finally {
+      setSubmittingAction('')
+    }
+  }
+
   const handlePurchasePackage = (pkg: PromotionPackage) => {
+    // Verificar duplicatas antes de continuar
+    const duplicateCheck = checkForExistingPromotion(pkg.type)
+    
+    if (duplicateCheck === false) {
+      // Bloqueado (profile_highlight com duplicata)
+      return
+    }
+    
     setSelectedPackage(pkg)
     
     // Pré-preencher formulário baseado no tipo
@@ -247,6 +388,8 @@ export default function BraiderPromotionsPage() {
         package_id: selectedPackage.id,
         price: selectedPackage.price,
         duration_days: selectedPackage.duration_days,
+        target_type: 'specific_user',
+        target_value: user?.email, // Explicitamente definir que é para o próprio usuário
         metadata: {
           package_name: selectedPackage.name,
           purchased_via: 'braider_dashboard'
@@ -512,11 +655,11 @@ export default function BraiderPromotionsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold font-heading text-gray-900 flex items-center gap-3">
-            <TrendingUp className="h-8 w-8 text-green-600" />
-            Destacar Meu Perfil
+            <ShoppingCart className="h-8 w-8 text-green-600" />
+            Marketplace de Promoções
           </h1>
           <p className="text-gray-600 mt-1">
-            Aumente sua visibilidade e atraia mais clientes com nossas promoções
+            Compre promoções para destacar seu perfil e atrair mais clientes
           </p>
           {!settings?.payments_enabled && (
             <Badge className="bg-green-100 text-green-800 mt-2">
@@ -612,31 +755,62 @@ export default function BraiderPromotionsPage() {
       {/* Main Content */}
       <Tabs defaultValue="packages" className="w-full">
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="packages">Pacotes</TabsTrigger>
-          <TabsTrigger value="combos">Combos</TabsTrigger>
-          <TabsTrigger value="subscriptions">Assinaturas</TabsTrigger>
-          <TabsTrigger value="my-promotions">Minhas Promoções</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="packages">🛒 Marketplace</TabsTrigger>
+          <TabsTrigger value="combos">💎 Combos</TabsTrigger>
+          <TabsTrigger value="subscriptions">📅 Assinaturas</TabsTrigger>
+          <TabsTrigger value="my-promotions">✨ Ativas</TabsTrigger>
+          <TabsTrigger value="analytics">📊 Relatórios</TabsTrigger>
         </TabsList>
 
         {/* Packages Tab */}
         <TabsContent value="packages" className="space-y-6">
-          <Card>
+          <Card className="bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
             <CardHeader>
-              <CardTitle>Escolha seu Pacote de Promoção</CardTitle>
-              <p className="text-gray-600">
-                Selecione o pacote ideal para aumentar sua visibilidade
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-green-600" />
+                🛒 Marketplace de Promoções
+              </CardTitle>
+              <p className="text-gray-700">
+                <strong>Como funciona:</strong> Compre uma promoção → Pagamento via Stripe → Sua promoção fica ativa automaticamente!
               </p>
+              <div className="flex items-center gap-2 text-sm text-green-700 bg-green-100 p-2 rounded-lg mt-2">
+                <CheckCircle className="h-4 w-4" />
+                Ativação automática após pagamento • Sem aprovação manual • Resultados imediatos
+              </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {packages.map((pkg) => {
                   const TypeIcon = getTypeIcon(pkg.type)
                   const hasDiscount = pkg.original_price && pkg.original_price > pkg.price
+                  const packageStatus = getPackageStatus(pkg.type)
 
                   return (
-                    <Card key={pkg.id} className="relative overflow-hidden hover:shadow-lg transition-shadow">
-                      {pkg.is_featured && (
+                    <Card key={pkg.id} className={`relative overflow-hidden hover:shadow-lg transition-shadow ${
+                      packageStatus.status === 'active' ? 'ring-2 ring-green-200 bg-green-50/20' : 
+                      packageStatus.status === 'pending' ? 'ring-2 ring-amber-200 bg-amber-50/20' : ''
+                    }`}>
+                      
+                      {/* Status Badge baseado no status da promoção */}
+                      {packageStatus.status === 'active' && (
+                        <div className="absolute top-4 right-4 z-10">
+                          <Badge className="bg-green-500 text-white">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Ativa
+                          </Badge>
+                        </div>
+                      )}
+                      
+                      {packageStatus.status === 'pending' && (
+                        <div className="absolute top-4 right-4 z-10">
+                          <Badge className="bg-amber-500 text-white">
+                            <Clock className="h-3 w-3 mr-1" />
+                            Pendente
+                          </Badge>
+                        </div>
+                      )}
+                      
+                      {packageStatus.status === 'available' && pkg.is_featured && (
                         <div className="absolute top-4 right-4 z-10">
                           <Badge className="bg-yellow-500 text-white">
                             <Star className="h-3 w-3 mr-1" />
@@ -646,8 +820,11 @@ export default function BraiderPromotionsPage() {
                       )}
                       
                       <div 
-                        className="absolute top-0 left-0 right-0 h-2"
-                        style={{ backgroundColor: pkg.color }}
+                        className={`absolute top-0 left-0 right-0 h-2 ${
+                          packageStatus.status === 'active' ? 'bg-gradient-to-r from-green-400 to-green-600' :
+                          packageStatus.status === 'pending' ? 'bg-gradient-to-r from-amber-400 to-amber-600' : ''
+                        }`}
+                        style={packageStatus.status === 'available' ? { backgroundColor: pkg.color } : undefined}
                       />
 
                       <CardHeader>
@@ -660,7 +837,17 @@ export default function BraiderPromotionsPage() {
                           </div>
                           <div>
                             <CardTitle className="text-lg">{pkg.name}</CardTitle>
-                            <p className="text-sm text-gray-500">{pkg.duration_days} dias</p>
+                            {packageStatus.status === 'active' ? (
+                              <p className="text-sm text-green-600 font-medium">
+                                Termina em {packageStatus.daysLeft} dias ({packageStatus.endDate})
+                              </p>
+                            ) : packageStatus.status === 'pending' ? (
+                              <p className="text-sm text-amber-600 font-medium">
+                                Aguardando aprovação
+                              </p>
+                            ) : (
+                              <p className="text-sm text-gray-500">{pkg.duration_days} dias</p>
+                            )}
                           </div>
                         </div>
                       </CardHeader>
@@ -668,18 +855,21 @@ export default function BraiderPromotionsPage() {
                       <CardContent className="space-y-4">
                         <p className="text-gray-600">{pkg.description}</p>
 
-                        <div className="flex items-center gap-2">
-                          {!settings?.payments_enabled ? (
-                            <div className="text-2xl font-bold text-green-600">GRATUITO</div>
-                          ) : (
-                            <>
-                              <div className="text-3xl font-bold">€{pkg.price}</div>
-                              {hasDiscount && (
-                                <div className="text-gray-500 line-through">€{pkg.original_price}</div>
-                              )}
-                            </>
-                          )}
-                        </div>
+                        {/* Mostrar preço apenas se não tiver promoção ativa/pendente */}
+                        {packageStatus.status === 'available' && (
+                          <div className="flex items-center gap-2">
+                            {!settings?.payments_enabled ? (
+                              <div className="text-2xl font-bold text-green-600">GRATUITO</div>
+                            ) : (
+                              <>
+                                <div className="text-3xl font-bold">€{pkg.price}</div>
+                                {hasDiscount && (
+                                  <div className="text-gray-500 line-through">€{pkg.original_price}</div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        )}
 
                         <div className="space-y-2">
                           <p className="font-medium text-sm">Inclui:</p>
@@ -698,14 +888,80 @@ export default function BraiderPromotionsPage() {
                           </ul>
                         </div>
 
-                        <Button 
-                          className="w-full" 
-                          onClick={() => handlePurchasePackage(pkg)}
-                          style={{ backgroundColor: pkg.color }}
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          {settings?.payments_enabled ? 'Comprar Agora' : 'Ativar Grátis'}
-                        </Button>
+                        {/* Botão dinâmico baseado no status */}
+                        {packageStatus.status === 'active' ? (
+                          <div className="space-y-2">
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                              <div className="flex items-center gap-2 text-green-700">
+                                <CheckCircle className="h-4 w-4" />
+                                <span className="text-sm font-medium">Promoção Ativa</span>
+                              </div>
+                              <div className="text-xs text-green-600 mt-1">
+                                Termina em {packageStatus.daysLeft} dias ({packageStatus.endDate})
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="flex-1"
+                                onClick={() => packageStatus.promotion && handleExtendPromotion(packageStatus.promotion)}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Estender
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="flex-1"
+                                onClick={() => handlePurchasePackage(pkg)}
+                              >
+                                <ShoppingCart className="h-3 w-3 mr-1" />
+                                Comprar Nova
+                              </Button>
+                            </div>
+                          </div>
+                        ) : packageStatus.status === 'pending' ? (
+                          <div className="space-y-2">
+                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                              <div className="flex items-center gap-2 text-amber-700">
+                                <Clock className="h-4 w-4" />
+                                <span className="text-sm font-medium">Aguardando Aprovação</span>
+                              </div>
+                              <div className="text-xs text-amber-600 mt-1">
+                                Sua promoção está sendo analisada
+                              </div>
+                            </div>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="w-full"
+                              onClick={() => handlePurchasePackage(pkg)}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Comprar Adicional
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button 
+                            className="w-full font-semibold" 
+                            onClick={() => handlePurchasePackage(pkg)}
+                            style={{ backgroundColor: pkg.color }}
+                            size="lg"
+                          >
+                            {settings?.payments_enabled ? (
+                              <>
+                                <ShoppingCart className="h-4 w-4 mr-2" />
+                                Comprar por €{pkg.price}
+                              </>
+                            ) : (
+                              <>
+                                <Zap className="h-4 w-4 mr-2" />
+                                Ativar Grátis
+                              </>
+                            )}
+                          </Button>
+                        )}
                       </CardContent>
                     </Card>
                   )
@@ -1001,12 +1257,28 @@ export default function BraiderPromotionsPage() {
                       </div>
 
                       {promotion.status === 'active' && (
-                        <div className="pt-2 border-t">
+                        <div className="pt-2 border-t space-y-3">
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div 
                               className="bg-green-500 h-2 rounded-full transition-all duration-300" 
                               style={{ width: `${Math.max(0, Math.min(100, (daysLeft / 30) * 100))}%` }}
                             />
+                          </div>
+                          
+                          {/* Botão Estender */}
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleExtendPromotion(promotion)}
+                              className="text-xs"
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Estender
+                            </Button>
+                            <span className="text-xs text-gray-500">
+                              Adicionar mais dias à esta promoção
+                            </span>
                           </div>
                         </div>
                       )}
@@ -1089,7 +1361,14 @@ export default function BraiderPromotionsPage() {
 
       {/* Create Promotion Modal */}
       {selectedPackage && (
-        <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+        <Dialog open={isCreateModalOpen} onOpenChange={(open) => {
+          setIsCreateModalOpen(open)
+          if (!open) {
+            // Limpar estados de duplicata ao fechar modal
+            setDuplicatePromotion(null)
+            setShowDuplicateWarning(false)
+          }
+        }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Criar Promoção - {selectedPackage.name}</DialogTitle>
@@ -1097,6 +1376,34 @@ export default function BraiderPromotionsPage() {
                 Configure os detalhes da sua promoção
               </DialogDescription>
             </DialogHeader>
+
+            {/* Aviso para promoções existentes */}
+            {duplicatePromotion && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="text-sm font-medium text-amber-800">
+                      Promoção Existente Detectada
+                    </h4>
+                    <p className="text-sm text-amber-700 mt-1">
+                      Você já possui uma promoção "{duplicatePromotion.title}" do tipo {' '}
+                      <span className="font-medium">
+                        {selectedPackage.type === 'hero_banner' && 'Banner Destaque'}
+                        {selectedPackage.type === 'profile_highlight' && 'Destaque de Perfil'}
+                        {selectedPackage.type === 'combo' && 'Pacote Combo'}
+                      </span>
+                      {' '}ativa até {new Date(duplicatePromotion.end_date).toLocaleDateString('pt-BR')}.
+                    </p>
+                    {selectedPackage.type !== 'profile_highlight' && (
+                      <p className="text-sm text-amber-700 mt-1">
+                        <strong>Você pode continuar</strong>, mas considere se realmente precisa de duas promoções do mesmo tipo ativas simultaneamente.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <form onSubmit={handleSubmitPromotion} className="space-y-6">
               <div className="grid grid-cols-1 gap-4">
@@ -1320,6 +1627,88 @@ export default function BraiderPromotionsPage() {
               >
                 <Gift className="h-4 w-4 mr-2" />
                 {settings?.payments_enabled ? 'Finalizar Compra' : 'Ativar Gratuitamente'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Modal de Extensão de Promoção */}
+      {promotionToExtend && (
+        <Dialog open={isExtendModalOpen} onOpenChange={setIsExtendModalOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Estender Promoção</DialogTitle>
+              <DialogDescription>
+                Adicione mais dias à promoção "{promotionToExtend.title}"
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="text-sm space-y-2">
+                <div className="flex justify-between">
+                  <span>Término atual:</span>
+                  <span className="font-medium">
+                    {new Date(promotionToExtend.end_date).toLocaleDateString('pt-BR')}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Novo término:</span>
+                  <span className="font-medium text-green-600">
+                    {new Date(new Date(promotionToExtend.end_date).getTime() + (extensionDays * 24 * 60 * 60 * 1000)).toLocaleDateString('pt-BR')}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="extension-days">Dias para adicionar:</Label>
+                <Select value={extensionDays.toString()} onValueChange={(value) => setExtensionDays(Number(value))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="7">7 dias</SelectItem>
+                    <SelectItem value="15">15 dias</SelectItem>
+                    <SelectItem value="30">30 dias</SelectItem>
+                    <SelectItem value="60">60 dias</SelectItem>
+                    <SelectItem value="90">90 dias</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="flex items-center gap-2 text-blue-600">
+                  <AlertCircle className="h-4 w-4" />
+                  <span className="text-sm font-medium">Extensão Gratuita</span>
+                </div>
+                <p className="text-sm text-blue-700 mt-1">
+                  Esta extensão será aplicada imediatamente sem custo adicional.
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsExtendModalOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSubmitExtension}
+                disabled={submittingAction === 'extending-promotion'}
+              >
+                {submittingAction === 'extending-promotion' ? (
+                  <>
+                    <Calendar className="mr-2 h-4 w-4 animate-pulse" />
+                    Estendendo...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Estender por {extensionDays} dias
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -482,7 +482,6 @@ export default function PromotionsPage() {
   const handleDeletePackage = async () => {
     if (!packageToDelete) return
 
-    setIsPackageLoading(true)
     try {
       const response = await fetch(`/api/promotions/packages/${packageToDelete.id}`, {
         method: 'DELETE',
@@ -490,22 +489,17 @@ export default function PromotionsPage() {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        const errorMessage = errorData.error || 'Falha ao deletar pacote'
-        toast.error(errorMessage)
-        setIsPackageLoading(false)
-        return
+        const error = await response.json()
+        throw new Error(error.error || 'Falha ao deletar pacote')
       }
 
       setPackages(prev => prev.filter(p => p.id !== packageToDelete.id))
       toast.success('Pacote deletado com sucesso!')
       setIsDeleteModalOpen(false)
       setPackageToDelete(null)
-      setIsPackageLoading(false)
     } catch (error) {
       console.error('Error deleting package:', error)
-      toast.error('Erro inesperado ao deletar pacote')
-      setIsPackageLoading(false)
+      toast.error('Erro ao deletar pacote')
     }
   }
 
@@ -562,14 +556,6 @@ export default function PromotionsPage() {
       case 'combo_package': return Gift
       default: return Star
     }
-  }
-
-  if (user?.role !== 'admin') {
-    return (
-      <div className="text-center py-8">
-        <p>Esta página é apenas para administradores.</p>
-      </div>
-    )
   }
 
   if (loading) {
@@ -1582,94 +1568,92 @@ export default function PromotionsPage() {
                 <div className="sticky top-0">
                   {/* Preview */}
                   <div className="p-4 bg-gray-50 border rounded-lg">
-                    <h4 className="font-medium text-gray-800 mb-2">Preview do Pacote</h4>
-                    <div className="space-y-3">
-                      {/* Simular o card como aparece no marketplace */}
-                      <div className="border rounded-lg overflow-hidden bg-white">
-                        {/* Color strip */}
-                        <div 
-                          className="h-2 w-full"
-                          style={{ backgroundColor: packageForm.color }}
-                        />
-                        
-                        {/* Badges */}
-                        <div className="relative p-4">
-                          {packageForm.is_featured && (
-                            <div className="absolute top-2 right-2">
-                              <Badge className="bg-yellow-500 text-white text-xs">
-                                <Star className="h-3 w-3 mr-1" />
-                                Popular
-                              </Badge>
-                            </div>
-                          )}
-                          
-                          <div className="absolute top-2 left-2">
-                            <Badge className={packageForm.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
-                              {packageForm.is_active ? 'Ativo' : 'Inativo'}
-                            </Badge>
-                          </div>
+              <h4 className="font-medium text-gray-800 mb-2">Preview do Pacote</h4>
+              <div className="space-y-3">
+                {/* Simular o card como aparece no marketplace */}
+                <div className="border rounded-lg overflow-hidden bg-white">
+                  {/* Color strip */}
+                  <div 
+                    className="h-2 w-full"
+                    style={{ backgroundColor: packageForm.color }}
+                  />
+                  
+                  {/* Badges */}
+                  <div className="relative p-4">
+                    {packageForm.is_featured && (
+                      <div className="absolute top-2 right-2">
+                        <Badge className="bg-yellow-500 text-white text-xs">
+                          <Star className="h-3 w-3 mr-1" />
+                          Popular
+                        </Badge>
+                      </div>
+                    )}
+                    
+                    <div className="absolute top-2 left-2">
+                      <Badge className={packageForm.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                        {packageForm.is_active ? 'Ativo' : 'Inativo'}
+                      </Badge>
+                    </div>
 
-                          {/* Icon and title */}
-                          <div className="flex items-center gap-3 mt-8">
-                            <div 
-                              className="p-2 rounded-lg text-white"
-                              style={{ backgroundColor: packageForm.color }}
-                            >
-                              {packageForm.type === 'profile_highlight' && <Crown className="h-5 w-5" />}
-                              {packageForm.type === 'hero_banner' && <Megaphone className="h-5 w-5" />}
-                              {packageForm.type === 'combo_package' && <Gift className="h-5 w-5" />}
-                            </div>
-                            <div>
-                              <h3 className="font-semibold">{packageForm.name || 'Nome do Pacote'}</h3>
-                              <p className="text-sm text-gray-500">{packageForm.duration_days} dias</p>
-                            </div>
-                          </div>
-
-                          <p className="text-sm text-gray-600 mt-3">
-                            {packageForm.description || 'Descrição do pacote...'}
-                          </p>
-
-                          {/* Price */}
-                          <div className="flex items-center gap-2 mt-3">
-                            <span className="text-2xl font-bold">€{packageForm.price}</span>
-                            {packageForm.original_price > packageForm.price && (
-                              <span className="text-gray-500 line-through">€{packageForm.original_price}</span>
-                            )}
-                          </div>
-
-                          {/* Features */}
-                          {packageForm.features.length > 0 && (
-                            <div className="mt-3">
-                              <p className="text-xs font-medium text-gray-700 mb-1">Inclui:</p>
-                              <ul className="space-y-1">
-                                {packageForm.features.slice(0, 3).map((feature, idx) => (
-                                  <li key={idx} className="flex items-center gap-2 text-xs">
-                                    <CheckCircle className="h-3 w-3 text-green-500" />
-                                    <span>{feature}</span>
-                                  </li>
-                                ))}
-                                {packageForm.features.length > 3 && (
-                                  <li className="text-xs text-gray-500">
-                                    +{packageForm.features.length - 3} funcionalidades
-                                  </li>
-                                )}
-                              </ul>
-                            </div>
-                          )}
-
-                          {/* Type and order */}
-                          <div className="flex items-center justify-between mt-3 pt-2 border-t text-xs text-gray-500">
-                            <span>Tipo: {
-                              packageForm.type === 'profile_highlight' ? 'Perfil Destaque' :
-                              packageForm.type === 'hero_banner' ? 'Banner Hero' :
-                              packageForm.type === 'combo_package' ? 'Combo' : 'N/A'
-                            }</span>
-                            <span>Ordem: {packageForm.sort_order}</span>
-                          </div>
-                        </div>
+                    {/* Icon and title */}
+                    <div className="flex items-center gap-3 mt-8">
+                      <div 
+                        className="p-2 rounded-lg text-white"
+                        style={{ backgroundColor: packageForm.color }}
+                      >
+                        {packageForm.type === 'profile_highlight' && <Crown className="h-5 w-5" />}
+                        {packageForm.type === 'hero_banner' && <Megaphone className="h-5 w-5" />}
+                        {packageForm.type === 'combo_package' && <Gift className="h-5 w-5" />}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">{packageForm.name || 'Nome do Pacote'}</h3>
+                        <p className="text-sm text-gray-500">{packageForm.duration_days} dias</p>
                       </div>
                     </div>
+
+                    <p className="text-sm text-gray-600 mt-3">
+                      {packageForm.description || 'Descrição do pacote...'}
+                    </p>
+
+                    {/* Price */}
+                    <div className="flex items-center gap-2 mt-3">
+                      <span className="text-2xl font-bold">€{packageForm.price}</span>
+                      {packageForm.original_price > packageForm.price && (
+                        <span className="text-gray-500 line-through">€{packageForm.original_price}</span>
+                      )}
+                    </div>
+
+                    {/* Features */}
+                    {packageForm.features.length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-xs font-medium text-gray-700 mb-1">Inclui:</p>
+                        <ul className="space-y-1">
+                          {packageForm.features.slice(0, 3).map((feature, idx) => (
+                            <li key={idx} className="flex items-center gap-2 text-xs">
+                              <CheckCircle className="h-3 w-3 text-green-500" />
+                              <span>{feature}</span>
+                            </li>
+                          ))}
+                          {packageForm.features.length > 3 && (
+                            <li className="text-xs text-gray-500">
+                              +{packageForm.features.length - 3} funcionalidades
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Type and order */}
+                    <div className="flex items-center justify-between mt-3 pt-2 border-t text-xs text-gray-500">
+                      <span>Tipo: {
+                        packageForm.type === 'profile_highlight' ? 'Perfil Destaque' :
+                        packageForm.type === 'hero_banner' ? 'Banner Hero' :
+                        packageForm.type === 'combo_package' ? 'Combo' : 'N/A'
+                      }</span>
+                      <span>Ordem: {packageForm.sort_order}</span>
+                    </div>
                   </div>
+                </div>
                 </div>
               </div>
             </div>
