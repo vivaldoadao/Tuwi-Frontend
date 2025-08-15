@@ -235,7 +235,7 @@ export async function checkAPIStatus(): Promise<{
   try {
     const geoResponse = await fetch('https://geoapi.pt/municipios', { 
       method: 'HEAD',
-      timeout: 5000 
+      signal: AbortSignal.timeout(5000)
     })
     results.geoapi = geoResponse.ok
   } catch {
@@ -245,7 +245,7 @@ export async function checkAPIStatus(): Promise<{
   try {
     const ipmaResponse = await fetch('https://api.ipma.pt/open-data/distrits-islands.json', { 
       method: 'HEAD',
-      timeout: 5000 
+      signal: AbortSignal.timeout(5000)
     })
     results.ipma = ipmaResponse.ok
   } catch {

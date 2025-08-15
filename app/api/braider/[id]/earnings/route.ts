@@ -16,46 +16,82 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    console.log('🎯 === EARNINGS API CALLED ===')
     const session = await auth()
+    console.log('🔐 Session:', { 
+      hasSession: !!session, 
+      userId: session?.user?.id, 
+      userEmail: session?.user?.email 
+    })
+    
     if (!session?.user?.id) {
+      console.error('❌ No session or user ID')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { id: braiderId } = await params
+    console.log('🆔 Braider ID from params:', braiderId)
+    
     const supabase = await createClient()
     const serviceClient = getServiceClient()
 
-    // Verificar se o usuário tem permissão (é a própria trancista ou admin)
-    const { data: user, error: userError } = await supabase
+    // Verificar se o usuário tem permissão usando service client (contorna RLS)
+    console.log('👤 Fetching user data for:', session.user.id, 'email:', session.user.email)
+    let { data: user, error: userError } = await serviceClient
       .from('users')
-      .select('role')
+      .select('role, email')
       .eq('id', session.user.id)
       .single()
 
+    console.log('👤 User data:', user, 'Error:', userError)
+    
     if (userError) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      console.error('❌ User not found in database, trying by email...')
+      
+      // Se falhar buscar por ID, tentar por email
+      const { data: userByEmail, error: emailError } = await serviceClient
+        .from('users')
+        .select('role, email, id')
+        .eq('email', session.user.email)
+        .single()
+      
+      console.log('👤 User by email:', userByEmail, 'Error:', emailError)
+      
+      if (emailError) {
+        console.error('❌ User not found by email either')
+        return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      }
+      
+      // Usar dados encontrados por email
+      user = userByEmail
     }
 
     // Buscar braider usando service client para contornar RLS
+    console.log('🔍 Looking for braider with ID:', braiderId)
     let { data: braider, error: braiderError } = await serviceClient
       .from('braiders')
       .select('id, user_id, name, contact_email')
       .eq('id', braiderId)
       .single()
 
+    console.log('🔍 Braider lookup result:', { braider, braiderError })
+
     if (braiderError) {
-      console.error('Braider lookup error:', braiderError)
+      console.error('❌ Braider lookup error:', braiderError)
       
       // Se não encontrar por ID, tentar encontrar por user_id
+      console.log('🔄 Trying to find braider by user_id:', braiderId)
       const { data: braiderByUserId, error: braiderByUserError } = await serviceClient
         .from('braiders')
         .select('id, user_id, name, contact_email')
         .eq('user_id', braiderId)
         .single()
       
+      console.log('🔍 Braider by user_id result:', { braiderByUserId, braiderByUserError })
+      
       if (braiderByUserError) {
         // Se não encontrar braider, retornar dados zerados em vez de erro
-        console.log(`No braider found for user ${braiderId}, returning default earnings data`)
+        console.log(`❌ No braider found for user ${braiderId}, returning default earnings data`)
         
         return NextResponse.json({
           totalEarnings: 0,
@@ -76,6 +112,9 @@ export async function GET(
       
       // Usar os dados encontrados por user_id
       braider = braiderByUserId
+      console.log('✅ Found braider by user_id:', braider)
+    } else {
+      console.log('✅ Found braider by ID:', braider)
     }
 
     if (!braider) {
@@ -97,10 +136,25 @@ export async function GET(
       })
     }
 
-    // Verificar permissões - permitir se é admin ou se é a própria trancista
-    if (user.role !== 'admin' && braider.user_id !== session.user.id) {
+    // Verificar permissões - permitir se é admin ou se é a própria trancista (usando email como padrão do sistema)
+    const userEmail = session.user.email
+    if (user.role !== 'admin' && braider.contact_email !== userEmail) {
+      console.log('Permission denied for earnings access:', { 
+        userRole: user.role, 
+        braiderEmail: braider.contact_email, 
+        userEmail,
+        braiderId: braider.id
+      })
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
+    
+    console.log('Permission granted for earnings access:', { 
+      userRole: user.role, 
+      braiderEmail: braider.contact_email, 
+      userEmail,
+      isAdmin: user.role === 'admin',
+      isOwnBraider: braider.contact_email === userEmail
+    })
 
     // 1. Buscar configurações da plataforma usando service client
     const { data: settings } = await serviceClient

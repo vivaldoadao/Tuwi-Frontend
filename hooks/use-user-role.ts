@@ -46,7 +46,7 @@ export function useUserRole() {
   // Navigation helpers
   const redirectToDefaultDashboard = useCallback(() => {
     const defaultPath = getDefaultRedirectPath(session)
-    router.push(defaultPath)
+    router.push(defaultPath as any)
   }, [session, router])
 
   const redirectToDashboard = useCallback((role?: UserRole) => {
@@ -62,7 +62,7 @@ export function useUserRole() {
       admin: '/admin'
     }
     
-    router.push(paths[targetRole])
+    router.push(paths[targetRole] as any)
   }, [userRole, router])
 
   // Role display helpers

@@ -542,23 +542,27 @@ export async function getAllBraiders(
   status?: string
 ): Promise<{ braiders: Braider[], total: number, hasMore: boolean }> {
   try {
-    // Simple query first - no joins
+    console.log('🔍 Buscando braiders - Página:', page, 'Limite:', limit, 'Status:', status)
+    
+    // Busca simples na tabela braiders - usar apenas dados da própria tabela
     let query = supabase
       .from('braiders')
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
 
-    // Add status filter if provided
+    // Filtrar por status (padrão: apenas aprovados para listagem pública)
     if (status) {
       query = query.eq('status', status)
+    } else {
+      query = query.eq('status', 'approved') // Apenas braiders aprovados na listagem pública
     }
 
-    // Add search filter if provided (only braider fields for now)
+    // Adicionar filtro de busca se fornecido
     if (search && search.trim()) {
-      query = query.or(`location.ilike.%${search}%,bio.ilike.%${search}%,contact_phone.ilike.%${search}%`)
+      query = query.or(`name.ilike.%${search}%,location.ilike.%${search}%,bio.ilike.%${search}%,contact_phone.ilike.%${search}%`)
     }
 
-    // Add pagination
+    // Adicionar paginação
     const from = (page - 1) * limit
     const to = from + limit - 1
     query = query.range(from, to)
@@ -566,84 +570,63 @@ export async function getAllBraiders(
     const { data, error, count } = await query
 
     if (error) {
-      console.error('Error fetching braiders:', error)
+      console.error('❌ Error fetching braiders:', error)
       return { braiders: [], total: 0, hasMore: false }
     }
 
-    // Get all users with braider role to match names
-    const { data: allUsers } = await supabase
-      .from('users')
-      .select('id, name, email')
-      .eq('role', 'braider')
+    console.log(`✅ Encontrados ${data?.length || 0} braiders de ${count || 0} total`)
 
-    // Create a map of user_id to user data
-    const usersMap = new Map()
-    if (allUsers) {
-      allUsers.forEach(user => {
-        usersMap.set(user.id, user)
-      })
-    }
-
-    // Process the braiders data
+    // Processar dados dos braiders - usar apenas dados da tabela braiders
     const braiders: Braider[] = []
     
     if (data && data.length > 0) {
-      data.forEach((braider, index) => {
-        // Try to find matching user, fallback to index-based assignment
-        let userData = usersMap.get(braider.user_id)
-        
-        // If no exact match, try to assign by index for demo purposes
-        if (!userData && allUsers && allUsers[index]) {
-          userData = allUsers[index]
-        }
-
+      data.forEach((braider) => {
         braiders.push({
           id: braider.id,
-          name: userData?.name || `Trancista ${braider.id.slice(0, 8)}`,
-          bio: braider.bio || '',
-          location: braider.location || 'Localização não informada',
-          contactEmail: userData?.email || 'email-nao-disponivel@exemplo.com',
+          name: braider.name || `Trancista ${braider.id.slice(0, 8)}`,
+          bio: braider.bio || 'Especialista em tranças e penteados africanos',
+          location: braider.location || 'Lisboa, Portugal',
+          contactEmail: braider.contact_email || '',
           contactPhone: braider.contact_phone || '',
           profileImageUrl: braider.profile_image_url || '/placeholder.svg?height=200&width=200&text=T',
+          coverImageUrl: braider.cover_image_url,
           services: [], // Will load separately if needed
           portfolioImages: braider.portfolio_images || [],
           status: braider.status || 'pending',
-          averageRating: parseFloat(braider.average_rating || '0'),
-          totalReviews: parseInt(braider.total_reviews || '0'),
-          createdAt: braider.created_at || new Date().toISOString(),
-          // Campos adicionais para sistema de promoções
-          email: userData?.email || 'email-nao-disponivel@exemplo.com',
           specialties: braider.specialties || [],
-          isVerified: braider.is_verified || false,
+          availability: braider.availability || {},
+          ratings: [],
+          reviews: [],
+          // Campos adicionais da tabela braiders
           district: braider.district,
-          concelho: braider.concelho,
-          freguesia: braider.freguesia,
-          user_id: braider.user_id,
-          whatsapp: braider.whatsapp,
-          instagram: braider.instagram,
-          address: braider.address,
-          postalCode: braider.postal_code,
-          servesHome: braider.serves_home || false,
-          servesStudio: braider.serves_studio || false,
-          servesSalon: braider.serves_salon || false
-        })
+          municipality: braider.municipality,
+          parish: braider.parish,
+          yearsExperience: braider.years_experience,
+          price_range: braider.price_range,
+          has_transportation: braider.has_transportation,
+          accepts_home_service: braider.accepts_home_service,
+          created_at: braider.created_at,
+          updated_at: braider.updated_at
+        } as any)
       })
     }
 
     const total = count || 0
     const hasMore = (page * limit) < total
 
+    console.log(`📊 Retornando ${braiders.length} braiders. Total: ${total}, Tem mais: ${hasMore}`)
     return { braiders, total, hasMore }
   } catch (error) {
-    console.error('Unexpected error fetching braiders:', error)
+    console.error('💥 Unexpected error fetching braiders:', error)
     return { braiders: [], total: 0, hasMore: false }
   }
 }
 
 // Legacy function for backward compatibility
 export async function getAllBraidersLegacy(): Promise<Braider[]> {
-  const { braiders } = await getAllBraiders(1, 1000) // Get all braiders
-  return braiders // Return all braiders for testing, regardless of status
+  const { braiders } = await getAllBraiders(1, 1000, undefined, 'approved') // Get all approved braiders
+  console.log(`📋 getAllBraidersLegacy retornando ${braiders.length} braiders aprovados`)
+  return braiders
 }
 
 // Function to try creating a braider record if user matches mock data
@@ -769,6 +752,7 @@ async function getBraiderDirectly(braiderId: string): Promise<Braider | null> {
       contactPhone: data.contact_phone || '',
       profileImageUrl: data.profile_image_url || '/placeholder.svg?height=200&width=200&text=T',
       status: data.status || 'approved',
+      portfolioImages: data.portfolio_images || [],
       services: (servicesData || []).map(service => ({
         id: service.id,
         name: service.name,
@@ -776,7 +760,8 @@ async function getBraiderDirectly(braiderId: string): Promise<Braider | null> {
         price: service.price,
         durationMinutes: service.duration_minutes,
         imageUrl: service.image_url || '/placeholder.svg?height=300&width=400&text=Serviço',
-      }))
+      })),
+      createdAt: data.created_at || new Date().toISOString()
     }
   } catch (error) {
     console.error('Error in getBraiderDirectly:', error)
@@ -956,6 +941,9 @@ export async function getBraiderByUserId(userId: string): Promise<Braider | null
 
 export async function getBraiderById(id: string): Promise<Braider | null> {
   try {
+    console.log('🔍 Buscando braider por ID:', id)
+    
+    // Busca simples na tabela braiders - usar apenas dados da própria tabela
     const { data, error } = await supabase
       .from('braiders')
       .select('*')
@@ -963,45 +951,35 @@ export async function getBraiderById(id: string): Promise<Braider | null> {
       .single()
 
     if (error) {
-      console.error('Error fetching braider:', error)
+      console.error('❌ Error fetching braider:', error)
       return null
     }
 
-    // Use same logic as getAllBraiders - get all users and match intelligently
-    const { data: allUsers } = await supabase
-      .from('users')
-      .select('id, name, email')
-      .eq('role', 'braider')
-
-    // Create a map of user_id to user data
-    const usersMap = new Map()
-    if (allUsers) {
-      allUsers.forEach(user => {
-        usersMap.set(user.id, user)
-      })
+    if (!data) {
+      console.log('❌ No braider found with ID:', id)
+      return null
     }
 
-    // Try to find matching user, fallback to first braider user
-    let userData = usersMap.get(data.user_id)
-    if (!userData && allUsers && allUsers.length > 0) {
-      userData = allUsers[0] // Fallback to first braider user
-    }
+    console.log('✅ Braider encontrado:', { id: data.id, name: data.name, email: data.contact_email })
 
-    // Get services separately
+    // Buscar serviços separadamente
     const { data: servicesData } = await supabase
       .from('services')
       .select('*')
       .eq('braider_id', data.id)
 
+    console.log(`📋 Encontrados ${servicesData?.length || 0} serviços para braider ${data.name}`)
+
     return {
       id: data.id,
-      user_id: data.user_id, // Add user_id for conversation creation
-      name: userData?.name || `Trancista ${data.id.slice(0, 8)}`,
-      bio: data.bio || '',
-      location: data.location || 'Localização não informada',
-      contactEmail: userData?.email || 'email-nao-disponivel@exemplo.com',
+      user_id: data.user_id, // Manter user_id para compatibilidade
+      name: data.name || `Trancista ${data.id.slice(0, 8)}`,
+      bio: data.bio || 'Especialista em tranças e penteados africanos',
+      location: data.location || 'Lisboa, Portugal',
+      contactEmail: data.contact_email || '',
       contactPhone: data.contact_phone || '',
       profileImageUrl: data.profile_image_url || '/placeholder.svg?height=200&width=200&text=T',
+      coverImageUrl: data.cover_image_url,
       services: (servicesData || []).map((service: any) => ({
         id: service.id,
         name: service.name,
@@ -1015,19 +993,34 @@ export async function getBraiderById(id: string): Promise<Braider | null> {
       averageRating: parseFloat(data.average_rating || '0'),
       totalReviews: parseInt(data.total_reviews || '0'),
       createdAt: data.created_at || new Date().toISOString(),
+      // Campos de localização
       district: data.district,
-      concelho: data.concelho,
-      freguesia: data.freguesia,
+      municipality: data.municipality,
+      parish: data.parish,
+      concelho: data.concelho, // Legacy
+      freguesia: data.freguesia, // Legacy
+      // Contatos sociais
       whatsapp: data.whatsapp,
       instagram: data.instagram,
+      // Endereço
       address: data.address,
       postalCode: data.postal_code,
-      servesHome: data.serves_home || false,
+      // Tipos de serviço
+      servesHome: data.serves_home || data.accepts_home_service || false,
       servesStudio: data.serves_studio || false,
-      servesSalon: data.serves_salon || false
+      servesSalon: data.serves_salon || false,
+      // Campos adicionais
+      specialties: data.specialties || [],
+      availability: data.availability || {},
+      ratings: [],
+      reviews: [],
+      yearsExperience: data.years_experience,
+      price_range: data.price_range,
+      has_transportation: data.has_transportation,
+      accepts_home_service: data.accepts_home_service
     } as any
   } catch (error) {
-    console.error('Unexpected error fetching braider:', error)
+    console.error('💥 Unexpected error fetching braider:', error)
     return null
   }
 }
@@ -1038,7 +1031,7 @@ async function getBraiderByUserIdWithServiceClient(userId: string): Promise<Brai
     console.log('=== Using Service Client Fallback ===')
     
     // Create service client with admin privileges
-    const serviceClient = createClient(
+    const serviceClient = createServiceClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
@@ -1119,6 +1112,7 @@ async function formatBraiderResponse(braiderData: any, client: any): Promise<Bra
     contactPhone: braiderData.contact_phone || '',
     profileImageUrl: braiderData.profile_image_url || '/placeholder.svg?height=200&width=200&text=T',
     status: braiderData.status || 'approved',
+    portfolioImages: braiderData.portfolio_images || [],
     services: (servicesData || []).map((service: any) => ({
       id: service.id,
       name: service.name,
@@ -1126,7 +1120,8 @@ async function formatBraiderResponse(braiderData: any, client: any): Promise<Bra
       price: service.price,
       durationMinutes: service.duration_minutes,
       imageUrl: service.image_url || '/placeholder.svg?height=300&width=400&text=Serviço',
-    }))
+    })),
+    createdAt: braiderData.created_at || new Date().toISOString()
   }
 }
 
@@ -1661,6 +1656,8 @@ export async function getAllBraiderAvailability(
   year?: number
 ): Promise<BraiderAvailability[]> {
   try {
+    // console.log('🔍 getAllBraiderAvailability called with:', { braiderId, month, year })
+    
     let query = supabase
       .from('braider_availability')
       .select('*')
@@ -1677,9 +1674,16 @@ export async function getAllBraiderAvailability(
     
     const { data, error } = await query
     if (error) {
-      console.error('Error fetching all braider availability:', error)
+      console.error('❌ Error fetching all braider availability:', error)
       return []
     }
+    
+    // console.log(`📋 Found ${data?.length || 0} availability slots for braider ${braiderId}`)
+    // if (data && data.length > 0) {
+    //   console.log('First few slots:', data.slice(0, 3).map(slot => 
+    //     `${slot.available_date} ${slot.start_time}-${slot.end_time} (${slot.is_booked ? 'BOOKED' : 'FREE'})`
+    //   ))
+    // }
     
     return data.map(availability => ({
       id: availability.id,

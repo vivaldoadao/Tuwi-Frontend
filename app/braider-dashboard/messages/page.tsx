@@ -445,8 +445,8 @@ export default function BraiderMessagesPage() {
                   <div className="flex items-center gap-4">
                     <div className="relative">
                       <Image
-                        src={selectedConversation.participant.avatar}
-                        alt={selectedConversation.participant.name}
+                        src={selectedConversation?.participant.avatar || '/placeholder.svg'}
+                        alt={selectedConversation?.participant.name || 'Participant'}
                         width={50}
                         height={50}
                         className="rounded-full object-cover"
@@ -454,15 +454,15 @@ export default function BraiderMessagesPage() {
                       />
                       <div className={cn(
                         "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white",
-                        selectedConversation.participant.isOnline ? "bg-green-500" : "bg-gray-400"
+                        selectedConversation?.participant.isOnline ? "bg-green-500" : "bg-gray-400"
                       )} />
                     </div>
                     <div>
                       <h3 className="font-bold text-lg text-gray-900">
-                        {selectedConversation.participant.name}
+                        {selectedConversation?.participant.name}
                       </h3>
                       <p className="text-sm text-gray-600">
-                        {selectedConversation.participant.isOnline ? "Online" : selectedConversation.participant.lastSeen}
+                        {selectedConversation?.participant.isOnline ? "Online" : selectedConversation?.participant.lastSeen}
                       </p>
                     </div>
                   </div>

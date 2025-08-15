@@ -48,7 +48,7 @@ import { cn } from "@/lib/utils"
 export default function BraiderDetailsPage() {
   const params = useParams()
   const router = useRouter()
-  const braiderId = params.id as string
+  const braiderId = params?.id as string
   const [braider, setBraider] = useState<BraiderAdmin | null>(null)
   const [loading, setLoading] = useState(true)
   const [processingApproval, setProcessingApproval] = useState(false)

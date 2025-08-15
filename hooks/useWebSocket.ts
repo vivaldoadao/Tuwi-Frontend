@@ -211,8 +211,20 @@ export const useWebSocket = (): UseWebSocketReturn => {
       })
 
       socket.on('message-error', (error) => {
-        console.error('❌ Message error:', error)
-        setError(error.message)
+        // Verificar se o erro tem conteúdo significativo
+        const hasContent = error && (
+          error.message || 
+          (typeof error === 'object' && Object.keys(error).length > 0 && !Array.isArray(error)) ||
+          (typeof error === 'string' && error.trim().length > 0)
+        )
+        
+        if (hasContent) {
+          console.error('❌ Message error:', error)
+          setError(error?.message || 'Erro desconhecido na mensagem')
+        } else {
+          // Erro vazio ou sem conteúdo, não logar no console
+          // console.warn('⚠️ Empty message error received (ignoring)')
+        }
       })
 
       socket.on('user-typing', (data: TypingUser) => {

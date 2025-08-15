@@ -383,8 +383,8 @@ export function AdminAnalyticsDashboard({ className }: AnalyticsDashboardProps) 
                         <div className="text-xs text-muted-foreground">CVR</div>
                       </div>
                       <div>
-                        <div className={`text-sm font-medium ${promo.metrics.roi > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {promo.metrics.roi}%
+                        <div className={`text-sm font-medium ${(promo.metrics?.roi ?? 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {promo.metrics?.roi ?? 0}%
                         </div>
                         <div className="text-xs text-muted-foreground">ROI</div>
                       </div>

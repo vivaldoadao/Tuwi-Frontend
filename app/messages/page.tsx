@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import SiteHeader from "@/components/site-header"
 import { Button } from "@/components/ui/button"
@@ -155,7 +155,7 @@ const mockMessages = [
 type Conversation = typeof mockConversations[0]
 type Message = typeof mockMessages[0]
 
-export default function MessagesPage() {
+function MessagesContent() {
   const { user } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -167,7 +167,7 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(false)
 
   // Get conversation ID from URL params
-  const conversationId = searchParams.get('conversation')
+  const conversationId = searchParams?.get('conversation')
 
   useEffect(() => {
     if (!user) {
@@ -532,5 +532,13 @@ export default function MessagesPage() {
         </div>
       </footer>
     </div>
+  )
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <MessagesContent />
+    </Suspense>
   )
 }

@@ -57,13 +57,13 @@ export async function POST(request: NextRequest) {
     
     // Check if braider with this email already exists
     console.log('🔍 Checking existing braider...')
-    const { data: existingBraider, error: checkError } = await serviceSupabase
+    const { data: existingBraiders, error: checkError } = await serviceSupabase
       .from('braiders')
-      .select('id, status, contact_email')
-      .eq('contact_email', validatedData.contactEmail)
-      .single()
+      .select('id, status, contact_email, created_at')
+      .eq('contact_email', validatedData.contactEmail.trim().toLowerCase())
+      .order('created_at', { ascending: false })
 
-    if (checkError && checkError.code !== 'PGRST116') { // Not "no rows returned"
+    if (checkError) {
       console.error('❌ Error checking existing braider:', checkError)
       return NextResponse.json({ 
         success: false, 
@@ -71,20 +71,43 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log('📊 Existing braider check result:', existingBraider ? 'Found' : 'Not found')
+    console.log('📊 Existing braider check result:', existingBraiders?.length ? `Found ${existingBraiders.length}` : 'Not found')
+    
+    if (existingBraiders && existingBraiders.length > 0) {
+      // Check for approved braiders
+      const approvedBraider = existingBraiders.find(b => b.status === 'approved')
+      if (approvedBraider) {
+        return NextResponse.json({ 
+          success: false, 
+          message: 'Este usuário já tem uma conta aprovada como trancista. Não é possível criar múltiplas contas com o mesmo email.' 
+        }, { status: 400 })
+      }
 
-    // If braider exists and is not rejected, prevent duplicate
-    if (existingBraider && existingBraider.status !== 'rejected') {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Já existe um cadastro de trancista com este email. Se você foi rejeitada anteriormente, pode tentar novamente.' 
-      }, { status: 400 })
+      // Check for pending braiders
+      const pendingBraider = existingBraiders.find(b => b.status === 'pending')
+      if (pendingBraider) {
+        return NextResponse.json({ 
+          success: false, 
+          message: 'Já existe um pedido de cadastro pendente para este email. Aguarde a análise da nossa equipe ou entre em contato conosco.' 
+        }, { status: 400 })
+      }
+
+      // Only allow if all existing braiders are rejected
+      const mostRecentBraider = existingBraiders[0] // Most recent due to ordering
+      if (mostRecentBraider.status !== 'rejected') {
+        return NextResponse.json({ 
+          success: false, 
+          message: 'Já existe um cadastro para este email. Entre em contato com o suporte se precisar de ajuda.' 
+        }, { status: 400 })
+      }
     }
+
+    const existingBraider = existingBraiders?.[0] || null
 
     // Prepare data for database insertion using validated data
     const insertData = {
       name: validatedData.name, // TODO: Add name column to braiders table first
-      contact_email: validatedData.contactEmail,
+      contact_email: validatedData.contactEmail.trim().toLowerCase(),
       contact_phone: validatedData.contactPhone,
       bio: validatedData.bio,
       location: validatedData.location,

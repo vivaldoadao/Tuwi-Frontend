@@ -11,12 +11,6 @@ import { getHeroSlides, type HeroSlideData } from "@/lib/cms-content"
 interface HeroSlide extends HeroSlideData {
   id: string
 }
-    ctaText: "Ver Coleção",
-    ctaLink: "/products",
-    secondaryCtaText: "Encontrar Profissional",
-    secondaryCtaLink: "/braiders"
-  }
-]
 
 const slideVariants = {
   enter: (direction: number) => ({
@@ -41,8 +35,13 @@ const swipePower = (offset: number, velocity: number) => {
 }
 
 export default function HeroCarouselOptimized() {
+  const [heroSlides, setHeroSlides] = useState<HeroSlideData[]>([])
   const [[currentSlide, direction], setCurrentSlide] = useState([0, 0])
   const [isAutoPlaying, setIsAutoPlaying] = useState(true)
+
+  useEffect(() => {
+    getHeroSlides().then(setHeroSlides)
+  }, [])
 
   // Auto-play functionality
   useEffect(() => {

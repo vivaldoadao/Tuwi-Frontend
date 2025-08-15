@@ -59,7 +59,7 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const [dbUser, setDbUser] = useState<User | null>(null)
   
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || "overview")
+  const [activeTab, setActiveTab] = useState(searchParams?.get('tab') || "overview")
   const [userInfo, setUserInfo] = useState({
     name: "",
     email: "",

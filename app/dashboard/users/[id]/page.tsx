@@ -26,7 +26,7 @@ import Link from "next/link"
 export default function UserDetailsPage() {
   const params = useParams()
   const router = useRouter()
-  const userId = params.id as string
+  const userId = params?.id as string
   
   const [user, setUser] = useState<UserType | null>(null)
   const [loading, setLoading] = useState(true)

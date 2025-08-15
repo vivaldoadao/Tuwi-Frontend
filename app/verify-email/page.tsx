@@ -24,7 +24,7 @@ export default function VerifyEmailPage() {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
   useEffect(() => {
-    const emailParam = searchParams.get('email')
+    const emailParam = searchParams?.get('email')
     if (emailParam) {
       setEmail(emailParam)
     } else {

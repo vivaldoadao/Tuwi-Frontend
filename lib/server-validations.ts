@@ -60,21 +60,21 @@ export const createBookingSchema = z.object({
   serviceId: z.string().min(1, 'ID do serviço é obrigatório'),
   clientName: z.string().min(2, 'Nome do cliente é obrigatório'),
   clientEmail: z.string().email('Email inválido'),
-  clientPhone: z.string().regex(/^\(\d{2}\)\s\d{4,5}-\d{4}$/, 'Formato de telefone inválido'),
+  clientPhone: z.string().min(10, 'Telefone deve ter pelo menos 10 dígitos').max(20, 'Telefone muito longo'),
   date: z.string().refine((date) => {
     const bookingDate = new Date(date)
     const now = new Date()
     return bookingDate > now
   }, 'Data deve ser no futuro'),
-  time: z.string().regex(/^\d{2}:\d{2}$/, 'Formato de hora inválido'),
-  locationType: z.enum(['salon', 'client_home'], 'Tipo de localização inválido'),
+  time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Formato de hora inválido'),
+  locationType: z.enum(['salon', 'client_home'], { errorMap: () => ({ message: 'Tipo de localização inválido' }) }),
   address: z.string().optional(),
   notes: z.string().max(500, 'Observações muito longas').optional()
 })
 
 export const updateBookingStatusSchema = z.object({
   bookingId: z.string().min(1, 'ID do agendamento é obrigatório'),
-  status: z.enum(['Pendente', 'Confirmado', 'Em Andamento', 'Concluído', 'Cancelado'], 'Status inválido'),
+  status: z.enum(['Pendente', 'Confirmado', 'Em Andamento', 'Concluído', 'Cancelado'], { errorMap: () => ({ message: 'Status inválido' }) }),
   notes: z.string().max(500, 'Observações muito longas').optional()
 })
 
@@ -93,7 +93,7 @@ export const createOrderSchema = z.object({
     zipCode: z.string().regex(/^\d{5}-?\d{3}$/, 'CEP inválido'),
     country: z.string().default('Brasil')
   }),
-  paymentMethod: z.enum(['credit_card', 'debit_card', 'pix', 'bank_transfer'], 'Método de pagamento inválido'),
+  paymentMethod: z.enum(['credit_card', 'debit_card', 'pix', 'bank_transfer'], { errorMap: () => ({ message: 'Método de pagamento inválido' }) }),
   notes: z.string().max(500, 'Observações muito longas').optional()
 })
 
@@ -146,7 +146,7 @@ export const passwordValidation = z.string()
 
 // File upload validation
 export const imageUploadValidation = z.object({
-  file: z.instanceof(File, 'Arquivo inválido'),
+  file: z.instanceof(File, { message: 'Arquivo inválido' }),
   maxSize: z.number().default(5 * 1024 * 1024) // 5MB default
 }).refine((data) => data.file.size <= data.maxSize, {
   message: 'Arquivo muito grande. Máximo 5MB'

@@ -126,7 +126,7 @@ export default function PackagesPage() {
     type: 'profile_highlight',
     duration_days: 7,
     price: 0,
-    original_price: null,
+    original_price: null as number | null,
     features: [''],
     is_featured: false,
     sort_order: 0,

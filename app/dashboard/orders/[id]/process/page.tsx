@@ -34,7 +34,7 @@ import { cn } from "@/lib/utils"
 export default function ProcessOrderPage() {
   const params = useParams()
   const router = useRouter()
-  const orderId = params.id as string
+  const orderId = params?.id as string
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)

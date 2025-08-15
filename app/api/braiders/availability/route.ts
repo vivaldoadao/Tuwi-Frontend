@@ -27,25 +27,11 @@ export async function GET(request: NextRequest) {
     
     const serviceSupabase = getServiceClient()
     
-    // Find user by email
-    const { data: userData, error: userError } = await serviceSupabase
-      .from('users')
-      .select('id')
-      .eq('email', email)
-      .single()
-    
-    if (userError || !userData) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Usuário não encontrado' 
-      }, { status: 404 })
-    }
-
-    // Find braider by user_id
+    // Find braider directly by email (standard pattern used throughout the system)
     const { data: braiderData, error: braiderError } = await serviceSupabase
       .from('braiders')
-      .select('id')
-      .eq('user_id', userData.id)
+      .select('id, name, contact_email')
+      .eq('contact_email', email)
       .single()
     
     if (braiderError || !braiderData) {
@@ -133,25 +119,11 @@ export async function POST(request: NextRequest) {
     
     const serviceSupabase = getServiceClient()
     
-    // Find user by email
-    const { data: userData, error: userError } = await serviceSupabase
-      .from('users')
-      .select('id')
-      .eq('email', email)
-      .single()
-    
-    if (userError || !userData) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Usuário não encontrado' 
-      }, { status: 404 })
-    }
-
-    // Find braider by user_id
+    // Find braider directly by email (standard pattern used throughout the system)
     const { data: braiderData, error: braiderError } = await serviceSupabase
       .from('braiders')
-      .select('id')
-      .eq('user_id', userData.id)
+      .select('id, name, contact_email')
+      .eq('contact_email', email)
       .single()
     
     if (braiderError || !braiderData) {
@@ -250,25 +222,11 @@ export async function DELETE(request: NextRequest) {
     
     const serviceSupabase = getServiceClient()
     
-    // Find user by email
-    const { data: userData, error: userError } = await serviceSupabase
-      .from('users')
-      .select('id')
-      .eq('email', email)
-      .single()
-    
-    if (userError || !userData) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Usuário não encontrado' 
-      }, { status: 404 })
-    }
-
-    // Find braider by user_id
+    // Find braider directly by email (standard pattern used throughout the system)
     const { data: braiderData, error: braiderError } = await serviceSupabase
       .from('braiders')
-      .select('id')
-      .eq('user_id', userData.id)
+      .select('id, name, contact_email')
+      .eq('contact_email', email)
       .single()
     
     if (braiderError || !braiderData) {

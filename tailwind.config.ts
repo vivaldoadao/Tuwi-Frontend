@@ -86,7 +86,7 @@ const config = {
           950: '#082f49',
         },
         // Warm support colors
-        secondary: {
+        warm: {
           50: '#fefbf3',
           100: '#fef7e7',
           200: '#fdecc4',

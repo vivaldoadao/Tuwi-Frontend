@@ -40,10 +40,10 @@ BEGIN
         WHERE id = user_id_var AND role != 'braider';
     END IF;
 
-    -- Check if braider profile already exists
+    -- Check if braider profile already exists (check both user_id and contact_email)
     SELECT id INTO braider_id_var
     FROM public.braiders 
-    WHERE user_id = user_id_var;
+    WHERE user_id = user_id_var OR contact_email = 'znattechnology95@gmail.com';
 
     IF braider_id_var IS NULL THEN
         RAISE NOTICE 'Creating braider profile for user...';

@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { auth } from '@/lib/auth'
+import { 
+  validateBookingOwnership, 
+  validateSession, 
+  createUnauthorizedResponse,
+  getBraiderByUserId 
+} from '@/lib/security/ownership-validation'
+import { createSecureHandler } from '@/lib/security/api-middleware'
 
 // Server-side service client with admin privileges to bypass RLS
 const getServiceClient = () => {
@@ -10,67 +17,59 @@ const getServiceClient = () => {
   )
 }
 
-export async function GET(request: NextRequest) {
+async function handleGET(request: NextRequest) {
   try {
     console.log('🚀 Starting braider bookings API...')
     
-    // Get the current user session
+    // 🔒 SECURITY: Validate user session
     const session = await auth()
+    const sessionValidation = validateSession(session)
     
-    if (!session?.user?.id) {
-      console.log('❌ No session found')
+    if (!sessionValidation.isValid) {
+      console.error('❌ Invalid session:', sessionValidation.details)
       return NextResponse.json(
-        { success: false, error: 'Não autenticado' },
+        { success: false, error: sessionValidation.error },
         { status: 401 }
       )
     }
-
-    console.log('👤 Authenticated user:', { 
-      id: session.user.id, 
-      email: session.user.email, 
-      role: session.user.role 
+    
+    console.log('👤 Valid session:', {
+      userId: session!.user.id,
+      userEmail: session!.user.email
     })
 
-    // Use service client to bypass RLS
-    const serviceSupabase = getServiceClient()
-
-    // First, find user by email to get user_id
-    console.log('🔍 Finding user by email...', session.user.email)
-    const { data: userData, error: userError } = await serviceSupabase
-      .from('users')
-      .select('id')
-      .eq('email', session.user.email!)
-      .single()
-
-    if (userError || !userData) {
-      console.error('❌ User not found for email:', session.user.email, userError)
-      return NextResponse.json(
-        { success: false, error: 'Usuário não encontrado' },
-        { status: 404 }
-      )
+    // 🔒 SECURITY: Get braider using email (padrão do sistema)
+    const userEmail = session!.user.email
+    if (!userEmail) {
+      console.error('❌ No email in session')
+      return createUnauthorizedResponse('Email não encontrado na sessão')
     }
-
-    console.log('👤 User ID found:', userData.id)
-
-    // Now find braider by user_id (direct relationship)
-    console.log('🔍 Finding braider for user_id...', userData.id)
+    
+    console.log('📧 Buscando braider por email:', userEmail)
+    
+    const serviceSupabase = getServiceClient()
     const { data: braiderData, error: braiderError } = await serviceSupabase
       .from('braiders')
       .select('id, name, contact_email, status, user_id')
-      .eq('user_id', userData.id)
+      .eq('contact_email', userEmail)
       .single()
 
     if (braiderError || !braiderData) {
-      console.error('❌ Braider not found for user_id:', userData.id, braiderError)
-      return NextResponse.json(
-        { success: false, error: 'Registro de trancista não encontrado para este usuário' },
-        { status: 404 }
-      )
+      console.error('❌ Braider not found for email:', { userEmail, error: braiderError })
+      return createUnauthorizedResponse('Registro de trancista não encontrado para este usuário')
+    }
+    
+    console.log('👩‍🦱 Braider encontrado:', { id: braiderData.id, name: braiderData.name })
+    
+    const braiderResult = {
+      id: braiderData.id,
+      name: braiderData.name,
+      contactEmail: braiderData.contact_email,
+      status: braiderData.status,
+      userId: braiderData.user_id || session!.user.id
     }
 
-    console.log('👩‍🦱 Braider found:', braiderData.id)
-
-    // Get all bookings for this braider
+    // Get all bookings for this braider (using secure service client after validation)
     console.log('📅 Fetching bookings...')
     const { data: bookings, error: bookingsError } = await serviceSupabase
       .from('bookings')
@@ -78,7 +77,7 @@ export async function GET(request: NextRequest) {
         *,
         services(name, price, duration_minutes)
       `)
-      .eq('braider_id', braiderData.id)
+      .eq('braider_id', braiderResult.id)
       .order('booking_date', { ascending: true })
 
     if (bookingsError) {
@@ -117,10 +116,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       braider: {
-        id: braiderData.id,
-        name: braiderData.name,
-        contactEmail: braiderData.contact_email,
-        status: braiderData.status
+        id: braiderResult.id,
+        name: braiderResult.name,
+        contactEmail: braiderResult.contactEmail,
+        status: braiderResult.status
       },
       bookings: formattedBookings,
       count: formattedBookings.length
@@ -135,26 +134,26 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function PATCH(request: NextRequest) {
+async function handlePATCH(request: NextRequest) {
   try {
     console.log('🔄 Starting booking status update...')
     
-    // Get the current user session
+    // 🔒 SECURITY: Validate user session
     const session = await auth()
-    console.log('👤 Session data:', {
-      hasSession: !!session,
-      userId: session?.user?.id,
-      userEmail: session?.user?.email,
-      userRole: session?.user?.role
-    })
+    const sessionValidation = validateSession(session)
     
-    if (!session?.user?.id) {
-      console.log('❌ No session or user ID found')
+    if (!sessionValidation.isValid) {
+      console.error('❌ Invalid session:', sessionValidation.details)
       return NextResponse.json(
-        { success: false, error: 'Não autenticado' },
+        { success: false, error: sessionValidation.error },
         { status: 401 }
       )
     }
+    
+    console.log('👤 Valid session:', {
+      userId: session!.user.id,
+      userEmail: session!.user.email
+    })
 
     const { bookingId, status } = await request.json()
 
@@ -167,10 +166,18 @@ export async function PATCH(request: NextRequest) {
 
     console.log('📋 Update request:', { bookingId, status })
 
-    // Use service client to bypass RLS
+    // 🔒 CRITICAL SECURITY: Validate booking ownership (usando email como padrão do sistema)
+    const ownershipValidation = await validateBookingOwnership(session!.user.id, bookingId, session!.user.email)
+    
+    if (!ownershipValidation.isValid) {
+      console.error('🚨 OWNERSHIP VALIDATION FAILED:', ownershipValidation.details)
+      return createUnauthorizedResponse(ownershipValidation.error, ownershipValidation.details)
+    }
+
+    // Use service client to get booking data after ownership validation
     const serviceSupabase = getServiceClient()
 
-    // First get the booking data
+    // Get the booking data (we can trust this now after ownership validation)
     const { data: booking, error: fetchError } = await serviceSupabase
       .from('bookings')
       .select(`
@@ -192,14 +199,14 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (fetchError || !booking) {
-      console.error('❌ Error fetching booking:', fetchError)
+      console.error('❌ Error fetching booking after ownership validation:', fetchError)
       return NextResponse.json(
-        { success: false, error: 'Agendamento não encontrado' },
-        { status: 404 }
+        { success: false, error: 'Erro interno: agendamento não encontrado após validação' },
+        { status: 500 }
       )
     }
 
-    // Get braider info separately to avoid RLS issues
+    // Get braider info for email notifications
     const { data: braiderData, error: braiderError } = await serviceSupabase
       .from('braiders')
       .select('user_id, name, contact_phone, location')
@@ -207,41 +214,11 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (braiderError || !braiderData) {
-      console.error('❌ Error fetching braider:', braiderError)
+      console.error('❌ Error fetching braider data:', braiderError)
       return NextResponse.json(
-        { success: false, error: 'Trancista não encontrada' },
-        { status: 404 }
+        { success: false, error: 'Erro interno: dados da trancista não encontrados' },
+        { status: 500 }
       )
-    }
-
-    // Verify ownership (with detailed debugging)
-    const sessionId = String(session.user.id).trim()
-    const braiderId = String(braiderData.user_id).trim()
-    
-    console.log('🔒 Detailed ownership check:', {
-      sessionUserId: sessionId,
-      braiderUserId: braiderId,
-      sessionType: typeof session.user.id,
-      braiderType: typeof braiderData.user_id,
-      sessionLength: sessionId.length,
-      braiderLength: braiderId.length,
-      exactMatch: sessionId === braiderId,
-      looseMatch: sessionId == braiderId
-    })
-    
-    // TEMPORARY: Skip ownership check for testing
-    // TODO: Fix session.user.id issue and re-enable this check
-    if (sessionId !== braiderId) {
-      console.log('⚠️ TEMPORARY: Ownership verification failed but continuing anyway for testing')
-      console.log(`  Session ID: "${sessionId}"`)
-      console.log(`  Braider ID: "${braiderId}"`)
-      console.log(`  Are equal: ${sessionId === braiderId}`)
-      
-      // For now, we'll continue but log the issue
-      // This should be re-enabled once the session issue is fixed
-      console.log('🔓 SKIPPING ownership check - this should be fixed in production')
-    } else {
-      console.log('✅ Ownership verified successfully')
     }
 
     // Get service info separately
@@ -489,3 +466,25 @@ export async function PATCH(request: NextRequest) {
     )
   }
 }
+
+// Apply security middleware to exports
+export const GET = createSecureHandler(handleGET, {
+  requireAuth: true,
+  rateLimit: {
+    max: 20, // Max 20 requests per hour for braider bookings
+    windowMinutes: 60,
+    action: 'braider_bookings_get'
+  },
+  logRequests: true
+})
+
+export const PATCH = createSecureHandler(handlePATCH, {
+  requireAuth: true,
+  rateLimit: {
+    max: 10, // Max 10 booking updates per hour
+    windowMinutes: 60,
+    action: 'braider_bookings_patch'
+  },
+  logRequests: true,
+  validateInput: true
+})

@@ -121,23 +121,23 @@ export async function getBraiderWithRealRating(id: string): Promise<BraiderWithR
     }
 
     return {
-      id: data.id,
-      name: data.user_name || `Trancista ${data.id.slice(0, 8)}`,
-      bio: data.bio || '',
-      location: data.location || 'Localização não informada',
-      contactEmail: data.user_email || 'email-nao-disponivel@exemplo.com',
-      contactPhone: data.contact_phone || '',
-      profileImageUrl: data.avatar_url || '/placeholder.svg?height=200&width=200&text=T',
+      id: (data as any).id,
+      name: (data as any).user_name || `Trancista ${(data as any).id.slice(0, 8)}`,
+      bio: (data as any).bio || '',
+      location: (data as any).location || 'Localização não informada',
+      contactEmail: (data as any).user_email || 'email-nao-disponivel@exemplo.com',
+      contactPhone: (data as any).contact_phone || '',
+      profileImageUrl: (data as any).avatar_url || '/placeholder.svg?height=200&width=200&text=T',
       services: [], // Carregado separadamente se necessário
-      portfolioImages: data.portfolio_images || [],
-      status: data.status || 'pending',
+      portfolioImages: (data as any).portfolio_images || [],
+      status: (data as any).status || 'pending',
       
       // DADOS REAIS DO BANCO
-      averageRating: parseFloat(data.average_rating || '0'),
-      totalReviews: parseInt(data.total_reviews || '0'),
-      isAvailable: data.is_available || false,
+      averageRating: parseFloat((data as any).average_rating || '0'),
+      totalReviews: parseInt((data as any).total_reviews || '0'),
+      isAvailable: (data as any).is_available || false,
       
-      createdAt: data.created_at || new Date().toISOString()
+      createdAt: (data as any).created_at || new Date().toISOString()
     }
   } catch (error) {
     console.error('❌ Unexpected error fetching braider with rating:', error)
@@ -160,10 +160,10 @@ export async function getBraiderRatingStats(braiderId: string) {
     }
 
     return {
-      averageRating: parseFloat(data?.average_rating || '0'),
-      totalReviews: parseInt(data?.total_reviews || '0'),
-      isAvailable: data?.is_available || false,
-      ratingDistribution: data?.rating_distribution || {}
+      averageRating: parseFloat((data as any)?.average_rating || '0'),
+      totalReviews: parseInt((data as any)?.total_reviews || '0'),
+      isAvailable: (data as any)?.is_available || false,
+      ratingDistribution: (data as any)?.rating_distribution || {}
     }
   } catch (error) {
     console.error('❌ Unexpected error fetching braider rating stats:', error)
@@ -250,18 +250,18 @@ export async function getProductWithRealRating(id: string): Promise<ProductWithR
     }
 
     return {
-      id: data.id,
-      name: data.name,
-      price: parseFloat(data.price),
-      imageUrl: data.images?.[0] || '/placeholder.svg',
-      description: data.description || '',
-      longDescription: data.long_description || '',
+      id: (data as any).id,
+      name: (data as any).name,
+      price: parseFloat((data as any).price),
+      imageUrl: (data as any).images?.[0] || '/placeholder.svg',
+      description: (data as any).description || '',
+      longDescription: (data as any).long_description || '',
       
       // DADOS REAIS DO BANCO
-      averageRating: parseFloat(data.average_rating || '0'),
-      totalReviews: parseInt(data.total_reviews || '0'),
-      stockStatus: data.stock_status as 'in_stock' | 'low_stock' | 'out_of_stock',
-      isInStock: data.is_in_stock || false
+      averageRating: parseFloat((data as any).average_rating || '0'),
+      totalReviews: parseInt((data as any).total_reviews || '0'),
+      stockStatus: (data as any).stock_status as 'in_stock' | 'low_stock' | 'out_of_stock',
+      isInStock: (data as any).is_in_stock || false
     }
   } catch (error) {
     console.error('❌ Unexpected error fetching product with rating:', error)
@@ -284,11 +284,11 @@ export async function getProductRatingStats(productId: string) {
     }
 
     return {
-      averageRating: parseFloat(data?.average_rating || '0'),
-      totalReviews: parseInt(data?.total_reviews || '0'),
-      ratingDistribution: data?.rating_distribution || {},
-      verifiedReviews: parseInt(data?.verified_reviews || '0'),
-      helpfulVotes: parseInt(data?.helpful_votes || '0')
+      averageRating: parseFloat((data as any)?.average_rating || '0'),
+      totalReviews: parseInt((data as any)?.total_reviews || '0'),
+      ratingDistribution: (data as any)?.rating_distribution || {},
+      verifiedReviews: parseInt((data as any)?.verified_reviews || '0'),
+      helpfulVotes: parseInt((data as any)?.helpful_votes || '0')
     }
   } catch (error) {
     console.error('❌ Unexpected error fetching product rating stats:', error)

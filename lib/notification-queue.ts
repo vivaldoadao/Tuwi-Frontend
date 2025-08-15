@@ -110,8 +110,8 @@ class NotificationQueue {
 
       if (error) throw error
 
-      console.log('📧 Email queued:', data.id)
-      return data.id
+      console.log('📧 Email queued:', (data as any).id)
+      return (data as any).id
     } catch (error) {
       console.error('Error queueing email:', error)
       return null
@@ -147,8 +147,8 @@ class NotificationQueue {
 
       if (error) throw error
 
-      console.log('📱 SMS queued:', data.id)
-      return data.id
+      console.log('📱 SMS queued:', (data as any).id)
+      return (data as any).id
     } catch (error) {
       console.error('Error queueing SMS:', error)
       return null
@@ -182,8 +182,8 @@ class NotificationQueue {
 
       if (error) throw error
 
-      console.log('🔔 Push notification queued:', data.id)
-      return data.id
+      console.log('🔔 Push notification queued:', (data as any).id)
+      return (data as any).id
     } catch (error) {
       console.error('Error queueing push notification:', error)
       return null
@@ -217,8 +217,8 @@ class NotificationQueue {
 
       if (error) throw error
 
-      console.log('🔗 Webhook queued:', data.id)
-      return data.id
+      console.log('🔗 Webhook queued:', (data as any).id)
+      return (data as any).id
     } catch (error) {
       console.error('Error queueing webhook:', error)
       return null
@@ -278,7 +278,7 @@ class NotificationQueue {
         console.log(`📋 Processing ${jobs.length} queue jobs...`)
         
         // Process jobs concurrently
-        const promises = jobs.map(job => this.processJob(job))
+        const promises = jobs.map(job => this.processJob(job as unknown as QueueJob))
         await Promise.allSettled(promises)
       }
 
@@ -518,8 +518,8 @@ class NotificationQueue {
 
       const stats = data?.reduce((acc, job) => {
         acc.total++
-        acc.by_status[job.status] = (acc.by_status[job.status] || 0) + 1
-        acc.by_type[job.type] = (acc.by_type[job.type] || 0) + 1
+        acc.by_status[(job as any).status] = (acc.by_status[(job as any).status] || 0) + 1
+        acc.by_type[(job as any).type] = (acc.by_type[(job as any).type] || 0) + 1
         return acc
       }, {
         total: 0,

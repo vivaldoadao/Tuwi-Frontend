@@ -53,6 +53,10 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
   // Estado da trancista
   const [braider, setBraider] = useState<Braider | null>(null)
   const [braiderLoading, setBraiderLoading] = useState(true)
+  
+  // Estado dos serviços (carregados separadamente)
+  const [services, setServices] = useState<Service[]>([])
+  const [servicesLoading, setServicesLoading] = useState(true)
 
   // Estados principais
   const [currentStep, setCurrentStep] = useState(1)
@@ -80,31 +84,57 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
   const [currentPage, setCurrentPage] = useState(1)
   const servicesPerPage = 8
 
-  // Função para carregar datas disponíveis
+  // Função para carregar datas disponíveis usando a API (mesmo padrão do dashboard)
   const loadAvailableDates = useCallback(async () => {
-    if (!braider) return
+    if (!braider?.contactEmail) {
+      console.log('🚫 loadAvailableDates: No braider email')
+      return
+    }
+    
+    console.log('🔍 loadAvailableDates: Starting for braider email:', braider.contactEmail)
     
     try {
-      // Buscar todas as disponibilidades da trancista (incluindo ocupadas)
-      const allAvailabilities = await getAllBraiderAvailability(braider.id)
+      // Usar API para buscar disponibilidades (mesmo padrão do dashboard)
+      const email = encodeURIComponent(braider.contactEmail)
       
-      // Filtrar apenas as não reservadas e criar Set de datas únicas
-      const dates = new Set(
-        allAvailabilities
-          .filter(avail => !avail.isBooked)
-          .map(avail => avail.date)
-      )
+      // Buscar próximas 4 semanas de disponibilidades
+      const today = new Date()
+      const endDate = new Date(today)
+      endDate.setDate(today.getDate() + 28) // Próximas 4 semanas
       
-      setAvailableDates(dates)
+      const dateStart = today.toISOString().split('T')[0]
+      const dateEnd = endDate.toISOString().split('T')[0]
+      
+      console.log('📊 loadAvailableDates: Fetching range:', dateStart, 'to', dateEnd)
+      
+      const response = await fetch(`/api/braiders/availability?email=${email}&dateStart=${dateStart}&dateEnd=${dateEnd}`)
+      const result = await response.json()
+      
+      if (result.success && result.data) {
+        const allAvailabilities = result.data
+        console.log('📊 loadAvailableDates: Raw availabilities:', allAvailabilities.length)
+        console.log('📊 loadAvailableDates: Sample data:', allAvailabilities.slice(0, 3))
+        
+        // Filtrar apenas as não reservadas e criar Set de datas únicas
+        const freeAvailabilities = allAvailabilities.filter(avail => !avail.isBooked)
+        console.log('📊 loadAvailableDates: Free availabilities:', freeAvailabilities.length)
+        
+        const dates = new Set(freeAvailabilities.map(avail => avail.date))
+        console.log('📊 loadAvailableDates: Unique dates:', Array.from(dates))
+        
+        setAvailableDates(dates)
+      } else {
+        console.error('❌ API error:', result.message)
+      }
     } catch (error) {
-      console.error('Erro ao carregar datas disponíveis:', error)
+      console.error('❌ Erro ao carregar datas disponíveis:', error)
     }
-  }, [braider])
+  }, [braider?.contactEmail])
 
-  // Função para buscar todos os horários (livres e ocupados)
+  // Função para buscar todos os horários (livres e ocupados) usando API
   const fetchAvailableTimes = useCallback(
     async (selectedDate: Date | undefined) => {
-      if (!selectedDate || !braider) {
+      if (!selectedDate || !braider?.contactEmail) {
         setAvailableTimes([])
         setSelectedAvailabilityId(undefined)
         return
@@ -112,46 +142,53 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
       setLoading(true)
       try {
         const formattedDate = format(selectedDate, "yyyy-MM-dd")
-        // Para agora, usar os dados do mês/ano da data selecionada
-        const selectedMonth = selectedDate.getMonth() + 1
-        const selectedYear = selectedDate.getFullYear()
+        const email = encodeURIComponent(braider.contactEmail)
         
-        // Usar a nova função que retorna TODOS os horários (livres e ocupados)
-        const allAvailabilities = await getAllBraiderAvailability(braider.id, selectedMonth, selectedYear)
+        console.log(`📅 fetchAvailableTimes: Fetching for date ${formattedDate}`)
         
-        // Filtrar apenas para a data específica (mas manter tanto livres quanto ocupados)
-        const dayAvailabilities = allAvailabilities.filter((avail) => 
-          avail.date === formattedDate
-        )
+        // Usar API para buscar horários específicos do dia
+        const response = await fetch(`/api/braiders/availability?email=${email}&date=${formattedDate}`)
+        const result = await response.json()
         
-        console.log(`📅 Horários para ${formattedDate}:`, dayAvailabilities.map(avail => 
-          `${avail.startTime}-${avail.endTime} ${avail.isBooked ? '🔒 OCUPADO' : '✅ LIVRE'}`
-        ))
-        
-        setAvailableTimes(dayAvailabilities)
+        if (result.success && result.data) {
+          const dayAvailabilities = result.data
+          
+          console.log(`📅 Horários para ${formattedDate}:`, dayAvailabilities.map(avail => 
+            `${avail.startTime}-${avail.endTime} ${avail.isBooked ? '🔒 OCUPADO' : '✅ LIVRE'}`
+          ))
+          
+          setAvailableTimes(dayAvailabilities)
+        } else {
+          console.error('❌ API error fetching times:', result.message)
+          setAvailableTimes([])
+        }
         setSelectedAvailabilityId(undefined)
       } catch (error) {
-        console.error('Erro ao carregar horários:', error)
+        console.error('❌ Erro ao carregar horários:', error)
         setAvailableTimes([])
       } finally {
         setLoading(false)
       }
     },
-    [braider],
+    [braider?.contactEmail],
   )
 
   // Carregar dados da trancista
   useEffect(() => {
     async function loadBraider() {
       try {
+        console.log('🔍 loadBraider: Starting for ID:', id)
         setBraiderLoading(true)
         const braiderData = await getBraiderById(id)
+        console.log('📊 loadBraider: Braider data:', braiderData)
         if (!braiderData) {
+          console.log('❌ loadBraider: No braider data found')
           notFound()
         }
         setBraider(braiderData)
+        console.log('✅ loadBraider: Braider set successfully')
       } catch (error) {
-        console.error('Erro ao carregar trancista:', error)
+        console.error('❌ Erro ao carregar trancista:', error)
         notFound()
       } finally {
         setBraiderLoading(false)
@@ -162,6 +199,41 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
       loadBraider()
     }
   }, [id])
+
+  // Carregar serviços separadamente usando a mesma API do dashboard-braider
+  useEffect(() => {
+    async function loadServices() {
+      if (!braider?.contactEmail) return
+      
+      try {
+        setServicesLoading(true)
+        console.log('🚀 Loading services for booking page:', braider.contactEmail)
+        
+        const email = encodeURIComponent(braider.contactEmail)
+        const apiUrl = `/api/braiders/services?email=${email}&page=1&limit=100`
+        console.log('🔗 API URL:', apiUrl)
+        
+        const response = await fetch(apiUrl)
+        const result = await response.json()
+        console.log('📦 Services API Response:', result)
+        
+        if (result.success && result.data) {
+          setServices(result.data.services || [])
+          console.log('✅ Services loaded for booking:', result.data.services?.length || 0)
+        } else {
+          console.log('ℹ️ No services found for booking')
+          setServices([])
+        }
+      } catch (error) {
+        console.error('❌ Error loading services for booking:', error)
+        setServices([])
+      } finally {
+        setServicesLoading(false)
+      }
+    }
+
+    loadServices()
+  }, [braider?.contactEmail])
 
   // Carregar datas disponíveis ao montar o componente
   useEffect(() => {
@@ -190,7 +262,7 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
     notFound()
   }
 
-  const selectedService = braider.services.find(s => s.id === selectedServiceId)
+  const selectedService = services.find(s => s.id === selectedServiceId)
   const selectedTime = availableTimes.find(t => t.id === selectedAvailabilityId)
   
   // Mock rating data
@@ -219,11 +291,11 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
     closeServiceModal()
   }
 
-  // Cálculos de paginação
-  const totalPages = Math.ceil((braider?.services?.length || 0) / servicesPerPage)
+  // Cálculos de paginação - usar services carregados da API
+  const totalPages = Math.ceil((services.length || 0) / servicesPerPage)
   const startIndex = (currentPage - 1) * servicesPerPage
   const endIndex = startIndex + servicesPerPage
-  const currentServices = braider?.services?.slice(startIndex, endIndex) || []
+  const currentServices = services.slice(startIndex, endIndex) || []
 
   // Funções de navegação entre steps
   const nextStep = () => {
@@ -359,8 +431,19 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
             </div>
             
             {/* Services Grid with Pagination - 4 columns, compact */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {currentServices.map((service) => (
+            {servicesLoading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-600 mx-auto mb-4"></div>
+                <p className="text-lg text-gray-600">Carregando serviços...</p>
+              </div>
+            ) : services.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <div className="text-4xl mb-4">✂️</div>
+                <p>Nenhum serviço disponível no momento.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {currentServices.map((service) => (
                 <Card 
                   key={service.id}
                   className={cn(
@@ -444,11 +527,12 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
                     </div>
                   </CardContent>
                 </Card>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
             {/* Pagination */}
-            {totalPages > 1 && (
+            {!servicesLoading && services.length > 0 && totalPages > 1 && (
               <div className="flex justify-center items-center gap-4 mt-8">
                 <Button
                   variant="outline"
@@ -488,9 +572,11 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
             )}
 
             {/* Services Summary */}
-            <div className="text-center text-sm text-gray-500 mt-4">
-              Mostrando {startIndex + 1}-{Math.min(endIndex, braider?.services?.length || 0)} de {braider?.services?.length || 0} serviços
-            </div>
+            {!servicesLoading && services.length > 0 && (
+              <div className="text-center text-sm text-gray-500 mt-4">
+                Mostrando {startIndex + 1}-{Math.min(endIndex, services.length || 0)} de {services.length || 0} serviços
+              </div>
+            )}
           </div>
         )
 
@@ -759,7 +845,17 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
                   type="tel"
                   placeholder="(XX) XXXXX-XXXX"
                   value={clientPhone}
-                  onChange={(e) => setClientPhone(e.target.value)}
+                  onChange={(e) => {
+                    // Formatar telefone automaticamente
+                    let value = e.target.value.replace(/\D/g, '') // Remove tudo que não é dígito
+                    
+                    if (value.length <= 11) {
+                      value = value.replace(/(\d{2})(\d)/, '($1) $2')
+                      value = value.replace(/(\d{4,5})(\d{4})$/, '$1-$2')
+                    }
+                    
+                    setClientPhone(value)
+                  }}
                   className="h-12 text-base"
                 />
               </div>

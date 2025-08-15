@@ -18,20 +18,60 @@ import { cn } from "@/lib/utils"
 
 export default function BraiderDashboardOverviewPage() {
   const { user } = useAuth()
-  const braiderId = user?.id || "braider-1" // Use actual user ID, fallback for development
-  const braider = getBraiderById(braiderId)
+  const [braiderId, setBraiderId] = useState<string | null>(null)
+  const [braider, setBraider] = useState<any>(null)
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
 
+  // Buscar o braider ID baseado no email do usuário
+  useEffect(() => {
+    const fetchBraiderId = async () => {
+      if (!user?.email) return
+      
+      try {
+        console.log('🔍 Fetching braider ID for user:', user.email)
+        const response = await fetch(`/api/braiders/by-email?email=${encodeURIComponent(user.email)}`)
+        
+        if (response.ok) {
+          const braiderData = await response.json()
+          console.log('✅ Braider found:', braiderData)
+          setBraiderId(braiderData.id)
+          setBraider(braiderData)
+        } else {
+          console.error('❌ Braider not found for user:', user.email)
+          setBraiderId(null)
+          setBraider(null)
+        }
+      } catch (error) {
+        console.error('❌ Error fetching braider ID:', error)
+        setBraiderId(null)
+        setBraider(null)
+      }
+    }
+    
+    fetchBraiderId()
+  }, [user?.email])
+
   useEffect(() => {
     const fetchData = async () => {
+      if (!braiderId) {
+        setLoading(false)
+        return
+      }
+      
       setLoading(true)
-      const braiderBookings = await getBraiderBookings(braiderId)
-      setBookings(braiderBookings)
-      setLoading(false)
+      try {
+        const braiderBookings = await getBraiderBookings(braiderId)
+        setBookings(braiderBookings)
+      } catch (error) {
+        console.error('❌ Error fetching bookings:', error)
+      } finally {
+        setLoading(false)
+      }
     }
+    
     fetchData()
-  }, [])
+  }, [braiderId])
 
   // Enhanced Analytics Calculations
   const today = new Date()
@@ -219,7 +259,21 @@ export default function BraiderDashboardOverviewPage() {
             Sistema Ativo
           </Badge>
         </div>
-        <BraiderEarningsDashboard braiderId={braiderId} />
+        {braiderId ? (
+          <BraiderEarningsDashboard braiderId={braiderId} />
+        ) : (
+          <Card className="border-yellow-200 bg-yellow-50">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 text-yellow-700">
+                <AlertCircle className="h-5 w-5" />
+                <div>
+                  <p className="font-semibold">Perfil de trancista não encontrado</p>
+                  <p className="text-sm">Complete seu cadastro como trancista para acessar o dashboard.</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Dashboard Content Grid */}

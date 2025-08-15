@@ -59,7 +59,7 @@ export function BraiderDetailClient({
       return
     }
     
-    toggleFavoriteBraider(braider)
+    toggleFavoriteBraider(braider.id)
     toast.success(
       isFavoriteBraider(braider.id) 
         ? 'Removida dos favoritos' 
@@ -253,16 +253,11 @@ export function BraiderDetailClient({
                           €{service.price}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {service.duration} min
+                          {service.durationMinutes} min
                         </div>
                       </div>
                     </div>
                     <p className="text-gray-600 text-sm mb-2">{service.description}</p>
-                    {service.category && (
-                      <Badge variant="outline" className="text-xs">
-                        {service.category}
-                      </Badge>
-                    )}
                   </div>
                 ))}
                 
@@ -295,8 +290,10 @@ export function BraiderDetailClient({
       {selectedServiceForModal && (
         <ServiceDetailModal
           service={selectedServiceForModal}
-          braider={braider}
           isOpen={isModalOpen}
+          onSelectService={() => {
+            // Handle service selection if needed
+          }}
           onClose={() => {
             setIsModalOpen(false)
             setSelectedServiceForModal(null)

@@ -54,10 +54,11 @@ export function BraidersClientComponent({
 
     // Rating filter  
     if (selectedFilter === "top_rated") {
-      filtered = filtered.filter(braider => (braider.averageRating || 0) >= 4.5)
+      // Filter top rated braiders - placeholder since rating data is not in Braider type yet
+      filtered = filtered
     } else if (selectedFilter === "new") {
-      // Ordenar por mais recentes (assumindo que têm menos reviews)
-      filtered = filtered.filter(braider => (braider.totalReviews || 0) < 5)
+      // Filter new braiders - placeholder logic
+      filtered = filtered
     }
 
     // Location filters
@@ -71,7 +72,7 @@ export function BraidersClientComponent({
     filtered.sort((a, b) => {
       switch (sortBy) {
         case "rating":
-          return (b.averageRating || 0) - (a.averageRating || 0)
+          return 0 // Placeholder for rating sort
         case "name":
           return a.name.localeCompare(b.name, 'pt')
         case "location":

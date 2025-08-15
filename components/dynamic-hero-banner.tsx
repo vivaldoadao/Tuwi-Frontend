@@ -184,7 +184,7 @@ export function DynamicHeroBanner({
                 asChild
                 onClick={() => handleCTAClick(false)}
               >
-                <Link href={content.ctaLink}>
+                <Link href={content.ctaLink as any}>
                   {content.ctaText}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
@@ -199,7 +199,7 @@ export function DynamicHeroBanner({
                   asChild
                   onClick={() => handleCTAClick(true)}
                 >
-                  <Link href={content.secondaryCtaLink}>
+                  <Link href={content.secondaryCtaLink as any}>
                     {content.secondaryCtaText}
                     <ExternalLink className="ml-2 h-5 w-5" />
                   </Link>

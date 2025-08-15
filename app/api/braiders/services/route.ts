@@ -28,33 +28,23 @@ export async function GET(request: NextRequest) {
     
     const serviceSupabase = getServiceClient()
     
-    // Find user by email
-    const { data: userData, error: userError } = await serviceSupabase
-      .from('users')
-      .select('id')
-      .eq('email', email)
-      .single()
-    
-    if (userError || !userData) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Usuário não encontrado' 
-      }, { status: 404 })
-    }
-
-    // Find braider by user_id
+    // Buscar braider diretamente por email (padrão do sistema)
+    console.log('📧 Buscando braider por email:', email)
     const { data: braiderData, error: braiderError } = await serviceSupabase
       .from('braiders')
-      .select('id')
-      .eq('user_id', userData.id)
+      .select('id, name, contact_email')
+      .eq('contact_email', email)
       .single()
     
     if (braiderError || !braiderData) {
+      console.error('❌ Braider não encontrado para email:', email, braiderError)
       return NextResponse.json({ 
         success: false, 
-        message: 'Perfil de trancista não encontrado' 
+        message: 'Perfil de trancista não encontrado para este email' 
       }, { status: 404 })
     }
+    
+    console.log('✅ Braider encontrado:', { id: braiderData.id, name: braiderData.name })
 
     // Get total count of services
     const { count, error: countError } = await serviceSupabase
@@ -142,33 +132,23 @@ export async function POST(request: NextRequest) {
     
     const serviceSupabase = getServiceClient()
     
-    // Find user by email
-    const { data: userData, error: userError } = await serviceSupabase
-      .from('users')
-      .select('id')
-      .eq('email', email)
-      .single()
-    
-    if (userError || !userData) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Usuário não encontrado' 
-      }, { status: 404 })
-    }
-
-    // Find braider by user_id
+    // Buscar braider diretamente por email (padrão do sistema)
+    console.log('📧 Buscando braider por email para criar serviço:', email)
     const { data: braiderData, error: braiderError } = await serviceSupabase
       .from('braiders')
-      .select('id')
-      .eq('user_id', userData.id)
+      .select('id, name, contact_email')
+      .eq('contact_email', email)
       .single()
     
     if (braiderError || !braiderData) {
+      console.error('❌ Braider não encontrado para email:', email, braiderError)
       return NextResponse.json({ 
         success: false, 
-        message: 'Perfil de trancista não encontrado' 
+        message: 'Perfil de trancista não encontrado para este email' 
       }, { status: 404 })
     }
+    
+    console.log('✅ Braider encontrado para criação:', { id: braiderData.id, name: braiderData.name })
 
     // Create new service
     const serviceData = {
@@ -244,33 +224,23 @@ export async function DELETE(request: NextRequest) {
     
     const serviceSupabase = getServiceClient()
     
-    // Find user by email
-    const { data: userData, error: userError } = await serviceSupabase
-      .from('users')
-      .select('id')
-      .eq('email', email)
-      .single()
-    
-    if (userError || !userData) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Usuário não encontrado' 
-      }, { status: 404 })
-    }
-
-    // Find braider by user_id
+    // Buscar braider diretamente por email (padrão do sistema)
+    console.log('📧 Buscando braider por email para deletar serviço:', email)
     const { data: braiderData, error: braiderError } = await serviceSupabase
       .from('braiders')
-      .select('id')
-      .eq('user_id', userData.id)
+      .select('id, name, contact_email')
+      .eq('contact_email', email)
       .single()
     
     if (braiderError || !braiderData) {
+      console.error('❌ Braider não encontrado para email:', email, braiderError)
       return NextResponse.json({ 
         success: false, 
-        message: 'Perfil de trancista não encontrado' 
+        message: 'Perfil de trancista não encontrado para este email' 
       }, { status: 404 })
     }
+    
+    console.log('✅ Braider encontrado para deletar:', { id: braiderData.id, name: braiderData.name })
 
     // Verify service belongs to this braider
     const { data: serviceData, error: serviceCheckError } = await serviceSupabase
@@ -334,33 +304,23 @@ export async function PUT(request: NextRequest) {
     
     const serviceSupabase = getServiceClient()
     
-    // Find user by email
-    const { data: userData, error: userError } = await serviceSupabase
-      .from('users')
-      .select('id')
-      .eq('email', email)
-      .single()
-    
-    if (userError || !userData) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Usuário não encontrado' 
-      }, { status: 404 })
-    }
-
-    // Find braider by user_id
+    // Buscar braider diretamente por email (padrão do sistema)
+    console.log('📧 Buscando braider por email para atualizar serviço:', email)
     const { data: braiderData, error: braiderError } = await serviceSupabase
       .from('braiders')
-      .select('id')
-      .eq('user_id', userData.id)
+      .select('id, name, contact_email')
+      .eq('contact_email', email)
       .single()
     
     if (braiderError || !braiderData) {
+      console.error('❌ Braider não encontrado para email:', email, braiderError)
       return NextResponse.json({ 
         success: false, 
-        message: 'Perfil de trancista não encontrado' 
+        message: 'Perfil de trancista não encontrado para este email' 
       }, { status: 404 })
     }
+    
+    console.log('✅ Braider encontrado para atualizar:', { id: braiderData.id, name: braiderData.name })
 
     // Verify service belongs to this braider
     const { data: existingService, error: serviceCheckError } = await serviceSupabase

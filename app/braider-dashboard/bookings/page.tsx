@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { MapPin, Home, CheckCircle, XCircle, Calendar, Phone, Mail, Clock, Euro, Filter, Search } from "lucide-react"
+import { MapPin, Home, CheckCircle, XCircle, Calendar, Phone, Mail, Clock, Euro, Filter, Search, Bell, Wifi, WifiOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Image from "next/image"
 import { useAuth } from "@/context/auth-context"
 import { useRouter } from "next/navigation"
+import { useRealtimeBookings } from "@/hooks/useRealtimeBookings"
+import { useToast } from "@/hooks/use-toast"
 
 interface Booking {
   id: string
@@ -43,6 +45,12 @@ interface Braider {
 export default function BraiderBookingsPage() {
   const { user } = useAuth()
   const router = useRouter()
+  const { toast } = useToast()
+  
+  // Real-time booking system
+  const realtimeBookings = useRealtimeBookings()
+  
+  // Existing state
   const [braider, setBraider] = useState<Braider | null>(null)
   const [bookings, setBookings] = useState<Booking[]>([])
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([])
@@ -112,6 +120,102 @@ export default function BraiderBookingsPage() {
     fetchData()
   }, [user, router])
 
+  // 🔄 REAL-TIME: Set up event listeners for booking notifications
+  useEffect(() => {
+    if (!braider?.id) return
+
+    console.log('🔔 Setting up real-time booking notifications for braider:', braider.id)
+
+    // Listen for new booking notifications
+    const unsubscribeNewBooking = realtimeBookings.onBookingCreated((notification) => {
+      console.log('📨 New booking notification received:', notification)
+      
+      // Show toast notification
+      toast({
+        title: "🎉 Novo Agendamento!",
+        description: `${notification.clientName} agendou ${notification.serviceName} para ${new Date(notification.bookingDate).toLocaleDateString('pt-BR')}`,
+        duration: 8000,
+      })
+
+      // Add the new booking to the list
+      const newBooking: Booking = {
+        id: notification.bookingId,
+        braiderId: notification.braiderId,
+        serviceId: '', // Will be populated by refresh
+        clientName: notification.clientName,
+        clientEmail: notification.clientEmail,
+        clientPhone: '', // Will be populated by refresh
+        clientAddress: '',
+        date: notification.bookingDate,
+        time: notification.bookingTime,
+        bookingType: 'domicilio', // Will be corrected by refresh
+        status: notification.status as Booking["status"],
+        createdAt: notification.timestamp,
+        service: {
+          name: notification.serviceName,
+          price: notification.totalAmount,
+          durationMinutes: 0
+        }
+      }
+
+      setBookings(prev => [newBooking, ...prev])
+      
+      // Buscar dados completos do agendamento em background
+      setTimeout(async () => {
+        try {
+          console.log('🔄 Fetching complete booking data in background')
+          const response = await fetch('/api/braiders/bookings')
+          if (response.ok) {
+            const result = await response.json()
+            if (result.success && result.bookings) {
+              // Atualizar apenas o booking específico ou todos se necessário
+              const updatedBooking = result.bookings.find(b => b.id === notification.bookingId)
+              if (updatedBooking) {
+                setBookings(prev => 
+                  prev.map(b => b.id === notification.bookingId ? updatedBooking : b)
+                )
+                console.log('✅ Booking data updated in background')
+              }
+            }
+          }
+        } catch (error) {
+          console.error('⚠️ Error fetching complete booking data:', error)
+        }
+      }, 1000)
+    })
+
+    // Listen for booking status updates
+    const unsubscribeStatusUpdate = realtimeBookings.onBookingStatusChanged((update) => {
+      console.log('📝 Booking status update received:', update)
+      
+      toast({
+        title: "📋 Status Atualizado",
+        description: `Agendamento ${update.bookingId.slice(-6)} alterado para ${update.newStatus}`,
+        duration: 5000,
+      })
+
+      // Update the booking status in the list
+      setBookings(prev => 
+        prev.map(booking => 
+          booking.id === update.bookingId 
+            ? { ...booking, status: update.newStatus as Booking["status"] }
+            : booking
+        )
+      )
+    })
+
+    // Subscribe to booking notifications for this braider
+    realtimeBookings.subscribeToBookings(braider.id)
+
+    // Cleanup function
+    return () => {
+      console.log('🧹 Cleaning up real-time booking listeners')
+      unsubscribeNewBooking()
+      unsubscribeStatusUpdate()
+      realtimeBookings.unsubscribeFromBookings()
+    }
+  }, [braider?.id, realtimeBookings, toast])
+
   // Filter bookings based on search and filters
   useEffect(() => {
     let filtered = bookings
@@ -142,7 +246,24 @@ export default function BraiderBookingsPage() {
     console.log('👤 Current user object:', user)
     console.log('📋 Request details:', { bookingId, newStatus })
     
-    setLoading(true)
+    // Get current booking for old status
+    const currentBooking = bookings.find(b => b.id === bookingId)
+    const oldStatus = currentBooking?.status || 'Pendente'
+    
+    // Update UI otimisticamente para feedback instantâneo
+    setBookings(prevBookings => 
+      prevBookings.map(b => 
+        b.id === bookingId ? { ...b, status: newStatus } : b
+      )
+    )
+    
+    // Show optimistic feedback
+    toast({
+      title: "🔄 Atualizando...",
+      description: `Alterando status para ${newStatus}`,
+      duration: 2000,
+    })
+    
     try {
       const response = await fetch('/api/braiders/bookings', {
         method: 'PATCH',
@@ -155,19 +276,52 @@ export default function BraiderBookingsPage() {
       const result = await response.json()
 
       if (response.ok && result.success) {
+        // 🔄 REAL-TIME: Send status update via WebSocket (disabled temporarily due to server issues)
+        try {
+          realtimeBookings.sendBookingUpdate(bookingId, newStatus, `Atualizado para ${newStatus}`)
+        } catch (error) {
+          console.warn('⚠️ WebSocket booking update failed, continuing without real-time sync:', error)
+        }
+        
+        // Show success toast
+        toast({
+          title: "✅ Status Atualizado",
+          description: `Agendamento alterado de ${oldStatus} para ${newStatus}`,
+          duration: 3000,
+        })
+        
+        console.log('✅ Status atualizado com sucesso e notificação enviada')
+      } else {
+        // Reverter mudança otimística em caso de erro
         setBookings(prevBookings => 
           prevBookings.map(b => 
-            b.id === bookingId ? { ...b, status: newStatus } : b
+            b.id === bookingId ? { ...b, status: oldStatus } : b
           )
         )
-        console.log('Status atualizado com sucesso')
-      } else {
-        console.error("Erro ao atualizar status do agendamento:", result.error)
+        
+        console.error("❌ Erro ao atualizar status do agendamento:", result.error)
+        toast({
+          title: "❌ Erro",
+          description: result.error || "Não foi possível atualizar o status do agendamento",
+          variant: "destructive",
+          duration: 5000,
+        })
       }
     } catch (error) {
-      console.error("Erro inesperado ao atualizar status:", error)
-    } finally {
-      setLoading(false)
+      // Reverter mudança otimística em caso de erro
+      setBookings(prevBookings => 
+        prevBookings.map(b => 
+          b.id === bookingId ? { ...b, status: oldStatus } : b
+        )
+      )
+      
+      console.error("❌ Erro inesperado ao atualizar status:", error)
+      toast({
+        title: "❌ Erro",
+        description: "Erro inesperado ao atualizar status",
+        variant: "destructive",
+        duration: 5000,
+      })
     }
   }
 
@@ -207,16 +361,31 @@ export default function BraiderBookingsPage() {
   }
 
   if (!braider) {
+    // Verificar se o usuário tem role braider mas não tem registro aprovado
+    const hasBraiderRole = user?.role === 'braider'
+    
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center max-w-md mx-auto p-8">
           <div className="bg-yellow-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-6">
             <Calendar className="h-8 w-8 text-yellow-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Acesso Restrito</h2>
-          <p className="text-gray-600 mb-6">
-            Esta página é exclusiva para trancistas registradas e aprovadas no sistema.
-          </p>
+          
+          {hasBraiderRole ? (
+            <>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Registro Pendente</h2>
+              <p className="text-gray-600 mb-6">
+                Você tem permissão de trancista, mas ainda não completou o processo de registro ou está aguardando aprovação.
+              </p>
+            </>
+          ) : (
+            <>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Acesso Restrito</h2>
+              <p className="text-gray-600 mb-6">
+                Esta página é exclusiva para trancistas registradas e aprovadas no sistema.
+              </p>
+            </>
+          )}
           
           {user?.email && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
@@ -230,19 +399,19 @@ export default function BraiderBookingsPage() {
           )}
 
           <div className="space-y-3 text-sm text-gray-500">
-            <p>• Verifique se você se registrou como trancista</p>
-            <p>• Aguarde a aprovação do seu cadastro</p>
-            <p>• Para testar, use um email de trancista mock</p>
-            <p>• Entre em contato conosco se houver problemas</p>
-          </div>
-
-          <div className="bg-gray-50 border rounded-lg p-3 mt-4 text-xs">
-            <p className="font-semibold text-gray-700 mb-2">Emails de teste disponíveis:</p>
-            <div className="grid grid-cols-1 gap-1 text-gray-600">
-              <p>ana.trancista@example.com</p>
-              <p>maria@example.com</p>
-              <p>ana@example.com</p>
-            </div>
+            {hasBraiderRole ? (
+              <>
+                <p>• Complete seu registro como trancista</p>
+                <p>• Aguarde a aprovação do administrador</p>
+                <p>• Você será notificada quando aprovada</p>
+              </>
+            ) : (
+              <>
+                <p>• Registre-se como trancista</p>
+                <p>• Aguarde a aprovação do seu cadastro</p>
+                <p>• Entre em contato conosco se houver problemas</p>
+              </>
+            )}
           </div>
 
           <div className="mt-8 space-y-3">
@@ -250,7 +419,7 @@ export default function BraiderBookingsPage() {
               onClick={() => router.push('/register-braider')}
               className="w-full bg-accent-500 hover:bg-accent-600 text-white"
             >
-              Registrar-se como Trancista
+              {hasBraiderRole ? 'Completar Registro' : 'Registrar-se como Trancista'}
             </Button>
             <Button
               variant="outline"
@@ -270,12 +439,35 @@ export default function BraiderBookingsPage() {
       {/* Header Section */}
       <div className="bg-gradient-to-r from-accent-500 to-accent-600 rounded-3xl p-8 text-white">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold font-heading mb-2">
-              Gestão de Agendamentos 📅
-            </h1>
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold font-heading">
+                Gestão de Agendamentos 📅
+              </h1>
+              {/* Real-time connection indicator */}
+              <div className="flex items-center gap-2">
+                {realtimeBookings.isConnected ? (
+                  <div className="flex items-center gap-1 bg-white/20 px-3 py-1 rounded-full text-sm">
+                    <Wifi className="h-4 w-4 text-green-400" />
+                    <span className="text-white/90">Tempo Real</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 bg-white/20 px-3 py-1 rounded-full text-sm">
+                    <WifiOff className="h-4 w-4 text-red-400" />
+                    <span className="text-white/90">Offline</span>
+                  </div>
+                )}
+                {/* Notification badge */}
+                {realtimeBookings.unreadCount > 0 && (
+                  <div className="flex items-center gap-1 bg-white/20 px-3 py-1 rounded-full text-sm">
+                    <Bell className="h-4 w-4 text-yellow-400" />
+                    <span className="text-white font-semibold">{realtimeBookings.unreadCount}</span>
+                  </div>
+                )}
+              </div>
+            </div>
             <p className="text-white/90 text-lg">
-              Gerencie todos os seus agendamentos em um só lugar
+              Gerencie todos os seus agendamentos em tempo real
             </p>
           </div>
           <div className="text-right">
@@ -519,8 +711,7 @@ export default function BraiderBookingsPage() {
                           <>
                             <Button
                               onClick={() => handleUpdateBookingStatus(booking.id, "Confirmado")}
-                              className="w-full bg-green-500 hover:bg-green-600 text-white rounded-xl shadow-lg"
-                              disabled={loading}
+                              className="w-full bg-green-500 hover:bg-green-600 text-white rounded-xl shadow-lg transition-all duration-200"
                             >
                               <CheckCircle className="h-4 w-4 mr-2" />
                               Aprovar
@@ -528,8 +719,7 @@ export default function BraiderBookingsPage() {
                             <Button
                               variant="destructive"
                               onClick={() => handleUpdateBookingStatus(booking.id, "Cancelado")}
-                              className="w-full rounded-xl"
-                              disabled={loading}
+                              className="w-full rounded-xl transition-all duration-200"
                             >
                               <XCircle className="h-4 w-4 mr-2" />
                               Rejeitar
@@ -540,8 +730,7 @@ export default function BraiderBookingsPage() {
                           <Button
                             variant="destructive"
                             onClick={() => handleUpdateBookingStatus(booking.id, "Cancelado")}
-                            className="w-full rounded-xl"
-                            disabled={loading}
+                            className="w-full rounded-xl transition-all duration-200"
                           >
                             <XCircle className="h-4 w-4 mr-2" />
                             Cancelar

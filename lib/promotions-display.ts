@@ -303,14 +303,9 @@ export async function incrementPromotionView(promotionId: string): Promise<void>
     if (rpcError) {
       console.warn('RPC function not available, using direct update:', rpcError.message)
       
-      // Fallback para update direto
+      // Fallback para update direto usando RPC
       await supabase
-        .from('promotions')
-        .update({ 
-          views_count: supabase.sql`views_count + 1`,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', promotionId)
+        .rpc('increment_promotion_views', { promotion_id: promotionId })
     }
 
   } catch (error) {
@@ -334,14 +329,9 @@ export async function trackPromotionClick(promotionId: string, metadata?: any): 
       })
 
     if (rpcError) {
-      // Fallback
+      // Fallback usando RPC
       await supabase
-        .from('promotions')
-        .update({ 
-          clicks_count: supabase.sql`clicks_count + 1`,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', promotionId)
+        .rpc('increment_promotion_clicks', { promotion_id: promotionId })
     }
 
     // Registrar evento detalhado de analytics (opcional)

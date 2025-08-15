@@ -21,11 +21,11 @@ async function isAdmin() {
 // GET /api/promotions/packages/[id] - Obter pacote específico
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const serviceClient = getServiceClient()
-    const { id } = params
+    const { id } = await params
 
     const { data: package_data, error } = await serviceClient
       .from('promotion_packages')
@@ -49,7 +49,7 @@ export async function GET(
 // PUT /api/promotions/packages/[id] - Atualizar pacote específico (admin apenas)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     if (!await isAdmin()) {
@@ -57,7 +57,7 @@ export async function PUT(
     }
 
     const serviceClient = getServiceClient()
-    const { id } = params
+    const { id } = await params
     const body = await request.json()
 
     const { data: updated, error } = await serviceClient
@@ -86,7 +86,7 @@ export async function PUT(
 // DELETE /api/promotions/packages/[id] - Deletar pacote (admin apenas)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     if (!await isAdmin()) {
@@ -94,7 +94,7 @@ export async function DELETE(
     }
 
     const serviceClient = getServiceClient()
-    const { id } = params
+    const { id } = await params
 
     // Verificar se há promoções ativas usando este pacote
     const { data: activePromotions } = await serviceClient

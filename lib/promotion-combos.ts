@@ -434,11 +434,7 @@ class PromotionComboService {
 
       // Atualizar contador de uso do cupom
       const { error: updateError } = await this.supabase
-        .from('promotion_coupons')
-        .update({ 
-          usage_count: this.supabase.raw('usage_count + 1')
-        })
-        .eq('id', couponId)
+        .rpc('increment_coupon_usage', { coupon_id: couponId })
 
       if (updateError) {
         console.error('Error updating coupon usage count:', updateError)
@@ -627,10 +623,4 @@ export function usePromotionCombos() {
   }
 }
 
-// Exportar tipos
-export type {
-  PromotionCombo,
-  PromotionSubscription,
-  PromotionCoupon,
-  ComboCalculation
-}
+// All types are already exported above as interfaces

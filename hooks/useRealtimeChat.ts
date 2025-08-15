@@ -896,12 +896,14 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
 
   // WebSocket event handlers
   useEffect(() => {
-    if (!useWebSocketMode || !wsConnected) return
+    if (!useWebSocketMode || !wsConnected) {
+      return
+    }
 
     console.log('🔌 Setting up WebSocket event listeners')
 
     // Handle new messages from WebSocket
-    const unsubscribeNewMessage = onNewMessage((message) => {
+    onNewMessage((message) => {
       console.log('📨 New message from WebSocket:', message)
       console.log('🔍 Current selected conversation:', selectedConversation?.id)
       console.log('🔍 Message conversation:', message.conversationId)
@@ -971,7 +973,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     })
 
     // Handle message sent confirmation from WebSocket
-    const unsubscribeMessageSent = onMessageSent(({ tempId, message }) => {
+    onMessageSent(({ tempId, message }) => {
       console.log('✅ Message sent confirmation from WebSocket:', { tempId, message })
       
       // Replace temporary message with real one
@@ -1000,7 +1002,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     })
 
     // Handle typing indicators from WebSocket
-    const unsubscribeUserTyping = onUserTyping((data) => {
+    onUserTyping((data) => {
       console.log('⌨️ Typing indicator from WebSocket:', data)
       
       if (data.isTyping) {
@@ -1021,7 +1023,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     })
 
     // Handle message read confirmations
-    const unsubscribeMessageRead = onMessageRead(({ messageId, readBy, readAt }) => {
+    onMessageRead(({ messageId, readBy, readAt }) => {
       console.log('👁️ Message read from WebSocket:', { messageId, readBy, readAt })
       
       setMessages(prev => prev.map(msg => 
@@ -1036,13 +1038,6 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
         return newMap
       })
     })
-
-    return () => {
-      if (unsubscribeNewMessage) unsubscribeNewMessage()
-      if (unsubscribeMessageSent) unsubscribeMessageSent()
-      if (unsubscribeUserTyping) unsubscribeUserTyping()
-      if (unsubscribeMessageRead) unsubscribeMessageRead()
-    }
   }, [useWebSocketMode, wsConnected, onNewMessage, onMessageSent, onUserTyping, onMessageRead])
 
   // Join conversation via WebSocket when selected

@@ -56,11 +56,11 @@ export function LazyProductCard({
     <div className={className}>
       {priority ? (
         // Load immediately for above-the-fold content
-        <ProductCardComponent product={product} onAddToCart={onAddToCart} />
+        <ProductCardComponent product={product} />
       ) : (
         // Lazy load for below-the-fold content
         <Suspense fallback={<ProductCardSkeleton />}>
-          <ProductCardComponent product={product} onAddToCart={onAddToCart} />
+          <ProductCardComponent product={product} />
         </Suspense>
       )}
     </div>

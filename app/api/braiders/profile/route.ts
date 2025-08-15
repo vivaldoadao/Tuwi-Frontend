@@ -82,12 +82,37 @@ export async function GET(request: NextRequest) {
       userId = sessionUserId
     }
     
-    // Get braider data by user_id
-    const { data: braiderData, error: braiderError } = await serviceSupabase
-      .from('braiders')
-      .select('*')
-      .eq('user_id', userId)
-      .single()
+    // Get braider data - try by email first, then by user_id as fallback
+    let braiderData = null
+    let braiderError = null
+    
+    if (email) {
+      // Try by contact_email first
+      const { data: braiderByEmail, error: emailBraiderError } = await serviceSupabase
+        .from('braiders')
+        .select('*')
+        .eq('contact_email', email)
+        .single()
+      
+      braiderData = braiderByEmail
+      braiderError = emailBraiderError
+      
+      console.log('🔍 Braider search by email result:', { braiderData: !!braiderData, error: braiderError })
+    }
+    
+    // If not found by email or no email provided, try by user_id
+    if (!braiderData && userId) {
+      const { data: braiderByUserId, error: userIdBraiderError } = await serviceSupabase
+        .from('braiders')
+        .select('*')
+        .eq('user_id', userId)
+        .single()
+      
+      braiderData = braiderByUserId
+      braiderError = userIdBraiderError
+      
+      console.log('🔍 Braider search by user_id result:', { braiderData: !!braiderData, error: braiderError })
+    }
 
     if (braiderError) {
       if (braiderError.code === 'PGRST116') {

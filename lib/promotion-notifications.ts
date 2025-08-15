@@ -489,7 +489,7 @@ class PromotionNotificationService {
 
       await this.createInAppNotification({
         user_id: userId,
-        promotion_id: null,
+        promotion_id: 'system-report',
         type: 'performance_report',
         title: 'Relatório Semanal Disponível',
         message: `Seu relatório de performance da semana está pronto!`,

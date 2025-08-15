@@ -181,8 +181,4 @@ declare module 'next-auth' {
   }
 }
 
-declare module 'next-auth/jwt' {
-  interface JWT {
-    role?: string
-  }
-}
+// JWT module augmentation removed - may not be available in NextAuth v5

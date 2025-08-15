@@ -211,5 +211,3 @@ export function usePromotedBraiders(options: {
   })
 }
 
-// Tipos úteis para export
-export type { UsePromotionsOptions, UsePromotionsResult }

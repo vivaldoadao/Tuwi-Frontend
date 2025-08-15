@@ -85,7 +85,9 @@ export function ProductForm({ product, onProductSaved, trigger, mode = 'create' 
           price: formData.price,
           category: formData.category,
           stockQuantity: formData.stockQuantity,
-          images: imageUrls
+          images: imageUrls,
+          imageUrl: imageUrls[0] || '', // Use first image as main imageUrl
+          isActive: true // Default to active
         })
 
         if (createResult.success) {
@@ -106,7 +108,7 @@ export function ProductForm({ product, onProductSaved, trigger, mode = 'create' 
             onProductSaved()
           }
         } else {
-          toast.error(createResult.error || 'Erro ao criar produto')
+          toast.error(createResult.message || 'Erro ao criar produto')
         }
       } else if (product) {
         const updateData = {
@@ -114,16 +116,16 @@ export function ProductForm({ product, onProductSaved, trigger, mode = 'create' 
           ...(imageUrls.length > 0 && { images: imageUrls })
         }
         
-        const { success, error } = await updateProductSecure(product.id, updateData)
+        const updateResult = await updateProductSecure(product.id, updateData)
 
-        if (success) {
+        if (updateResult.success) {
           toast.success('Produto atualizado com sucesso!')
           setOpen(false)
           if (onProductSaved) {
             onProductSaved()
           }
         } else {
-          toast.error(error || 'Erro ao atualizar produto')
+          toast.error(updateResult.message || 'Erro ao atualizar produto')
         }
       }
     } catch (error) {

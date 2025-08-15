@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { getBraiderById } from "@/lib/data-supabase"
 import { useFavorites } from "@/context/favorites-context"
-import { MapPin, Phone, Mail, Clock, ChevronLeft, ChevronRight, Star, Calendar, Heart, Share2, ArrowLeft } from "lucide-react"
+import { MapPin, Phone, Mail, Clock, ChevronLeft, ChevronRight, Star, Calendar, Heart, Share2, ArrowLeft, MessageSquare, TrendingUp } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect, use } from "react"
 import { Braider, Service } from "@/lib/data"
@@ -17,11 +17,16 @@ import { cn } from "@/lib/utils"
 import { useAuth } from "@/context/auth-context"
 import { useRouter } from "next/navigation"
 import { toast } from "react-hot-toast"
+import { RatingsList } from "@/components/ratings/ratings-list"
+import { RatingForm } from "@/components/ratings/rating-form"
+import { StarDisplay } from "@/components/ratings/star-rating"
 
 export default function BraiderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const [braider, setBraider] = useState<Braider | null>(null)
   const [loading, setLoading] = useState(true)
+  const [services, setServices] = useState<Service[]>([])
+  const [servicesLoading, setServicesLoading] = useState(true)
   const { isFavoriteBraider, toggleFavoriteBraider } = useFavorites()
   const [currentPortfolioImageIndex, setCurrentPortfolioImageIndex] = useState(0)
   const [selectedServiceForModal, setSelectedServiceForModal] = useState<Service | null>(null)
@@ -30,6 +35,10 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
   const servicesPerPage = 8
   const { user } = useAuth()
   const router = useRouter()
+  
+  // Rating states
+  const [showRatingForm, setShowRatingForm] = useState(false)
+  const [activeTab, setActiveTab] = useState<'services' | 'ratings'>('services')
   
   console.log('BraiderDetailPage - Received ID:', id)
   
@@ -63,6 +72,41 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
       notFound()
     }
   }, [id])
+
+  // Load services separately using the same API as dashboard-braider
+  useEffect(() => {
+    async function loadServices() {
+      if (!braider?.contactEmail) return
+      
+      try {
+        setServicesLoading(true)
+        console.log('🚀 Loading services for braider email:', braider.contactEmail)
+        
+        const email = encodeURIComponent(braider.contactEmail)
+        const apiUrl = `/api/braiders/services?email=${email}&page=1&limit=100`
+        console.log('🔗 API URL:', apiUrl)
+        
+        const response = await fetch(apiUrl)
+        const result = await response.json()
+        console.log('📦 Services API Response:', result)
+        
+        if (result.success && result.data) {
+          setServices(result.data.services || [])
+          console.log('✅ Services loaded:', result.data.services?.length || 0)
+        } else {
+          console.log('ℹ️ No services found or error')
+          setServices([])
+        }
+      } catch (error) {
+        console.error('❌ Error loading services:', error)
+        setServices([])
+      } finally {
+        setServicesLoading(false)
+      }
+    }
+
+    loadServices()
+  }, [braider?.contactEmail])
 
   if (loading) {
     return (
@@ -113,14 +157,114 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
     window.location.href = `/braiders/${braider?.id}/book?service=${serviceId}`
   }
 
-  // Pagination calculations
-  const totalPages = Math.ceil((braider?.services.length || 0) / servicesPerPage)
+  // Pagination calculations - usar services carregados da API
+  const totalPages = Math.ceil((services.length || 0) / servicesPerPage)
   const startIndex = (currentPage - 1) * servicesPerPage
   const endIndex = startIndex + servicesPerPage
-  const currentServices = braider?.services.slice(startIndex, endIndex) || []
+  const currentServices = services.slice(startIndex, endIndex) || []
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
+  }
+
+  // Rating handlers
+  const handleSubmitRating = async (ratingData: any) => {
+    try {
+      const response = await fetch('/api/ratings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(ratingData)
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao enviar avaliação')
+      }
+
+      setShowRatingForm(false)
+      // Refresh ratings by switching tabs
+      setActiveTab('ratings')
+
+    } catch (error) {
+      console.error('Error submitting rating:', error)
+      throw error // Re-throw to let form handle it
+    }
+  }
+
+  const handleRatingEdit = (ratingId: string) => {
+    // Navigate to edit rating page or open edit modal
+    console.log('Edit rating:', ratingId)
+  }
+
+  const handleRatingDelete = async (ratingId: string) => {
+    try {
+      const response = await fetch(`/api/ratings/${ratingId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        const result = await response.json()
+        throw new Error(result.error || 'Erro ao remover avaliação')
+      }
+
+      // Rating will be removed from list by RatingsList component
+    } catch (error) {
+      console.error('Error deleting rating:', error)
+      throw error
+    }
+  }
+
+  const handleRatingReport = async (ratingId: string, reason: string, description: string) => {
+    try {
+      const response = await fetch('/api/ratings/reports', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ratingId,
+          reason,
+          description
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao denunciar avaliação')
+      }
+
+    } catch (error) {
+      console.error('Error reporting rating:', error)
+      throw error
+    }
+  }
+
+  const handleRatingRespond = async (ratingId: string, response: string) => {
+    try {
+      const res = await fetch(`/api/ratings/${ratingId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          braiderResponse: response
+        })
+      })
+
+      const result = await res.json()
+
+      if (!res.ok) {
+        throw new Error(result.error || 'Erro ao responder avaliação')
+      }
+
+    } catch (error) {
+      console.error('Error responding to rating:', error)
+      throw error
+    }
   }
 
 
@@ -193,21 +337,13 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
                       <div className="space-y-2">
                         <h2 className="text-3xl md:text-4xl font-bold font-heading text-gray-900">{braider.name}</h2>
                         <div className="flex items-center justify-center md:justify-start gap-2">
-                          <div className="flex items-center gap-1">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`h-4 w-4 ${
-                                  i < Math.floor(rating) 
-                                    ? 'fill-accent-500 text-accent-500' 
-                                    : 'text-gray-300'
-                                }`}
-                              />
-                            ))}
-                          </div>
-                          <span className="text-sm font-medium text-gray-700">
-                            {rating} ({reviewCount} avaliações)
-                          </span>
+                          <StarDisplay 
+                            rating={braider.averageRating || 0}
+                            size="md"
+                            showValue
+                            showCount
+                            count={braider.totalReviews || 0}
+                          />
                         </div>
                         <div className="flex items-center justify-center md:justify-start gap-2 text-gray-600">
                           <MapPin className="h-4 w-4" />
@@ -272,6 +408,15 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
                           <Heart className={`mr-2 h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
                           {isLiked ? 'Nos Favoritos' : 'Adicionar aos Favoritos'}
                         </Button>
+                        
+                        <Button
+                          onClick={() => setShowRatingForm(true)}
+                          variant="outline"
+                          className="flex-1 px-6 py-3 rounded-full font-semibold transition-all duration-300 hover:bg-yellow-50 border-yellow-300 text-yellow-600"
+                        >
+                          <Star className="mr-2 h-4 w-4" />
+                          Avaliar
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -281,18 +426,24 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
           </Card>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="bg-white/90 backdrop-blur-sm shadow-lg rounded-2xl border-0 text-center p-6">
-              <div className="text-3xl font-bold text-accent-600 mb-2">{completedServices}</div>
-              <div className="text-sm text-gray-600">Serviços Realizados</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card className="bg-white/90 backdrop-blur-sm shadow-lg rounded-2xl border-0 text-center p-4">
+              <div className="text-2xl font-bold text-accent-600 mb-1">{braider.totalReviews || 0}</div>
+              <div className="text-xs text-gray-600">Avaliações</div>
             </Card>
-            <Card className="bg-white/90 backdrop-blur-sm shadow-lg rounded-2xl border-0 text-center p-6">
-              <div className="text-3xl font-bold text-green-600 mb-2">{responseTime}</div>
-              <div className="text-sm text-gray-600">Tempo de Resposta</div>
+            <Card className="bg-white/90 backdrop-blur-sm shadow-lg rounded-2xl border-0 text-center p-4">
+              <div className="text-2xl font-bold text-yellow-600 mb-1">
+                {braider.averageRating ? braider.averageRating.toFixed(1) : '0.0'}
+              </div>
+              <div className="text-xs text-gray-600">Rating Médio</div>
             </Card>
-            <Card className="bg-white/90 backdrop-blur-sm shadow-lg rounded-2xl border-0 text-center p-6">
-              <div className="text-3xl font-bold text-blue-600 mb-2">{braider.services.length}</div>
-              <div className="text-sm text-gray-600">Serviços Disponíveis</div>
+            <Card className="bg-white/90 backdrop-blur-sm shadow-lg rounded-2xl border-0 text-center p-4">
+              <div className="text-2xl font-bold text-green-600 mb-1">{responseTime}</div>
+              <div className="text-xs text-gray-600">Tempo de Resposta</div>
+            </Card>
+            <Card className="bg-white/90 backdrop-blur-sm shadow-lg rounded-2xl border-0 text-center p-4">
+              <div className="text-2xl font-bold text-blue-600 mb-1">{services.length}</div>
+              <div className="text-xs text-gray-600">Serviços</div>
             </Card>
           </div>
 
@@ -459,12 +610,50 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
             </Card>
           </div>
 
-          {/* Services Section */}
+          {/* Tabs for Services and Ratings */}
           <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-3xl border-0 overflow-hidden">
             <CardContent className="p-8">
-              <h3 className="text-2xl font-bold font-heading text-gray-900 mb-6">Serviços Oferecidos</h3>
+              {/* Tab Navigation */}
+              <div className="flex items-center gap-4 mb-6 border-b">
+                <button
+                  onClick={() => setActiveTab('services')}
+                  className={`pb-4 px-2 font-semibold transition-all duration-200 ${
+                    activeTab === 'services'
+                      ? 'text-accent-600 border-b-2 border-accent-600'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Serviços ({services.length})
+                  </div>
+                </button>
+                <button
+                  onClick={() => setActiveTab('ratings')}
+                  className={`pb-4 px-2 font-semibold transition-all duration-200 ${
+                    activeTab === 'ratings'
+                      ? 'text-accent-600 border-b-2 border-accent-600'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    Avaliações ({braider.totalReviews || 0})
+                  </div>
+                </button>
+              </div>
+
+              {/* Services Tab */}
+              {activeTab === 'services' && (
+                <div>
+                  <h3 className="text-2xl font-bold font-heading text-gray-900 mb-6">Serviços Oferecidos</h3>
               
-              {braider.services.length > 0 ? (
+              {servicesLoading ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-600 mx-auto mb-4"></div>
+                  <p className="text-lg text-gray-600">Carregando serviços...</p>
+                </div>
+              ) : services.length > 0 ? (
                 <>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {currentServices.map((service) => (
@@ -568,8 +757,25 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
               ) : (
                 <div className="text-center py-12 text-gray-500">
                   <div className="text-4xl mb-4">✂️</div>
-                  <p>Nenhum serviço disponível no momento.</p>
+                    <p>Nenhum serviço disponível no momento.</p>
+                  </div>
+                )}
                 </div>
+              )}
+
+              {/* Ratings Tab */}
+              {activeTab === 'ratings' && (
+                <RatingsList
+                  braiderId={braider.id}
+                  braiderName={braider.name}
+                  currentUserId={user?.id}
+                  userRole={user?.role}
+                  showBraiderActions={user?.role === 'braider'}
+                  onRatingEdit={handleRatingEdit}
+                  onRatingDelete={handleRatingDelete}
+                  onRatingReport={handleRatingReport}
+                  onRatingRespond={handleRatingRespond}
+                />
               )}
             </CardContent>
           </Card>
@@ -582,12 +788,26 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
         <ServiceDetailModal
           service={selectedServiceForModal}
           braiderName={braider?.name || ""}
-          braiderRating={rating}
-          braiderReviews={reviewCount}
+          braiderRating={braider.averageRating || 0}
+          braiderReviews={braider.totalReviews || 0}
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           onSelectService={handleSelectServiceModal}
         />
+      )}
+
+      {/* Rating Form Modal */}
+      {showRatingForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <RatingForm
+              braiderId={braider.id}
+              braiderName={braider.name}
+              onSubmit={handleSubmitRating}
+              onCancel={() => setShowRatingForm(false)}
+            />
+          </div>
+        </div>
       )}
 
       {/* Modern Footer */}

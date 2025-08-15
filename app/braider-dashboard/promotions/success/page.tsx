@@ -34,7 +34,7 @@ export default function PromotionSuccessPage() {
   const { user } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const sessionId = searchParams.get('session_id')
+  const sessionId = searchParams?.get('session_id')
   
   const [loading, setLoading] = useState(true)
   const [session, setSession] = useState<SessionStatus | null>(null)

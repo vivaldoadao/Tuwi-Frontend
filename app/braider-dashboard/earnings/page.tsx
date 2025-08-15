@@ -57,36 +57,73 @@ interface Transaction {
 
 export default function BraiderEarningsPage() {
   const { user } = useAuth()
-  const braiderId = user?.id || "braider-1"
-  
+  const [braiderId, setBraiderId] = useState<string | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [dateRange, setDateRange] = useState<string>('current_month')
 
+  // Buscar o braider ID baseado no email do usuário
+  useEffect(() => {
+    const fetchBraiderId = async () => {
+      if (!user?.email) {
+        console.log('❌ No user email available')
+        return
+      }
+      
+      try {
+        console.log('🔍 Fetching braider ID for user:', user.email, 'User ID:', user.id)
+        const response = await fetch(`/api/braiders/by-email?email=${encodeURIComponent(user.email)}`)
+        
+        console.log('📡 Response status:', response.status)
+        
+        if (response.ok) {
+          const braiderData = await response.json()
+          console.log('✅ Braider found:', braiderData)
+          setBraiderId(braiderData.id)
+        } else {
+          const errorData = await response.text()
+          console.error('❌ Braider not found for user:', user.email, 'Status:', response.status, 'Error:', errorData)
+          setBraiderId(null)
+        }
+      } catch (error) {
+        console.error('❌ Error fetching braider ID:', error)
+        setBraiderId(null)
+      }
+    }
+    
+    fetchBraiderId()
+  }, [user?.email, user?.id])
+
   // Carregar transações via API
   useEffect(() => {
     const loadTransactions = async () => {
+      if (!braiderId) {
+        setLoading(false)
+        return
+      }
+      
       setLoading(true)
       try {
+        console.log('💰 Loading transactions for braider:', braiderId)
         const response = await fetch(`/api/braider/${braiderId}/earnings`)
+        
         if (response.ok) {
           const data = await response.json()
+          console.log('✅ Transactions loaded:', data)
           setTransactions(data.transactions || [])
+        } else {
+          console.error('❌ Failed to load transactions:', response.statusText)
         }
       } catch (error) {
-        console.error('Error loading transactions:', error)
+        console.error('❌ Error loading transactions:', error)
       } finally {
         setLoading(false)
       }
     }
 
-    if (braiderId && braiderId !== "braider-1") {
-      loadTransactions()
-    } else {
-      setLoading(false)
-    }
+    loadTransactions()
   }, [braiderId])
 
   const filteredTransactions = transactions.filter(transaction => {
@@ -133,7 +170,21 @@ export default function BraiderEarningsPage() {
       </div>
 
       {/* Dashboard de Ganhos */}
-      <BraiderEarningsDashboard braiderId={braiderId} />
+      {braiderId ? (
+        <BraiderEarningsDashboard braiderId={braiderId} />
+      ) : (
+        <Card className="border-yellow-200 bg-yellow-50">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3 text-yellow-700">
+              <AlertCircle className="h-5 w-5" />
+              <div>
+                <p className="font-semibold">Perfil de trancista não encontrado</p>
+                <p className="text-sm">Você precisa completar seu cadastro como trancista para acessar os ganhos.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filtros e Histórico Detalhado */}
       <Card>
