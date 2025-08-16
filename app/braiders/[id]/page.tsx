@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { getBraiderById } from "@/lib/data-supabase"
+import { getBraiderWithRealRating, type BraiderWithRealRating } from "@/lib/data-supabase-ratings"
 import { useFavorites } from "@/context/favorites-context"
 import { MapPin, Phone, Mail, Clock, ChevronLeft, ChevronRight, Star, Calendar, Heart, Share2, ArrowLeft, MessageSquare, TrendingUp } from "lucide-react"
 import Link from "next/link"
@@ -24,7 +25,7 @@ import { PortfolioGallery } from "@/components/portfolio-gallery"
 
 export default function BraiderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const [braider, setBraider] = useState<Braider | null>(null)
+  const [braider, setBraider] = useState<BraiderWithRealRating | null>(null)
   const [loading, setLoading] = useState(true)
   const [services, setServices] = useState<Service[]>([])
   const [servicesLoading, setServicesLoading] = useState(true)
@@ -44,22 +45,51 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
   
   const isLiked = isFavoriteBraider(braider?.id || "")
 
-  // Load braider data from database
+  // Load braider data from database with real ratings
   useEffect(() => {
     async function loadBraider() {
       try {
         setLoading(true)
-        console.log('Loading braider with ID:', id)
-        const braiderData = await getBraiderById(id)
-        console.log('getBraiderById result:', braiderData)
+        console.log('Loading braider with real ratings and ID:', id)
+        const braiderData = await getBraiderWithRealRating(id)
+        console.log('getBraiderWithRealRating result:', braiderData)
         setBraider(braiderData)
         if (!braiderData) {
-          console.log('No braider data found, calling notFound()')
-          notFound()
+          console.log('No braider data found with real ratings, trying fallback...')
+          // Fallback to original function if ratings system fails
+          const fallbackData = await getBraiderById(id)
+          if (fallbackData) {
+            // Convert to BraiderWithRealRating format
+            setBraider({
+              ...fallbackData,
+              averageRating: 0,
+              totalReviews: 0,
+              isAvailable: true
+            })
+          } else {
+            console.log('No braider data found in fallback either, calling notFound()')
+            notFound()
+          }
         }
       } catch (error) {
-        console.error('Error loading braider:', error)
-        notFound()
+        console.error('Error loading braider with real ratings:', error)
+        // Try fallback
+        try {
+          const fallbackData = await getBraiderById(id)
+          if (fallbackData) {
+            setBraider({
+              ...fallbackData,
+              averageRating: 0,
+              totalReviews: 0,
+              isAvailable: true
+            })
+          } else {
+            notFound()
+          }
+        } catch (fallbackError) {
+          console.error('Fallback also failed:', fallbackError)
+          notFound()
+        }
       } finally {
         setLoading(false)
       }
@@ -76,13 +106,14 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
   // Load services separately using the same API as dashboard-braider
   useEffect(() => {
     async function loadServices() {
-      if (!braider?.contactEmail) return
+      const emailToUse = braider?.contactEmail || (braider as any)?.contact_email
+      if (!emailToUse) return
       
       try {
         setServicesLoading(true)
-        console.log('🚀 Loading services for braider email:', braider.contactEmail)
+        console.log('🚀 Loading services for braider email:', emailToUse)
         
-        const email = encodeURIComponent(braider.contactEmail)
+        const email = encodeURIComponent(emailToUse)
         const apiUrl = `/api/braiders/services?email=${email}&page=1&limit=100`
         console.log('🔗 API URL:', apiUrl)
         
@@ -106,7 +137,7 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
     }
 
     loadServices()
-  }, [braider?.contactEmail])
+  }, [braider?.contactEmail, (braider as any)?.contact_email])
 
   if (loading) {
     return (
@@ -339,12 +370,12 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
                         <div className="flex items-center justify-center md:justify-start gap-2 text-gray-600">
                           <MapPin className="h-4 w-4" />
                           <span className="text-sm">
-                            {braider.freguesia && braider.concelho && braider.district
-                              ? `${braider.freguesia}, ${braider.concelho}, ${braider.district}`
-                              : braider.concelho && braider.district
-                              ? `${braider.concelho}, ${braider.district}`
-                              : braider.district
-                              ? braider.district
+                            {(braider as any).freguesia && (braider as any).concelho && (braider as any).district
+                              ? `${(braider as any).freguesia}, ${(braider as any).concelho}, ${(braider as any).district}`
+                              : (braider as any).concelho && (braider as any).district
+                              ? `${(braider as any).concelho}, ${(braider as any).district}`
+                              : (braider as any).district
+                              ? (braider as any).district
                               : braider.location}
                           </span>
                         </div>
@@ -448,28 +479,28 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
                 
                 <div className="space-y-6">
                   {/* Location Details */}
-                  {(braider.district || braider.concelho || braider.freguesia) && (
+                  {((braider as any).district || (braider as any).concelho || (braider as any).freguesia) && (
                     <div className="space-y-3">
                       <h4 className="font-semibold text-gray-900">Localização</h4>
                       <div className="space-y-2">
-                        {braider.district && (
+                        {(braider as any).district && (
                           <div className="flex items-center gap-2">
                             <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50">
-                              📍 {braider.district}
+                              📍 {(braider as any).district}
                             </Badge>
                           </div>
                         )}
-                        {braider.concelho && (
+                        {(braider as any).concelho && (
                           <div className="flex items-center gap-2">
                             <Badge variant="outline" className="border-green-200 text-green-700 bg-green-50">
-                              🏘️ {braider.concelho}
+                              🏘️ {(braider as any).concelho}
                             </Badge>
                           </div>
                         )}
-                        {braider.freguesia && (
+                        {(braider as any).freguesia && (
                           <div className="flex items-center gap-2">
                             <Badge variant="outline" className="border-purple-200 text-purple-700 bg-purple-50">
-                              🏡 {braider.freguesia}
+                              🏡 {(braider as any).freguesia}
                             </Badge>
                           </div>
                         )}
@@ -478,28 +509,28 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
                   )}
 
                   {/* Experience and Specialties */}
-                  {(braider.yearsExperience || braider.specialties) && (
+                  {((braider as any).yearsExperience || (braider as any).specialties) && (
                     <div className="space-y-3">
                       <h4 className="font-semibold text-gray-900">Experiência & Especialidades</h4>
                       <div className="space-y-2">
-                        {braider.yearsExperience && (
+                        {(braider as any).yearsExperience && (
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-600">Experiência:</span>
-                            <Badge variant="secondary">{braider.yearsExperience} anos</Badge>
+                            <Badge variant="secondary">{(braider as any).yearsExperience} anos</Badge>
                           </div>
                         )}
-                        {braider.specialties && braider.specialties.length > 0 && (
+                        {(braider as any).specialties && (braider as any).specialties.length > 0 && (
                           <div>
                             <span className="text-sm text-gray-600">Especialidades:</span>
                             <div className="flex flex-wrap gap-2 mt-1">
-                              {braider.specialties.slice(0, 3).map((specialty, index) => (
+                              {(braider as any).specialties.slice(0, 3).map((specialty: string, index: number) => (
                                 <Badge key={index} variant="outline" className="text-xs">
                                   {specialty}
                                 </Badge>
                               ))}
-                              {braider.specialties.length > 3 && (
+                              {(braider as any).specialties.length > 3 && (
                                 <Badge variant="outline" className="text-xs">
-                                  +{braider.specialties.length - 3} mais
+                                  +{(braider as any).specialties.length - 3} mais
                                 </Badge>
                               )}
                             </div>
@@ -513,25 +544,25 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
                   <div className="space-y-3">
                     <h4 className="font-semibold text-gray-900">Informações de Contato</h4>
                     <div className="space-y-3">
-                      {braider.contactPhone && (
+                      {(braider.contactPhone || (braider as any).contact_phone) && (
                         <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
                           <div className="w-10 h-10 bg-accent-100 rounded-full flex items-center justify-center">
                             <Phone className="h-5 w-5 text-accent-600" />
                           </div>
                           <div>
                             <div className="text-sm text-gray-500">Telefone</div>
-                            <div className="font-medium text-gray-900">{braider.contactPhone}</div>
+                            <div className="font-medium text-gray-900">{braider.contactPhone || (braider as any).contact_phone}</div>
                           </div>
                         </div>
                       )}
-                      {braider.contactEmail && (
+                      {(braider.contactEmail || (braider as any).contact_email) && (
                         <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
                           <div className="w-10 h-10 bg-accent-100 rounded-full flex items-center justify-center">
                             <Mail className="h-5 w-5 text-accent-600" />
                           </div>
                           <div>
                             <div className="text-sm text-gray-500">Email</div>
-                            <div className="font-medium text-gray-900">{braider.contactEmail}</div>
+                            <div className="font-medium text-gray-900">{braider.contactEmail || (braider as any).contact_email}</div>
                           </div>
                         </div>
                       )}

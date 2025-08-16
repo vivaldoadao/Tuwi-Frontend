@@ -41,6 +41,7 @@ import {
   type BraiderAvailability,
   type Braider,
 } from "@/lib/data-supabase"
+import { getBraiderWithRealRating, type BraiderWithRealRating } from "@/lib/data-supabase-ratings"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import ServiceDetailModal from "@/components/service-detail-modal"
@@ -51,7 +52,7 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
   const { notifyBookingConfirmed } = useNotificationHelpers()
   
   // Estado da trancista
-  const [braider, setBraider] = useState<Braider | null>(null)
+  const [braider, setBraider] = useState<BraiderWithRealRating | null>(null)
   const [braiderLoading, setBraiderLoading] = useState(true)
   
   // Estado dos serviços (carregados separadamente)
@@ -86,16 +87,17 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
 
   // Função para carregar datas disponíveis usando a API (mesmo padrão do dashboard)
   const loadAvailableDates = useCallback(async () => {
-    if (!braider?.contactEmail) {
+    const emailToUse = braider?.contactEmail || (braider as any)?.contact_email
+    if (!emailToUse) {
       console.log('🚫 loadAvailableDates: No braider email')
       return
     }
     
-    console.log('🔍 loadAvailableDates: Starting for braider email:', braider.contactEmail)
+    console.log('🔍 loadAvailableDates: Starting for braider email:', emailToUse)
     
     try {
       // Usar API para buscar disponibilidades (mesmo padrão do dashboard)
-      const email = encodeURIComponent(braider.contactEmail)
+      const email = encodeURIComponent(emailToUse)
       
       // Buscar próximas 4 semanas de disponibilidades
       const today = new Date()
@@ -129,12 +131,13 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
     } catch (error) {
       console.error('❌ Erro ao carregar datas disponíveis:', error)
     }
-  }, [braider?.contactEmail])
+  }, [braider?.contactEmail, (braider as any)?.contact_email])
 
   // Função para buscar todos os horários (livres e ocupados) usando API
   const fetchAvailableTimes = useCallback(
     async (selectedDate: Date | undefined) => {
-      if (!selectedDate || !braider?.contactEmail) {
+      const emailToUse = braider?.contactEmail || (braider as any)?.contact_email
+      if (!selectedDate || !emailToUse) {
         setAvailableTimes([])
         setSelectedAvailabilityId(undefined)
         return
@@ -142,7 +145,7 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
       setLoading(true)
       try {
         const formattedDate = format(selectedDate, "yyyy-MM-dd")
-        const email = encodeURIComponent(braider.contactEmail)
+        const email = encodeURIComponent(emailToUse)
         
         console.log(`📅 fetchAvailableTimes: Fetching for date ${formattedDate}`)
         
@@ -173,23 +176,55 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
     [braider?.contactEmail],
   )
 
-  // Carregar dados da trancista
+  // Carregar dados da trancista com ratings reais
   useEffect(() => {
     async function loadBraider() {
       try {
         console.log('🔍 loadBraider: Starting for ID:', id)
         setBraiderLoading(true)
-        const braiderData = await getBraiderById(id)
-        console.log('📊 loadBraider: Braider data:', braiderData)
+        const braiderData = await getBraiderWithRealRating(id)
+        console.log('📊 loadBraider: Braider data with ratings:', braiderData)
         if (!braiderData) {
-          console.log('❌ loadBraider: No braider data found')
+          console.log('❌ loadBraider: No braider data found with ratings, trying fallback...')
+          // Fallback to original function if ratings system fails
+          const fallbackData = await getBraiderById(id)
+          if (fallbackData) {
+            // Convert to BraiderWithRealRating format
+            setBraider({
+              ...fallbackData,
+              averageRating: 0,
+              totalReviews: 0,
+              isAvailable: true
+            })
+            console.log('✅ loadBraider: Fallback braider set successfully')
+          } else {
+            console.log('❌ loadBraider: No braider data found in fallback either')
+            notFound()
+          }
+        } else {
+          setBraider(braiderData)
+          console.log('✅ loadBraider: Braider with ratings set successfully')
+        }
+      } catch (error) {
+        console.error('❌ Erro ao carregar trancista com ratings:', error)
+        // Try fallback
+        try {
+          const fallbackData = await getBraiderById(id)
+          if (fallbackData) {
+            setBraider({
+              ...fallbackData,
+              averageRating: 0,
+              totalReviews: 0,
+              isAvailable: true
+            })
+            console.log('✅ loadBraider: Fallback successful after error')
+          } else {
+            notFound()
+          }
+        } catch (fallbackError) {
+          console.error('❌ Fallback also failed:', fallbackError)
           notFound()
         }
-        setBraider(braiderData)
-        console.log('✅ loadBraider: Braider set successfully')
-      } catch (error) {
-        console.error('❌ Erro ao carregar trancista:', error)
-        notFound()
       } finally {
         setBraiderLoading(false)
       }
@@ -203,13 +238,14 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
   // Carregar serviços separadamente usando a mesma API do dashboard-braider
   useEffect(() => {
     async function loadServices() {
-      if (!braider?.contactEmail) return
+      const emailToUse = braider?.contactEmail || (braider as any)?.contact_email
+      if (!emailToUse) return
       
       try {
         setServicesLoading(true)
-        console.log('🚀 Loading services for booking page:', braider.contactEmail)
+        console.log('🚀 Loading services for booking page:', emailToUse)
         
-        const email = encodeURIComponent(braider.contactEmail)
+        const email = encodeURIComponent(emailToUse)
         const apiUrl = `/api/braiders/services?email=${email}&page=1&limit=100`
         console.log('🔗 API URL:', apiUrl)
         
@@ -233,7 +269,7 @@ export default function BookServicePage({ params }: { params: Promise<{ id: stri
     }
 
     loadServices()
-  }, [braider?.contactEmail])
+  }, [braider?.contactEmail, (braider as any)?.contact_email])
 
   // Carregar datas disponíveis ao montar o componente
   useEffect(() => {
