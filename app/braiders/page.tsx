@@ -3,6 +3,7 @@
 import SiteHeader from "@/components/site-header"
 import BraiderCard from "@/components/braider-card"
 import { getAllBraidersLegacy } from "@/lib/data-supabase"
+import { getAllBraidersWithRealRatings, type BraiderWithRealRating } from "@/lib/data-supabase-ratings"
 import Image from "next/image"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -22,7 +23,7 @@ import {
 } from "@/components/ui/select"
 
 export default function BraidersPage() {
-  const [braiders, setBraiders] = useState<Braider[]>([])
+  const [braiders, setBraiders] = useState<BraiderWithRealRating[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedFilter, setSelectedFilter] = useState("all")
@@ -30,24 +31,49 @@ export default function BraidersPage() {
   const [selectedConcelho, setSelectedConcelho] = useState("all")
   const [selectedFreguesia, setSelectedFreguesia] = useState("all")
   const [sortBy, setSortBy] = useState("name")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [hasMore, setHasMore] = useState(false)
+  const [totalBraiders, setTotalBraiders] = useState(0)
 
-  // Load braiders from database
+  // Load braiders from database with real ratings
   useEffect(() => {
     async function loadBraiders() {
       try {
         setLoading(true)
-        console.log('Starting to load braiders...')
-        const data = await getAllBraidersLegacy()
-        console.log('Braiders loaded:', data.length, data)
+        console.log('Starting to load braiders with real ratings...')
+        const { braiders: data, total, hasMore: more } = await getAllBraidersWithRealRatings(
+          currentPage, 
+          20, 
+          searchTerm || undefined, 
+          'approved'
+        )
+        console.log('Braiders with ratings loaded:', data.length, data)
         setBraiders(data)
+        setTotalBraiders(total)
+        setHasMore(more)
       } catch (error) {
-        console.error('Error loading braiders:', error)
+        console.error('Error loading braiders with ratings:', error)
+        // Fallback to legacy function if ratings system fails
+        console.log('Falling back to legacy braiders...')
+        try {
+          const legacyData = await getAllBraidersLegacy()
+          setBraiders(legacyData.map(braider => ({
+            ...braider,
+            averageRating: 0,
+            totalReviews: 0,
+            isAvailable: true
+          })))
+          console.log('✅ Fallback successful, loaded', legacyData.length, 'braiders')
+        } catch (legacyError) {
+          console.error('❌ Fallback also failed:', legacyError)
+          setBraiders([])
+        }
       } finally {
         setLoading(false)
       }
     }
     loadBraiders()
-  }, [])
+  }, [currentPage, searchTerm])
 
   // Get available distritos from actual braider data
   const availableDistritos = Array.from(new Set(
@@ -126,7 +152,7 @@ export default function BraidersPage() {
           if (exp === "10+") return 5
           return 0
         }
-        return getExperienceWeight(b.yearsExperience) - getExperienceWeight(a.yearsExperience)
+        return getExperienceWeight((b as any).yearsExperience) - getExperienceWeight((a as any).yearsExperience)
       default:
         return 0
     }

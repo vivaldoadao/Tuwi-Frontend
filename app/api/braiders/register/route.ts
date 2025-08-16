@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
         message: 'Erro ao salvar cadastro. Verifique os dados e tente novamente.' 
       }, { status: 500 })
     }
-
+    
     console.log('Braider saved successfully:', result.data)
     
     return NextResponse.json({ 

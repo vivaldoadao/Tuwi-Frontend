@@ -5,17 +5,16 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import type { Braider } from "@/lib/data"
 import type { BraiderWithRealRating } from "@/lib/data-supabase-ratings"
 import { useFavorites } from "@/context/favorites-context"
 import { MapPin, Phone, Mail, ChevronLeft, ChevronRight, Star, MessageCircle, Heart } from "lucide-react"
 import { useState } from "react"
 
-interface BraiderCardProps {
-  braider: Braider | BraiderWithRealRating
+interface BraiderCardV2Props {
+  braider: BraiderWithRealRating
 }
 
-export default function BraiderCard({ braider }: BraiderCardProps) {
+export default function BraiderCardV2({ braider }: BraiderCardV2Props) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const { isFavoriteBraider, toggleFavoriteBraider } = useFavorites()
 
@@ -35,10 +34,15 @@ export default function BraiderCard({ braider }: BraiderCardProps) {
   // Verifica se há mais de uma imagem para exibir os controles do carrossel
   const hasMultipleImages = braider.portfolioImages && braider.portfolioImages.length > 1
 
-  // Use real rating data if available, otherwise fallback to defaults
-  const rating = 'averageRating' in braider ? braider.averageRating : 0
-  const reviewCount = 'totalReviews' in braider ? braider.totalReviews : 0
-  const isAvailable = 'isAvailable' in braider ? braider.isAvailable : true
+  // DADOS REAIS DO BANCO DE DADOS (não mais mock!)
+  const rating = braider.averageRating || 0
+  const reviewCount = braider.totalReviews || 0
+  const isAvailable = braider.isAvailable
+
+  // Função para formatar rating
+  const formatRating = (rating: number) => {
+    return rating > 0 ? rating.toFixed(1) : '0.0'
+  }
 
   return (
     <Card className="group w-full max-w-sm overflow-hidden bg-white shadow-lg hover:shadow-2xl transition-all duration-300 border-0 rounded-2xl">
@@ -56,7 +60,7 @@ export default function BraiderCard({ braider }: BraiderCardProps) {
         {/* Glassmorphism gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
         
-        {/* Status badge */}
+        {/* Status badge - DADOS REAIS DO BANCO */}
         <div className="absolute top-4 left-4">
           <Badge className={`px-3 py-1 rounded-full text-white ${
             isAvailable 
@@ -118,7 +122,7 @@ export default function BraiderCard({ braider }: BraiderCardProps) {
       </div>
       
       <CardContent className="p-6 space-y-4">
-        {/* Name and rating */}
+        {/* Name and rating - DADOS REAIS DO BANCO */}
         <div className="space-y-2">
           <Link href={`/braiders/${braider.id}`}>
             <CardTitle className="text-xl font-semibold text-gray-900 group-hover:text-brand-700 transition-colors font-heading">
@@ -126,13 +130,23 @@ export default function BraiderCard({ braider }: BraiderCardProps) {
             </CardTitle>
           </Link>
           
-          {/* Rating */}
+          {/* Rating with real data from database */}
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1">
-              <Star className="h-4 w-4 fill-accent-500 text-accent-500" />
-              <span className="text-sm font-medium text-gray-700">{rating}</span>
+              <Star className={`h-4 w-4 ${rating > 0 ? 'fill-accent-500 text-accent-500' : 'fill-gray-300 text-gray-300'}`} />
+              <span className={`text-sm font-medium ${rating > 0 ? 'text-gray-700' : 'text-gray-400'}`}>
+                {formatRating(rating)}
+              </span>
             </div>
-            <span className="text-sm text-gray-500">({reviewCount} avaliações)</span>
+            <span className={`text-sm ${reviewCount > 0 ? 'text-gray-500' : 'text-gray-400'}`}>
+              ({reviewCount} {reviewCount === 1 ? 'avaliação' : 'avaliações'})
+            </span>
+            {/* Indicador visual de dados reais */}
+            {rating > 0 && (
+              <Badge variant="secondary" className="bg-blue-50 text-blue-700 text-xs px-2 py-0.5">
+                Real
+              </Badge>
+            )}
           </div>
         </div>
         
@@ -166,6 +180,26 @@ export default function BraiderCard({ braider }: BraiderCardProps) {
             </div>
           )}
         </div>
+        
+        {/* Stats adicionais com dados reais */}
+        {rating > 0 && (
+          <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+            <div className="text-center">
+              <div className="text-lg font-bold text-brand-600">{formatRating(rating)}</div>
+              <div className="text-xs text-gray-500">Rating</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-gray-700">{reviewCount}</div>
+              <div className="text-xs text-gray-500">Reviews</div>
+            </div>
+            <div className="text-center">
+              <div className={`text-lg font-bold ${isAvailable ? 'text-green-600' : 'text-red-600'}`}>
+                {isAvailable ? '●' : '●'}
+              </div>
+              <div className="text-xs text-gray-500">Status</div>
+            </div>
+          </div>
+        )}
       </CardContent>
 
       <CardFooter className="p-6 pt-0">
