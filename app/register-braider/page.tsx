@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { registerBraider } from "@/lib/api-client"
+import { PortfolioUpload } from "@/components/portfolio-upload"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { 
@@ -338,7 +339,7 @@ export default function RegisterBraiderPage() {
     specialties: [] as string[],
     yearsExperience: "",
     certificates: "",
-    portfolio: [],
+    portfolio: [] as string[],
     minPrice: "",
     maxPrice: "",
     availability: {
@@ -509,6 +510,14 @@ export default function RegisterBraiderPage() {
       specialties: prev.specialties.includes(specialty)
         ? prev.specialties.filter(s => s !== specialty)
         : [...prev.specialties, specialty]
+    }))
+  }
+
+  // Handle portfolio changes
+  const handlePortfolioChange = (images: string[]) => {
+    setServiceData(prev => ({
+      ...prev,
+      portfolio: images
     }))
   }
 
@@ -879,8 +888,8 @@ export default function RegisterBraiderPage() {
                   currentStep === 3 ? "bg-brand-50 border-2 border-brand-primary" : "bg-gray-50"
                 )}>
                   <Star className={cn("h-8 w-8 mx-auto mb-2", currentStep === 3 ? "text-brand-primary" : "text-gray-400")} />
-                  <h3 className="font-semibold">Serviços</h3>
-                  <p className="text-sm text-gray-600">Especialidades e experiência</p>
+                  <h3 className="font-semibold">Serviços & Portfólio</h3>
+                  <p className="text-sm text-gray-600">Especialidades, experiência e trabalhos</p>
                 </div>
               </div>
             </CardContent>
@@ -892,12 +901,12 @@ export default function RegisterBraiderPage() {
               <CardTitle className="text-2xl font-bold text-brand-primary">
                 {currentStep === 1 && "Dados Pessoais"}
                 {currentStep === 2 && "Localização e Atendimento"}
-                {currentStep === 3 && "Serviços e Especialidades"}
+                {currentStep === 3 && "Serviços, Especialidades e Portfólio"}
               </CardTitle>
               <CardDescription className="text-gray-600">
                 {currentStep === 1 && "Conte-nos sobre você e como podemos entrar em contato"}
                 {currentStep === 2 && "Onde você atende e qual sua área de cobertura"}
-                {currentStep === 3 && "Suas especialidades, experiência e disponibilidade"}
+                {currentStep === 3 && "Suas especialidades, experiência, disponibilidade e portfólio"}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-8">
@@ -1427,6 +1436,43 @@ export default function RegisterBraiderPage() {
                             </Label>
                           </div>
                         ))}
+                      </div>
+                    </div>
+
+                    {/* Portfolio Section */}
+                    <div className="space-y-4">
+                      <Label className="text-base font-semibold flex items-center gap-2">
+                        <Camera className="h-4 w-4" />
+                        Portfólio de Trabalhos (opcional)
+                      </Label>
+                      <p className="text-sm text-gray-600">
+                        Adicione fotos dos seus trabalhos para impressionar os clientes. 
+                        A primeira imagem será a principal do seu perfil.
+                      </p>
+                      
+                      {user && (
+                        <PortfolioUpload
+                          userId={user.id}
+                          initialImages={serviceData.portfolio}
+                          onImagesChange={handlePortfolioChange}
+                          maxImages={8}
+                          className="mt-4"
+                        />
+                      )}
+                      
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex items-start gap-2">
+                          <div className="text-blue-600 text-sm">💡</div>
+                          <div className="text-sm text-blue-700">
+                            <p className="font-medium mb-1">Dicas para um portfólio atrativo:</p>
+                            <ul className="list-disc list-inside space-y-1 text-xs">
+                              <li>Use fotos com boa iluminação e qualidade</li>
+                              <li>Mostre diferentes estilos e técnicas</li>
+                              <li>Inclua antes e depois quando possível</li>
+                              <li>Mantenha as imagens organizadas por estilo</li>
+                            </ul>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
