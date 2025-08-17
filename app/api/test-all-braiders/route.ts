@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     // Buscar todos os braiders (approved e pending)
     const { data: allBraiders, error } = await supabase
       .from('braiders')
-      .select('id, user_name, status, district, concelho, freguesia, location')
+      .select('id, name, status, district, concelho, freguesia, location')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
         approvedWithDistrict: approvedWithDistrict.length,
         pendingWithDistrict: pendingWithDistrict.length,
         approvedSample: approved.slice(0, 3).map(b => ({
-          name: b.user_name || `ID: ${b.id.slice(0, 8)}`,
+          name: b.name || `ID: ${b.id.slice(0, 8)}`,
           status: b.status,
           district: b.district,
           concelho: b.concelho,

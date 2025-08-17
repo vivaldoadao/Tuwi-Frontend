@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       // Fallback: tentar tabela braiders direta
       const { data: tableData, error: tableError } = await supabase
         .from('braiders')
-        .select('id, user_name, bio, location, district, concelho, freguesia, status, created_at')
+        .select('id, name, bio, location, district, concelho, freguesia, status, created_at')
         .limit(1);
 
       if (tableError) {

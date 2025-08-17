@@ -219,7 +219,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       braider: {
         id: braiderId,
-        name: braider.user_name,
+        name: braider.name,
         status: braider.status
       },
       can_delete: canDelete,
