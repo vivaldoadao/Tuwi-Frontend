@@ -234,7 +234,7 @@ export default function BraidersPage() {
           <div className="absolute inset-0 bg-gradient-to-r from-brand-700 via-brand-800 to-accent-700 flex items-center justify-center z-10">
             <div className="text-center text-white">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-              <p className="text-lg">Carregando trancistas...</p>
+              <p className="text-lg">Carregando profissionais...</p>
             </div>
           </div>
         )}
@@ -243,14 +243,14 @@ export default function BraidersPage() {
         <div className="relative container mx-auto px-4 py-16 md:py-24">
           <div className="text-center space-y-6">
             <h1 className="text-4xl md:text-6xl font-bold font-heading mb-4">
-              Encontre sua{" "}
+              Encontre o seu{" "}
               <span className="text-accent-200">
-                Trancista Ideal
+                Profissional Ideal
               </span>
             </h1>
             <p className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto leading-relaxed">
-              Descubra profissionais talentosas especializadas na arte das tranças. 
-              Conecte-se com quem entende do assunto e transforme seu visual!
+              Descubra profissionais talentosos especializados na arte das tranças africanas. 
+              Conecte-se com quem entende do assunto e transforme o seu visual!
             </p>
             
             {/* Stats Cards */}
@@ -258,7 +258,7 @@ export default function BraidersPage() {
               <Card className="bg-white/10 backdrop-blur-md border-white/20 text-white">
                 <CardContent className="text-center p-6">
                   <div className="text-3xl font-bold mb-2">{approvedCount}</div>
-                  <div className="text-sm text-white/80">Trancistas Verificadas</div>
+                  <div className="text-sm text-white/80">Profissionais Verificados</div>
                 </CardContent>
               </Card>
               <Card className="bg-white/10 backdrop-blur-md border-white/20 text-white">
@@ -491,7 +491,7 @@ export default function BraidersPage() {
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="flex items-center gap-3">
                 <h2 className="text-2xl font-bold font-heading text-gray-900">
-                  {loading ? "Carregando..." : sortedBraiders.length === 0 ? "Nenhuma trancista encontrada" : "Nossas Trancistas"}
+                  {loading ? "Carregando..." : sortedBraiders.length === 0 ? "Nenhum profissional encontrado" : "Nossos Profissionais"}
                 </h2>
                 <Badge variant="secondary" className="bg-brand-100 text-brand-700 px-3 py-1">
                   {sortedBraiders.length} {sortedBraiders.length === 1 ? "resultado" : "resultados"}
@@ -564,11 +564,11 @@ export default function BraidersPage() {
               <Card className="bg-white/90 backdrop-blur-sm shadow-lg rounded-3xl border-0">
                 <CardContent className="text-center py-16">
                   <div className="text-6xl mb-6">🔍</div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-4">Nenhuma trancista encontrada</h3>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-4">Nenhum profissional encontrado</h3>
                   <p className="text-gray-600 mb-6 max-w-md mx-auto">
                     {searchTerm || selectedDistrito !== "all" || selectedConcelho !== "all" || selectedFreguesia !== "all"
-                      ? "Não encontramos trancistas que correspondem aos filtros selecionados. Tente ajustar os filtros."
-                      : "Não há trancistas disponíveis no momento."
+                      ? "Não encontramos profissionais que correspondem aos filtros seleccionados. Tente ajustar os filtros."
+                      : "Não há profissionais disponíveis no momento."
                     }
                   </p>
                   {(searchTerm || selectedDistrito !== "all" || selectedConcelho !== "all" || selectedFreguesia !== "all") && (
@@ -582,7 +582,7 @@ export default function BraidersPage() {
                       }}
                       className="bg-brand-500 hover:bg-brand-600 text-white rounded-full"
                     >
-                      Ver todas as trancistas
+                      Ver todos os profissionais
                     </Button>
                   )}
                 </CardContent>

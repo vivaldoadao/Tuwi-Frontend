@@ -65,7 +65,7 @@ export default function ProfilePage() {
     email: "",
     phone: "",
     address: "Lisboa, Portugal", // This will remain static for now
-    bio: "Apaixonada por tranças e cuidados capilares afro-brasileiros.", // This will remain static for now
+    bio: "Apaixonada por tranças e cuidados capilares africanos.", // This will remain static for now
     avatar: ""
   })
 
@@ -86,7 +86,7 @@ export default function ProfilePage() {
               email: dbUserData.email || "",
               phone: dbUserData.phone || "",
               address: "Lisboa, Portugal", // Static for now
-              bio: "Apaixonada por tranças e cuidados capilares afro-brasileiros.", // Static for now
+              bio: "Apaixonada por tranças e cuidados capilares africanos.", // Static for now
               avatar: dbUserData.avatar_url || ""
             })
           } else {
@@ -96,7 +96,7 @@ export default function ProfilePage() {
               email: user.email || "",
               phone: "",
               address: "Lisboa, Portugal",
-              bio: "Apaixonada por tranças e cuidados capilares afro-brasileiros.",
+              bio: "Apaixonada por tranças e cuidados capilares africanos.",
               avatar: ""
             })
           }
@@ -207,11 +207,11 @@ export default function ProfilePage() {
 
   if (loadingUser) {
     return (
-      <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
         <SiteHeader />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <div className="w-16 h-16 border-4 border-accent-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-gray-600">Carregando perfil...</p>
           </div>
         </div>
@@ -298,11 +298,11 @@ export default function ProfilePage() {
   const favoriteItems = 12 // Mock data
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
       <SiteHeader />
       
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-purple-500 via-pink-500 to-rose-500 py-16 text-white relative overflow-hidden">
+      <div className="bg-gradient-to-r from-brand-800 via-brand-700 to-brand-600 py-16 text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-black/10 backdrop-blur-3xl"></div>
         <div className="container px-4 md:px-6 relative z-10">
           <div className="flex items-center justify-between mb-8">
@@ -330,7 +330,7 @@ export default function ProfilePage() {
             <Button
               onClick={() => setIsEditing(!isEditing)}
               variant="outline"
-              className="bg-white/20 border-white/30 text-white hover:bg-white/30 rounded-xl"
+              className="bg-white/20 border-white/30 text-white hover:bg-white/30 rounded-full"
             >
               <Edit3 className="h-4 w-4 mr-2" />
               {isEditing ? "Cancelar" : "Editar Perfil"}
@@ -426,7 +426,7 @@ export default function ProfilePage() {
                         <Button
                           onClick={handleSave}
                           disabled={saving}
-                          className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl"
+                          className="flex-1 bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white rounded-full"
                         >
                           {saving ? (
                             <Activity className="h-4 w-4 animate-spin mr-2" />
@@ -460,7 +460,7 @@ export default function ProfilePage() {
                           <p className="text-sm text-gray-600">Localização</p>
                         </div>
                       </div>
-                      <div className="p-3 bg-purple-50 rounded-xl border border-purple-200">
+                      <div className="p-3 bg-brand-50 rounded-xl border border-brand-200">
                         <p className="text-sm font-semibold text-gray-900 mb-1">Sobre mim</p>
                         <p className="text-sm text-gray-700">{userInfo.bio}</p>
                       </div>
@@ -492,12 +492,12 @@ export default function ProfilePage() {
                     </div>
                     <span className="text-lg font-bold text-blue-600">{totalOrders}</span>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-purple-50 rounded-xl border border-purple-200">
+                  <div className="flex items-center justify-between p-3 bg-brand-50 rounded-xl border border-brand-200">
                     <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-purple-600" />
+                      <Calendar className="h-4 w-4 text-brand-600" />
                       <span className="font-semibold text-gray-900">Agendamentos</span>
                     </div>
-                    <span className="text-lg font-bold text-purple-600">{totalBookings}</span>
+                    <span className="text-lg font-bold text-brand-600">{totalBookings}</span>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-pink-50 rounded-xl border border-pink-200">
                     <div className="flex items-center gap-2">
@@ -516,21 +516,21 @@ export default function ProfilePage() {
                 <TabsList className="grid w-full grid-cols-3 mb-6 bg-white/95 backdrop-blur-sm shadow-lg rounded-2xl p-2">
                   <TabsTrigger 
                     value="overview" 
-                    className="rounded-xl data-[state=active]:bg-purple-500 data-[state=active]:text-white font-semibold"
+                    className="rounded-xl data-[state=active]:bg-accent-600 data-[state=active]:text-white font-semibold"
                   >
                     <TrendingUp className="h-4 w-4 mr-2" />
                     Visão Geral
                   </TabsTrigger>
                   <TabsTrigger 
                     value="bookings" 
-                    className="rounded-xl data-[state=active]:bg-purple-500 data-[state=active]:text-white font-semibold"
+                    className="rounded-xl data-[state=active]:bg-accent-600 data-[state=active]:text-white font-semibold"
                   >
                     <Calendar className="h-4 w-4 mr-2" />
                     Agendamentos
                   </TabsTrigger>
                   <TabsTrigger 
                     value="messages" 
-                    className="rounded-xl data-[state=active]:bg-purple-500 data-[state=active]:text-white font-semibold"
+                    className="rounded-xl data-[state=active]:bg-accent-600 data-[state=active]:text-white font-semibold"
                   >
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Mensagens
@@ -557,7 +557,7 @@ export default function ProfilePage() {
                             Seus serviços confirmados com trancistas
                           </CardDescription>
                         </div>
-                        <Button asChild className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl">
+                        <Button asChild className="bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white rounded-full">
                           <Link href="/braiders">
                             <Plus className="h-4 w-4 mr-2" />
                             Novo Agendamento
@@ -579,7 +579,7 @@ export default function ProfilePage() {
                       <CheckCircle className="h-16 w-16 mx-auto mb-4 text-gray-300" />
                       <p className="text-gray-500 font-medium text-lg mb-2">Nenhum agendamento confirmado</p>
                       <p className="text-gray-400 text-sm mb-6">Você ainda não tem agendamentos confirmados pelas trancistas</p>
-                      <Button asChild className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl">
+                      <Button asChild className="bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white rounded-full">
                         <Link href="/braiders">
                           <Award className="h-4 w-4 mr-2" />
                           Encontrar Trancistas
@@ -593,8 +593,8 @@ export default function ProfilePage() {
                           <div key={booking.id} className="p-6 bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-2xl border border-gray-200 hover:shadow-lg transition-all duration-300">
                             <div className="flex items-start justify-between mb-4">
                               <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                                  <Award className="h-6 w-6 text-purple-600" />
+                                <div className="w-12 h-12 bg-accent-100 rounded-full flex items-center justify-center">
+                                  <Award className="h-6 w-6 text-accent-600" />
                                 </div>
                                 <div>
                                   <h4 className="font-bold text-lg text-gray-900">
@@ -630,9 +630,9 @@ export default function ProfilePage() {
                             <div className="p-3 bg-white/80 rounded-xl">
                               <div className="flex items-center gap-2 text-sm text-gray-700 mb-2">
                                 {booking.bookingType === "domicilio" ? (
-                                  <Home className="h-4 w-4 text-purple-600" />
+                                  <Home className="h-4 w-4 text-accent-600" />
                                 ) : (
-                                  <MapPin className="h-4 w-4 text-purple-600" />
+                                  <MapPin className="h-4 w-4 text-accent-600" />
                                 )}
                                 <span className="font-semibold">
                                   {booking.bookingType === "domicilio" ? "Serviço ao Domicílio" : "No Salão da Trancista"}
@@ -670,7 +670,7 @@ export default function ProfilePage() {
                                 <Button
                                   onClick={() => handleStartConversationFromBooking(booking)}
                                   disabled={startingConversation === booking.id}
-                                  className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-300"
+                                  className="w-full bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-800 text-white px-4 py-2 rounded-full font-semibold shadow-md hover:shadow-lg transition-all duration-300"
                                 >
                                   {startingConversation === booking.id ? (
                                     <>
@@ -698,7 +698,7 @@ export default function ProfilePage() {
                 {/* Messages Tab */}
                 <TabsContent value="messages" className="space-y-6">
                   <RealtimeChat 
-                    colorTheme="purple"
+                    colorTheme="sage"
                     showHeader={false}
                     className="h-auto lg:h-[calc(100vh-400px)] lg:min-h-[500px]"
                   />
@@ -710,21 +710,21 @@ export default function ProfilePage() {
         </div>
       </main>
 
-      <footer className="bg-brand-primary text-white py-8">
+      <footer className="bg-gradient-to-r from-brand-800 via-brand-700 to-brand-600 text-white py-8">
         <div className="container px-4 md:px-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Image
               src="/wilnara-logo.png"
-              alt="Wilnara Tranças Logo"
+              alt="Tuwi Logo"
               width={30}
               height={30}
               className="rounded-full"
               unoptimized={true}
             />
-            <span className="text-lg font-bold text-brand-accent">WILNARA TRANÇAS</span>
+            <span className="text-lg font-bold text-accent-300">TUWI</span>
           </div>
           <p className="text-sm text-white/80">
-            © {new Date().getFullYear()} Wilnara Tranças. Todos os direitos reservados.
+            © {new Date().getFullYear()} Tuwi. Todos os direitos reservados.
           </p>
         </div>
       </footer>

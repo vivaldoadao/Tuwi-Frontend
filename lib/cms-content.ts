@@ -169,13 +169,13 @@ export async function getHeroSlides(): Promise<HeroSlideData[]> {
         return JSON.parse(content.content || '{}') as HeroSlideData
       } catch {
         return {
-          title: 'WILNARA TRANÇAS',
-          subtitle: 'Beleza e Tradição',
-          description: 'Descubra a arte das tranças africanas.',
+          title: 'TUWI',
+          subtitle: 'Sua Beleza, Nossa Especialidade',
+          description: 'Descubra os melhores profissionais de beleza especializados em cuidados africanos em Portugal.',
           imageUrl: '/hero-braids.png',
           ctaText: 'Ver Produtos',
           ctaLink: '/products',
-          secondaryCtaText: 'Conhecer Trancistas',
+          secondaryCtaText: 'Encontrar Profissionais',
           secondaryCtaLink: '/braiders'
         }
       }
@@ -201,10 +201,10 @@ export async function getAboutContent() {
   }
 
   return {
-    heroTitle: getContentByKey('about_hero_title') || 'Sobre a Wilnara Tranças',
-    heroSubtitle: getContentByKey('about_hero_subtitle') || 'Uma jornada de paixão pela arte das tranças.',
+    heroTitle: getContentByKey('about_hero_title') || 'Sobre a Tuwi',
+    heroSubtitle: getContentByKey('about_hero_subtitle') || 'Uma jornada de paixão pela beleza africana.',
     missionTitle: getContentByKey('about_mission_title') || 'Nossa Missão',
-    missionContent: getContentByKey('about_mission_content') || 'Bem-vindo à Wilnara Tranças...',
+    missionContent: getContentByKey('about_mission_content') || 'Bem-vindo à Tuwi...',
     missionImage: getContentByKey('about_mission_image') || '/placeholder.svg?height=400&width=400',
     values: getJsonContentByKey('about_values') as AboutValues[] || [],
     statistics: getJsonContentByKey('about_statistics') as AboutStatistics[] || []
@@ -232,7 +232,7 @@ export async function getContactContent() {
   return {
     heroTitle: getContentByKey('contact_hero_title') || 'Fale Conosco',
     heroSubtitle: getContentByKey('contact_hero_subtitle') || 'Nossa equipe está pronta para atendê-la.',
-    email: getContentByKey('contact_email') || 'contato@wilnaratranças.com',
+    email: getContentByKey('contact_email') || 'contato@tuwi.com',
     phone: getContentByKey('contact_phone') || '+351 912 345 678',
     support: getContentByKey('contact_support') || 'Atendimento especializado',
     hours: getJsonContentByKey('contact_hours') || {
@@ -241,7 +241,7 @@ export async function getContactContent() {
       sunday: 'Fechado'
     },
     location: getJsonContentByKey('contact_location') || {
-      name: 'Wilnara Tranças',
+      name: 'Tuwi',
       address: 'Rua das Flores, 123',
       postal: '1200-001 Lisboa, Portugal',
       note: 'Atendimento presencial apenas com agendamento prévio'
@@ -260,12 +260,12 @@ export async function getHomepageContent() {
 
   return {
     productsTitle: getContentByKey('homepage_products_title') || 'Nossos Produtos em Destaque',
-    braidersTitle: getContentByKey('homepage_braiders_title') || 'Conheça Nossas Trancistas em Destaque',
-    braidersSubtitle: getContentByKey('homepage_braiders_subtitle') || 'Encontre profissionais talentosas e apaixonadas.',
-    ctaBraiderTitle: getContentByKey('homepage_cta_braider_title') || 'É Trancista? Junte-se à Nossa Comunidade!',
-    ctaBraiderSubtitle: getContentByKey('homepage_cta_braider_subtitle') || 'Amplie seu alcance e conecte-se com novos clientes.',
-    aboutTitle: getContentByKey('homepage_about_title') || 'A Beleza da Tradição, o Estilo da Modernidade',
-    aboutSubtitle: getContentByKey('homepage_about_subtitle') || 'Celebramos a arte e a cultura das tranças.'
+    braidersTitle: getContentByKey('homepage_braiders_title') || 'Nossos Profissionais de Beleza em Destaque',
+    braidersSubtitle: getContentByKey('homepage_braiders_subtitle') || 'Encontre especialistas talentosos em tranças, tratamentos capilares e cuidados de beleza africanos.',
+    ctaBraiderTitle: getContentByKey('homepage_cta_braider_title') || 'É Profissional de Beleza? Junte-se à Tuwi!',
+    ctaBraiderSubtitle: getContentByKey('homepage_cta_braider_subtitle') || 'Expanda o seu negócio em Portugal e conecte-se com clientes que valorizam a sua expertise em beleza e cuidados capilares.',
+    aboutTitle: getContentByKey('homepage_about_title') || 'Beleza Sem Limites, Tradição Sem Fronteiras',
+    aboutSubtitle: getContentByKey('homepage_about_subtitle') || 'Na Tuwi, celebramos a diversidade da beleza africana. Conectamos-te aos melhores profissionais especializados em tranças, tratamentos capilares e cuidados únicos para o teu cabelo.'
   }
 }
 
@@ -279,10 +279,10 @@ export async function getFooterContent() {
   }
 
   return {
-    description: getContentByKey('footer_description') || 'Wilnara Tranças - Conectando cultura e beleza.',
-    facebook: getContentByKey('footer_social_facebook') || 'https://facebook.com/wilnaratrancas',
-    instagram: getContentByKey('footer_social_instagram') || 'https://instagram.com/wilnaratrancas',
-    copyright: getContentByKey('footer_copyright') || '© 2024 Wilnara Tranças. Todos os direitos reservados.'
+    description: getContentByKey('footer_description') || 'Tuwi - Conectando beleza e diversidade.',
+    facebook: getContentByKey('footer_social_facebook') || 'https://facebook.com/tuwi',
+    instagram: getContentByKey('footer_social_instagram') || 'https://instagram.com/tuwi',
+    copyright: getContentByKey('footer_copyright') || '© 2024 Tuwi. Todos os direitos reservados.'
   }
 }
 
@@ -296,10 +296,10 @@ export async function getSiteSettings() {
   }
 
   return {
-    siteName: getSettingValue('site_name') || 'Wilnara Tranças',
-    siteTagline: getSettingValue('site_tagline') || 'Plataforma de Tranças Africanas',
+    siteName: getSettingValue('site_name') || 'Tuwi',
+    siteTagline: getSettingValue('site_tagline') || 'Marketplace de Serviços de Beleza',
     siteLogo: getSettingValue('site_logo') || '/images/logo.png',
-    metaKeywords: getSettingValue('meta_keywords') || 'tranças africanas, trancistas, portugal',
+    metaKeywords: getSettingValue('meta_keywords') || 'beleza, tranças, cabeleireiro, tratamentos capilares, cuidados africanos, portugal',
     socialSharingEnabled: getSettingValue('social_sharing_enabled') === 'true'
   }
 }

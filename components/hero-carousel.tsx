@@ -22,35 +22,35 @@ interface HeroSlide {
 const heroSlides: HeroSlide[] = [
   {
     id: "1",
-    title: "WILNARA TRANÇAS",
-    subtitle: "Box Braids Elegantes",
-    description: "Realce sua beleza natural com nossas box braids profissionais. Estilo, conforto e durabilidade em cada fio trançado com perfeição.",
+    title: "TUWI",
+    subtitle: "Beleza Africana em Portugal",
+    description: "Realce a sua beleza natural com os nossos profissionais especializados em cuidados africanos. Estilo, conforto e qualidade em cada serviço.",
     imageUrl: "/hero-braids.png",
-    ctaText: "Compre Agora",
+    ctaText: "Ver Produtos",
     ctaLink: "/products",
-    secondaryCtaText: "Ver Trancistas",
+    secondaryCtaText: "Ver Profissionais",
     secondaryCtaLink: "/braiders"
   },
   {
     id: "2", 
-    title: "WILNARA TRANÇAS",
-    subtitle: "Goddess Braids Luxuosas",
-    description: "Transforme seu visual com nossas goddess braids artesanais. Cada trança é uma obra de arte que celebra sua individualidade.",
+    title: "TUWI",
+    subtitle: "Tranças Africanas Autênticas",
+    description: "Transforme o seu visual com as nossas tranças africanas autênticas. Cada trança é uma obra de arte que celebra a sua individualidade.",
     imageUrl: "/hero-braids.png", // Você pode substituir por imagens específicas
-    ctaText: "Explorar Estilos",
+    ctaText: "Ver Serviços",
     ctaLink: "/products",
-    secondaryCtaText: "Agendar Serviço",
+    secondaryCtaText: "Encontrar Profissionais",
     secondaryCtaLink: "/braiders"
   },
   {
     id: "3",
-    title: "WILNARA TRANÇAS", 
-    subtitle: "Twist Braids Modernas",
-    description: "Descubra a versatilidade dos twist braids. Proteção capilar e estilo combinados para um visual autêntico e contemporâneo.",
+    title: "TUWI", 
+    subtitle: "Cuidados Capilares Africanos",
+    description: "Descubra a versatilidade dos cuidados capilares africanos. Proteção capilar e estilo combinados para um visual autêntico e contemporâneo.",
     imageUrl: "/hero-braids.png", // Você pode substituir por imagens específicas
-    ctaText: "Ver Coleção",
+    ctaText: "Ver Produtos",
     ctaLink: "/products",
-    secondaryCtaText: "Encontrar Profissional",
+    secondaryCtaText: "Ver Profissionais",
     secondaryCtaLink: "/braiders"
   }
 ]

@@ -52,7 +52,7 @@ export default async function AboutPage() {
               <div className="bg-gradient-to-br from-accent-100 to-brand-100 rounded-3xl p-8 shadow-lg">
                 <Image
                   src={content.missionImage}
-                  alt="História da Wilnara Tranças"
+                  alt="História da Tuwi"
                   width={400}
                   height={400}
                   className="rounded-2xl mx-auto"
@@ -68,7 +68,7 @@ export default async function AboutPage() {
                 Nossos Valores
               </h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                Os princípios que guiam nossa jornada e definem quem somos como marca e comunidade.
+                Os princípios que guiam a nossa jornada e definem quem somos como plataforma de beleza diversa e inclusiva.
               </p>
             </div>
             
@@ -110,7 +110,7 @@ export default async function AboutPage() {
                 Nossa Jornada em Números
               </h2>
               <p className="text-lg text-gray-600">
-                Conquistas que refletem nosso compromisso com a excelência e satisfação das clientes.
+                Conquistas que refletem o nosso compromisso com a excelência em conectar clientes e profissionais de beleza.
               </p>
             </div>
             
@@ -140,11 +140,11 @@ export default async function AboutPage() {
           {/* Call to Action */}
           <div className="text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 font-heading mb-6">
-              Pronta para Descobrir Sua Beleza?
+              Pronta para Transformar Sua Beleza?
             </h2>
             <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-              Explore nossa coleção e descubra a variedade de estilos, cores e texturas que temos a oferecer. 
-              Seja para um visual clássico, ousado ou natural, a Wilnara Tranças tem a opção perfeita para você.
+              Explore a nossa plataforma e descubra a variedade de profissionais especializados em cuidados africanos que temos para oferecer. 
+              Seja para tranças, tratamentos capilares ou cuidados especializados, a Tuwi conecta-te aos melhores profissionais da tua região em Portugal.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button

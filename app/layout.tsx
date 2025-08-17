@@ -6,7 +6,7 @@ import "./globals.css"
 import { CartProvider } from "@/context/cart-context"
 import { AuthProvider } from "@/context/auth-context"
 import { FavoritesProvider } from "@/context/favorites-context"
-import { NotificationsProvider } from "@/context/notifications-context"
+import { NotificationsProviderV2 } from "@/context/notifications-context-v2"
 import { ToastContainer } from "@/components/toast-container"
 import { Toaster } from "react-hot-toast"
 import PresenceProvider from "@/components/presence-provider"
@@ -30,7 +30,7 @@ export default function RootLayout({
         <SessionProvider>
           <AuthProvider>
             <PresenceProvider>
-              <NotificationsProvider>
+              <NotificationsProviderV2>
                 <CartProvider>
                   <FavoritesProvider>
                     {children}
@@ -38,7 +38,7 @@ export default function RootLayout({
                     <Toaster position="top-right" />
                   </FavoritesProvider>
                 </CartProvider>
-              </NotificationsProvider>
+              </NotificationsProviderV2>
             </PresenceProvider>
           </AuthProvider>
         </SessionProvider>

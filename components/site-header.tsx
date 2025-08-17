@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/s
 import { useCart } from "@/context/cart-context"
 import { useAuth } from "@/context/auth-context"
 import { useFavorites } from "@/context/favorites-context"
-import { useNotifications } from "@/context/notifications-context"
+import { useNotifications } from "@/context/notifications-context-v2"
 import { NotificationCenter } from "@/components/notification-center"
 import { signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
@@ -46,7 +46,7 @@ export default function SiteHeader() {
       case 'braider':
         return { 
           href: "/braider-dashboard", 
-          text: "Dashboard Trancista", 
+          text: "Dashboard Profissional", 
           icon: UserCheck 
         }
       case 'customer':
@@ -68,7 +68,7 @@ export default function SiteHeader() {
           <div className="relative">
             <Image
               src="/wilnara-logo.png"
-              alt="Wilnara Tranças Logo"
+              alt="Tuwi Logo"
               width={48}
               height={48}
               className="rounded-full shadow-md group-hover:shadow-lg transition-shadow duration-300"
@@ -77,8 +77,7 @@ export default function SiteHeader() {
             <div className="absolute inset-0 bg-brand-600 rounded-full opacity-0 group-hover:opacity-10 transition-opacity duration-300" />
           </div>
           <div className="hidden sm:block">
-            <span className="text-2xl font-bold text-brand-800 font-heading">WILNARA</span>
-            <span className="text-lg font-semibold text-accent-600 ml-2 font-heading">TRANÇAS</span>
+            <span className="text-2xl font-bold text-brand-800 font-heading">TUWI</span>
           </div>
         </Link>
         <nav className="hidden md:flex items-center gap-8 text-base font-medium">
@@ -91,7 +90,7 @@ export default function SiteHeader() {
             <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-brand-600 group-hover:w-full transition-all duration-300" />
           </Link>
           <Link href="/braiders" className="relative text-gray-700 hover:text-brand-700 transition-colors group py-2">
-            Trancistas
+            Profissionais
             <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-brand-600 group-hover:w-full transition-all duration-300" />
           </Link>
           <Link href="/about" className="relative text-gray-700 hover:text-brand-700 transition-colors group py-2">
@@ -193,7 +192,7 @@ export default function SiteHeader() {
               <Link href="/" className="flex items-center gap-3 mb-8">
                 <Image
                   src="/wilnara-logo.png"
-                  alt="Wilnara Tranças Logo"
+                  alt="Tuwi Logo"
                   width={48}
                   height={48}
                   className="rounded-full shadow-md"
@@ -212,7 +211,7 @@ export default function SiteHeader() {
                   Produtos
                 </Link>
                 <Link href="/braiders" className="text-gray-700 hover:text-brand-700 transition-colors py-2 border-b border-gray-100">
-                  Trancistas
+                  Profissionais
                 </Link>
                 <Link href="/about" className="text-gray-700 hover:text-brand-700 transition-colors py-2 border-b border-gray-100">
                   Sobre

@@ -1,6 +1,6 @@
 "use client"
 
-import { useNotifications } from "@/context/notifications-context"
+import { useNotifications } from "@/context/notifications-context-v2"
 import type { Product, Braider } from "@/lib/data"
 
 export function useNotificationHelpers() {
@@ -24,15 +24,19 @@ export function useNotificationHelpers() {
     })
   }
 
-  const notifyProductAddedToFavorites = (product: Product) => {
-    addNotification({
-      type: 'success',
-      title: 'Produto Favoritado',
-      message: `${product.name} foi adicionado aos seus favoritos`,
-      isImportant: false,
-      actionUrl: '/favorites',
-      actionLabel: 'Ver Favoritos'
-    })
+  const notifyProductAddedToFavorites = async (product: Product) => {
+    try {
+      await addNotification({
+        type: 'success',
+        title: 'Produto Favoritado',
+        message: `${product.name} foi adicionado aos seus favoritos`,
+        isImportant: false,
+        actionUrl: '/favorites',
+        actionLabel: 'Ver Favoritos'
+      })
+    } catch (error) {
+      console.error('Error adding notification:', error)
+    }
 
     showToast({
       type: 'success',
@@ -51,15 +55,19 @@ export function useNotificationHelpers() {
     })
   }
 
-  const notifyBraiderAddedToFavorites = (braider: Braider) => {
-    addNotification({
-      type: 'success',
-      title: 'Trancista Favoritada',
-      message: `${braider.name} foi adicionada aos seus favoritos`,
-      isImportant: false,
-      actionUrl: '/favorites',
-      actionLabel: 'Ver Favoritos'
-    })
+  const notifyBraiderAddedToFavorites = async (braider: Braider) => {
+    try {
+      await addNotification({
+        type: 'success',
+        title: 'Trancista Favoritada',
+        message: `${braider.name} foi adicionada aos seus favoritos`,
+        isImportant: false,
+        actionUrl: '/favorites',
+        actionLabel: 'Ver Favoritos'
+      })
+    } catch (error) {
+      console.error('Error adding notification:', error)
+    }
 
     showToast({
       type: 'success',
@@ -78,15 +86,19 @@ export function useNotificationHelpers() {
     })
   }
 
-  const notifyOrderPlaced = (orderId: string) => {
-    addNotification({
-      type: 'order',
-      title: 'Pedido Realizado com Sucesso',
-      message: `Seu pedido #${orderId} foi confirmado e está sendo processado`,
-      isImportant: true,
-      actionUrl: `/dashboard/orders/${orderId}`,
-      actionLabel: 'Ver Pedido'
-    })
+  const notifyOrderPlaced = async (orderId: string) => {
+    try {
+      await addNotification({
+        type: 'order',
+        title: 'Pedido Realizado com Sucesso',
+        message: `Seu pedido #${orderId} foi confirmado e está sendo processado`,
+        isImportant: true,
+        actionUrl: `/dashboard/orders/${orderId}`,
+        actionLabel: 'Ver Pedido'
+      })
+    } catch (error) {
+      console.error('Error adding notification:', error)
+    }
 
     showToast({
       type: 'success',
@@ -96,7 +108,7 @@ export function useNotificationHelpers() {
     })
   }
 
-  const notifyOrderStatusChanged = (orderId: string, status: string) => {
+  const notifyOrderStatusChanged = async (orderId: string, status: string) => {
     const statusMessages = {
       'processando': 'Seu pedido está sendo preparado',
       'enviado': 'Seu pedido foi enviado',
@@ -104,26 +116,34 @@ export function useNotificationHelpers() {
       'cancelado': 'Seu pedido foi cancelado'
     }
 
-    addNotification({
-      type: 'order',
-      title: 'Status do Pedido Atualizado',
-      message: statusMessages[status as keyof typeof statusMessages] || `Status alterado para: ${status}`,
-      isImportant: true,
-      actionUrl: `/dashboard/orders/${orderId}`,
-      actionLabel: 'Ver Pedido',
-      metadata: { orderId }
-    })
+    try {
+      await addNotification({
+        type: 'order',
+        title: 'Status do Pedido Atualizado',
+        message: statusMessages[status as keyof typeof statusMessages] || `Status alterado para: ${status}`,
+        isImportant: true,
+        actionUrl: `/dashboard/orders/${orderId}`,
+        actionLabel: 'Ver Pedido',
+        metadata: { orderId }
+      })
+    } catch (error) {
+      console.error('Error adding notification:', error)
+    }
   }
 
-  const notifyNewMessage = (senderName: string, messagePreview: string) => {
-    addNotification({
-      type: 'message',
-      title: 'Nova Mensagem',
-      message: `${senderName}: ${messagePreview}`,
-      isImportant: false,
-      actionUrl: '/messages',
-      actionLabel: 'Ver Mensagem'
-    })
+  const notifyNewMessage = async (senderName: string, messagePreview: string) => {
+    try {
+      await addNotification({
+        type: 'message',
+        title: 'Nova Mensagem',
+        message: `${senderName}: ${messagePreview}`,
+        isImportant: false,
+        actionUrl: '/messages',
+        actionLabel: 'Ver Mensagem'
+      })
+    } catch (error) {
+      console.error('Error adding notification:', error)
+    }
 
     showToast({
       type: 'message',
@@ -133,15 +153,19 @@ export function useNotificationHelpers() {
     })
   }
 
-  const notifyBookingConfirmed = (braiderName: string, date: string, time: string) => {
-    addNotification({
-      type: 'booking',
-      title: 'Agendamento Confirmado',
-      message: `Seu agendamento com ${braiderName} foi confirmado para ${date} às ${time}`,
-      isImportant: true,
-      actionUrl: '/profile',
-      actionLabel: 'Ver Agendamentos'
-    })
+  const notifyBookingConfirmed = async (braiderName: string, date: string, time: string) => {
+    try {
+      await addNotification({
+        type: 'booking',
+        title: 'Agendamento Confirmado',
+        message: `Seu agendamento com ${braiderName} foi confirmado para ${date} às ${time}`,
+        isImportant: true,
+        actionUrl: '/profile',
+        actionLabel: 'Ver Agendamentos'
+      })
+    } catch (error) {
+      console.error('Error adding notification:', error)
+    }
 
     showToast({
       type: 'success',
@@ -151,15 +175,19 @@ export function useNotificationHelpers() {
     })
   }
 
-  const notifyBookingCancelled = (braiderName: string, date: string) => {
-    addNotification({
-      type: 'warning',
-      title: 'Agendamento Cancelado',
-      message: `Seu agendamento com ${braiderName} para ${date} foi cancelado`,
-      isImportant: true,
-      actionUrl: '/profile',
-      actionLabel: 'Ver Agendamentos'
-    })
+  const notifyBookingCancelled = async (braiderName: string, date: string) => {
+    try {
+      await addNotification({
+        type: 'warning',
+        title: 'Agendamento Cancelado',
+        message: `Seu agendamento com ${braiderName} para ${date} foi cancelado`,
+        isImportant: true,
+        actionUrl: '/profile',
+        actionLabel: 'Ver Agendamentos'
+      })
+    } catch (error) {
+      console.error('Error adding notification:', error)
+    }
 
     showToast({
       type: 'warning',
@@ -169,15 +197,19 @@ export function useNotificationHelpers() {
     })
   }
 
-  const notifyBraiderApproved = () => {
-    addNotification({
-      type: 'success',
-      title: 'Conta Aprovada!',
-      message: 'Parabéns! Sua conta de trancista foi aprovada. Você já pode começar a receber agendamentos.',
-      isImportant: true,
-      actionUrl: '/braider-dashboard',
-      actionLabel: 'Acessar Dashboard'
-    })
+  const notifyBraiderApproved = async () => {
+    try {
+      await addNotification({
+        type: 'success',
+        title: 'Conta Aprovada!',
+        message: 'Parabéns! Sua conta de trancista foi aprovada. Você já pode começar a receber agendamentos.',
+        isImportant: true,
+        actionUrl: '/braider-dashboard',
+        actionLabel: 'Acessar Dashboard'
+      })
+    } catch (error) {
+      console.error('Error adding notification:', error)
+    }
 
     showToast({
       type: 'success',
@@ -187,35 +219,47 @@ export function useNotificationHelpers() {
     })
   }
 
-  const notifyBraiderRejected = (reason?: string) => {
-    addNotification({
-      type: 'error',
-      title: 'Conta Não Aprovada',
-      message: reason || 'Sua solicitação de conta de trancista não foi aprovada. Entre em contato conosco para mais informações.',
-      isImportant: true,
-      actionUrl: '/contact',
-      actionLabel: 'Contato'
-    })
+  const notifyBraiderRejected = async (reason?: string) => {
+    try {
+      await addNotification({
+        type: 'error',
+        title: 'Conta Não Aprovada',
+        message: reason || 'Sua solicitação de conta de trancista não foi aprovada. Entre em contato conosco para mais informações.',
+        isImportant: true,
+        actionUrl: '/contact',
+        actionLabel: 'Contato'
+      })
+    } catch (error) {
+      console.error('Error adding notification:', error)
+    }
   }
 
-  const notifySystemMaintenance = (message: string, scheduledTime: string) => {
-    addNotification({
-      type: 'system',
-      title: 'Manutenção Programada',
-      message: `${message} Programada para: ${scheduledTime}`,
-      isImportant: true
-    })
+  const notifySystemMaintenance = async (message: string, scheduledTime: string) => {
+    try {
+      await addNotification({
+        type: 'system',
+        title: 'Manutenção Programada',
+        message: `${message} Programada para: ${scheduledTime}`,
+        isImportant: true
+      })
+    } catch (error) {
+      console.error('Error adding notification:', error)
+    }
   }
 
-  const notifyWelcome = (userName: string) => {
-    addNotification({
-      type: 'system',
-      title: `Bem-vinda, ${userName}!`,
-      message: 'Explore nossos produtos e encontre as melhores trancistas da região.',
-      isImportant: false,
-      actionUrl: '/products',
-      actionLabel: 'Explorar'
-    })
+  const notifyWelcome = async (userName: string) => {
+    try {
+      await addNotification({
+        type: 'system',
+        title: `Bem-vinda, ${userName}!`,
+        message: 'Explore nossos produtos e encontre as melhores trancistas da região.',
+        isImportant: false,
+        actionUrl: '/products',
+        actionLabel: 'Explorar'
+      })
+    } catch (error) {
+      console.error('Error adding notification:', error)
+    }
   }
 
   const notifyError = (title: string, message: string) => {

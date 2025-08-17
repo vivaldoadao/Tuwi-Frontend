@@ -95,11 +95,11 @@ export default function FavoritesPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
       <SiteHeader />
       
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-pink-500 via-rose-500 to-red-500 py-16 text-white relative overflow-hidden">
+      <div className="bg-gradient-to-r from-brand-800 via-brand-700 to-brand-600 py-16 text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-black/10 backdrop-blur-3xl"></div>
         <div className="container px-4 md:px-6 relative z-10">
           <div className="flex items-center justify-between mb-8">
@@ -154,7 +154,7 @@ export default function FavoritesPage() {
                 variant={viewMode === 'grid' ? 'default' : 'outline'}
                 size="icon"
                 onClick={() => setViewMode('grid')}
-                className="rounded-xl"
+                className="rounded-full"
               >
                 <Grid3X3 className="h-4 w-4" />
               </Button>
@@ -162,7 +162,7 @@ export default function FavoritesPage() {
                 variant={viewMode === 'list' ? 'default' : 'outline'}
                 size="icon"
                 onClick={() => setViewMode('list')}
-                className="rounded-xl"
+                className="rounded-full"
               >
                 <List className="h-4 w-4" />
               </Button>
@@ -171,12 +171,12 @@ export default function FavoritesPage() {
 
           {/* Favorites Tabs */}
           <Tabs defaultValue="products" className="w-full">
-            <TabsList className="grid w-full max-w-md grid-cols-2 mx-auto mb-8 rounded-2xl">
-              <TabsTrigger value="products" className="rounded-xl flex items-center gap-2">
+            <TabsList className="grid w-full max-w-md grid-cols-2 mx-auto mb-8 rounded-2xl bg-white/95 backdrop-blur-sm shadow-lg p-2">
+              <TabsTrigger value="products" className="rounded-xl flex items-center gap-2 data-[state=active]:bg-accent-600 data-[state=active]:text-white">
                 <Package className="h-4 w-4" />
                 Produtos ({favoriteProductsList.length})
               </TabsTrigger>
-              <TabsTrigger value="braiders" className="rounded-xl flex items-center gap-2">
+              <TabsTrigger value="braiders" className="rounded-xl flex items-center gap-2 data-[state=active]:bg-accent-600 data-[state=active]:text-white">
                 <Award className="h-4 w-4" />
                 Trancistas ({favoriteBraidersList.length})
               </TabsTrigger>
@@ -205,7 +205,7 @@ export default function FavoritesPage() {
                         : "Comece a adicionar produtos aos seus favoritos para vê-los aqui"
                       }
                     </p>
-                    <Button asChild className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-xl">
+                    <Button asChild className="bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white rounded-full">
                       <Link href="/products">
                         <ShoppingBag className="h-4 w-4 mr-2" />
                         Explorar Produtos
@@ -251,11 +251,11 @@ export default function FavoritesPage() {
                         
                         <div className="flex-1">
                           <div className="flex items-start justify-between mb-2">
-                            <h3 className="text-xl font-bold font-heading text-gray-900 group-hover:text-pink-600 transition-colors">
+                            <h3 className="text-xl font-bold font-heading text-gray-900 group-hover:text-accent-600 transition-colors">
                               {product.name}
                             </h3>
                             <div className="text-right">
-                              <p className="text-2xl font-bold text-pink-600">€{product.price.toFixed(2)}</p>
+                              <p className="text-2xl font-bold text-accent-600">€{product.price.toFixed(2)}</p>
                             </div>
                           </div>
                           
@@ -273,13 +273,13 @@ export default function FavoritesPage() {
                             </div>
                             
                             <div className="flex items-center gap-2">
-                              <Button asChild size="sm" variant="outline" className="rounded-xl">
+                              <Button asChild size="sm" variant="outline" className="rounded-full">
                                 <Link href={`/products/${product.id}`}>
                                   <Eye className="h-4 w-4 mr-1" />
                                   Ver
                                 </Link>
-                              </Button>
-                              <Button size="sm" className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-xl">
+              </Button>
+                              <Button size="sm" className="bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white rounded-full">
                                 <ShoppingBag className="h-4 w-4 mr-1" />
                                 Comprar
                               </Button>
@@ -316,7 +316,7 @@ export default function FavoritesPage() {
                         : "Comece a adicionar trancistas aos seus favoritos para vê-las aqui"
                       }
                     </p>
-                    <Button asChild className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-xl">
+                    <Button asChild className="bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white rounded-full">
                       <Link href="/braiders">
                         <Award className="h-4 w-4 mr-2" />
                         Encontrar Trancistas
@@ -358,14 +358,14 @@ export default function FavoritesPage() {
                               <Trash2 className="h-4 w-4 text-red-500" />
                             </Button>
                           </div>
-                          <Badge className="absolute bottom-3 left-3 bg-green-500 text-white">
+                          <Badge className="absolute bottom-3 left-3 bg-accent-500 text-white">
                             {braider.status === "approved" ? "Verificada" : "Pendente"}
                           </Badge>
                         </div>
                         
                         <div className="flex-1">
                           <div className="flex items-start justify-between mb-2">
-                            <h3 className="text-xl font-bold font-heading text-gray-900 group-hover:text-pink-600 transition-colors">
+                            <h3 className="text-xl font-bold font-heading text-gray-900 group-hover:text-accent-600 transition-colors">
                               {braider.name}
                             </h3>
                             <div className="flex items-center gap-1">
@@ -403,13 +403,13 @@ export default function FavoritesPage() {
                             </div>
                             
                             <div className="flex items-center gap-2">
-                              <Button asChild size="sm" variant="outline" className="rounded-xl">
+                              <Button asChild size="sm" variant="outline" className="rounded-full">
                                 <Link href={`/braiders/${braider.id}`}>
                                   <Eye className="h-4 w-4 mr-1" />
                                   Ver Perfil
                                 </Link>
                               </Button>
-                              <Button asChild size="sm" className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-xl">
+                              <Button asChild size="sm" className="bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white rounded-full">
                                 <Link href={`/braiders/${braider.id}/book`}>
                                   <Calendar className="h-4 w-4 mr-1" />
                                   Agendar
@@ -428,21 +428,21 @@ export default function FavoritesPage() {
         </div>
       </main>
 
-      <footer className="bg-brand-primary text-white py-8">
+      <footer className="bg-gradient-to-r from-brand-800 via-brand-700 to-brand-600 text-white py-8">
         <div className="container px-4 md:px-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Image
               src="/wilnara-logo.png"
-              alt="Wilnara Tranças Logo"
+              alt="Tuwi Logo"
               width={30}
               height={30}
               className="rounded-full"
               unoptimized={true}
             />
-            <span className="text-lg font-bold text-brand-accent">WILNARA TRANÇAS</span>
+            <span className="text-lg font-bold text-accent-300">TUWI</span>
           </div>
           <p className="text-sm text-white/80">
-            © {new Date().getFullYear()} Wilnara Tranças. Todos os direitos reservados.
+            © {new Date().getFullYear()} Tuwi. Todos os direitos reservados.
           </p>
         </div>
       </footer>

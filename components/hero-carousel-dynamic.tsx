@@ -89,7 +89,7 @@ export default function HeroCarouselDynamic({ slides }: HeroCarouselDynamicProps
     return (
       <section className="relative min-h-screen bg-gradient-to-r from-brand-800 via-brand-700 to-brand-600 flex items-center justify-center">
         <div className="text-center text-white">
-          <h1 className="text-4xl font-bold mb-4">WILNARA TRANÇAS</h1>
+          <h1 className="text-4xl font-bold mb-4">TUWI</h1>
           <p className="text-xl">Carregando...</p>
         </div>
       </section>
@@ -148,13 +148,13 @@ export default function HeroCarouselDynamic({ slides }: HeroCarouselDynamicProps
                 transition={{ duration: 0.6, delay: 0.4 }}
               >
                 <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 font-heading">
-                  {currentSlide?.title || "WILNARA TRANÇAS"}
+                  {currentSlide?.title || "TUWI"}
                 </h1>
                 <h2 className="text-xl md:text-3xl lg:text-4xl text-accent-200 mb-8 font-medium">
-                  {currentSlide?.subtitle || "Beleza e Tradição"}
+                  {currentSlide?.subtitle || "Sua Beleza, Nossa Especialidade"}
                 </h2>
                 <p className="text-lg md:text-xl text-white/90 mb-10 max-w-3xl mx-auto leading-relaxed">
-                  {currentSlide?.description || "Descubra a arte das tranças africanas."}
+                  {currentSlide?.description || "Conectamos-te aos melhores profissionais de beleza especializados em cuidados africanos em Portugal."}
                 </p>
               </motion.div>
               

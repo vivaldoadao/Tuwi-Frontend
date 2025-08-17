@@ -12,7 +12,7 @@ export default function HeroSimple() {
       <div className="absolute inset-0">
         <Image
           src="/hero-braids.png"
-          alt="Wilnara Tranças - Box Braids Elegantes"
+          alt="Tuwi - Beleza Africana em Portugal"
           fill
           className="object-cover"
           priority
@@ -30,18 +30,18 @@ export default function HeroSimple() {
             {/* Brand Title */}
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold font-heading text-white mb-4 tracking-tight">
               <span className="bg-gradient-to-r from-white via-white to-accent-200 bg-clip-text text-transparent">
-                WILNARA TRANÇAS
+                TUWI
               </span>
             </h1>
 
             {/* Subtitle */}
             <h2 className="text-2xl md:text-3xl lg:text-4xl font-semibold text-accent-300 mb-4 font-heading">
-              Box Braids Elegantes
+              Beleza Africana em Portugal
             </h2>
 
             {/* Description */}
             <p className="text-lg md:text-xl lg:text-2xl text-white/90 mb-8 max-w-3xl mx-auto leading-relaxed">
-              Realce sua beleza natural com nossas tranças e postiços de alta qualidade. Estilo, conforto e durabilidade em cada fio trançado com perfeição.
+              Realce a sua beleza natural com os nossos profissionais especializados em cuidados africanos. Estilo, conforto e qualidade em cada serviço personalizado.
             </p>
 
             {/* Call to Action Buttons */}
@@ -53,7 +53,7 @@ export default function HeroSimple() {
               >
                 <Link href="/products">
                   <ShoppingBag className="mr-2 h-5 w-5" />
-                  Compre Agora
+                  Ver Produtos
                 </Link>
               </Button>
 
@@ -65,7 +65,7 @@ export default function HeroSimple() {
               >
                 <Link href="/braiders">
                   <Users className="mr-2 h-5 w-5" />
-                  Ver Trancistas
+                  Ver Profissionais
                 </Link>
               </Button>
             </div>

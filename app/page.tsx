@@ -20,9 +20,9 @@ export const revalidate = 1800
 
 // 📊 METADATA para SEO otimizado
 export const metadata = {
-  title: 'Wilnara Tranças - Produtos e Serviços de Tranças Profissionais',
-  description: 'Descubra os melhores produtos e serviços de tranças com nossas trancistas profissionais. Agendamentos online, produtos premium e atendimento especializado.',
-  keywords: 'tranças, box braids, goddess braids, trancistas, agendamento online',
+  title: 'Tuwi - Marketplace de Serviços de Beleza e Produtos Premium',
+  description: 'Descubra os melhores profissionais de beleza e produtos premium. Tranças, tratamentos capilares, cuidados africanos e muito mais. Agendamentos online com especialistas em Portugal.',
+  keywords: 'beleza, tranças, cabeleireiro, tratamentos capilares, produtos de beleza, agendamento online, cuidados africanos, salão de beleza, portugal',
 }
 
 async function getFeaturedData(): Promise<{ featuredProducts: Product[], featuredBraiders: Braider[] }> {
@@ -40,19 +40,19 @@ async function getFeaturedData(): Promise<{ featuredProducts: Product[], feature
     const mockProducts: Product[] = [
       {
         id: "1",
-        name: "Box Braids Premium",
-        description: "Tranças box braids profissionais de alta qualidade",
-        longDescription: "Tranças box braids profissionais de alta qualidade com material premium",
+        name: "Kit Tranças Premium",
+        description: "Kit completo para tranças profissionais com produtos de alta qualidade",
+        longDescription: "Kit completo para tranças profissionais com produtos de alta qualidade e ferramentas especializadas",
         price: 45.99,
-        imageUrl: "/placeholder.svg?height=300&width=300&text=Box+Braids"
+        imageUrl: "/placeholder.svg?height=300&width=300&text=Kit+Premium"
       },
       {
         id: "2", 
-        name: "Goddess Braids Luxo",
-        description: "Goddess braids elegantes para ocasiões especiais",
-        longDescription: "Goddess braids elegantes para ocasiões especiais com acabamento perfeito",
+        name: "Tratamento Capilar Afro",
+        description: "Linha completa de cuidados para cabelos afro e crespos",
+        longDescription: "Linha completa de cuidados para cabelos afro e crespos com ingredientes naturais",
         price: 65.99,
-        imageUrl: "/placeholder.svg?height=300&width=300&text=Goddess+Braids"
+        imageUrl: "/placeholder.svg?height=300&width=300&text=Tratamento+Afro"
       }
     ]
 
@@ -60,10 +60,10 @@ async function getFeaturedData(): Promise<{ featuredProducts: Product[], feature
       {
         id: "mock-1",
         name: "Maria Silva",
-        bio: "Especialista em tranças africanas com mais de 10 anos de experiência.",
-        location: "São Paulo, SP",
+        bio: "Especialista em tranças africanas e tratamentos capilares com mais de 10 anos de experiência em cuidados afro.",
+        location: "Lisboa, Portugal",
         contactEmail: "maria@example.com",
-        contactPhone: "(11) 99999-1234",
+        contactPhone: "+351 91 999-1234",
         profileImageUrl: "/placeholder.svg?height=200&width=200&text=Maria",
         services: [],
         portfolioImages: ["/placeholder.svg?height=300&width=300&text=Portfolio1"],
@@ -128,10 +128,10 @@ export default async function HomePage() {
       {/* Featured Braiders Section - Sempre mostrar trancistas */}
       <Section background="gray" padding="md">
         <h2 className="text-3xl md:text-4xl font-bold font-heading text-center mb-10 bg-gradient-to-r from-brand-600 via-brand-700 to-accent-600 bg-clip-text text-transparent">
-          {homepageContent.braidersTitle}
+          Nossos Profissionais de Beleza em Destaque
         </h2>
         <p className="text-lg md:text-xl text-center max-w-3xl mx-auto mb-12 text-gray-700 leading-relaxed">
-          {homepageContent.braidersSubtitle}
+          Encontre especialistas talentosos em tranças, tratamentos capilares e cuidados de beleza africanos
         </p>
         
         {/* Mostrar trancistas promovidas se sistema estiver ativo, senão mostrar tradicionais */}
@@ -159,7 +159,7 @@ export default async function HomePage() {
             variant="outline"
             className="border-brand-500 text-brand-600 hover:bg-gradient-to-r hover:from-brand-500 hover:to-accent-500 hover:text-white px-8 py-3 text-lg font-semibold rounded-full transition-all duration-300 bg-transparent shadow-md hover:shadow-lg hover:border-transparent"
           >
-            <Link href="/braiders">Ver Todas as Trancistas</Link>
+            <Link href="/braiders">Ver Todos os Profissionais</Link>
           </Button>
         </div>
       </Section>
@@ -168,10 +168,10 @@ export default async function HomePage() {
       <Section className="bg-gradient-to-br from-brand-50 via-brand-100 to-accent-50" padding="md">
         <div className="text-center space-y-6">
           <h2 className="text-3xl md:text-4xl font-bold font-heading bg-gradient-to-r from-brand-700 to-brand-800 bg-clip-text text-transparent">
-            {homepageContent.ctaBraiderTitle}
+            É Profissional de Beleza? Junte-se à Tuwi!
           </h2>
           <p className="text-lg md:text-xl max-w-3xl mx-auto text-brand-700 leading-relaxed">
-            {homepageContent.ctaBraiderSubtitle}
+            Expanda o seu negócio em Portugal e conecte-se com clientes que valorizam a sua expertise em beleza e cuidados capilares
           </p>
           <BraiderRegisterButton 
             className="bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-800 text-white px-8 py-3 text-lg font-semibold rounded-full transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
@@ -183,10 +183,10 @@ export default async function HomePage() {
       <Section className="bg-gradient-to-br from-brand-800 via-brand-900 to-slate-800 text-white" padding="md">
         <div className="text-center space-y-6">
           <h2 className="text-3xl md:text-4xl font-bold font-heading bg-gradient-to-r from-accent-200 to-brand-200 bg-clip-text text-transparent">
-            {homepageContent.aboutTitle}
+            Beleza Sem Limites, Tradição Sem Fronteiras
           </h2>
           <p className="text-lg md:text-xl max-w-3xl mx-auto text-brand-100 leading-relaxed">
-            {homepageContent.aboutSubtitle}
+            Na Tuwi, celebramos a diversidade da beleza africana. Conectamos-te aos melhores profissionais especializados em tranças, tratamentos capilares e cuidados únicos para o teu cabelo.
           </p>
           <Button
             asChild

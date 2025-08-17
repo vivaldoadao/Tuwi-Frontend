@@ -1,6 +1,6 @@
 "use client"
 
-import { useNotifications, type Toast } from "@/context/notifications-context"
+import { useNotifications, type Toast } from "@/context/notifications-context-v2"
 import { Button } from "@/components/ui/button"
 import { X, CheckCircle, AlertCircle, AlertTriangle, Info, ShoppingBag, MessageSquare, Calendar, Settings } from "lucide-react"
 import { cn } from "@/lib/utils"
