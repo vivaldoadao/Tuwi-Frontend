@@ -32,6 +32,7 @@ import {
 } from "lucide-react"
 import { toast } from "react-hot-toast"
 import { useAuth } from "@/context/auth-context"
+import { geocodePortugueseAddress } from "@/lib/geocoding"
 
 // Dados de Portugal por distrito
 // TODO: Migrar para APIs públicas (ver /lib/portugal-api.ts e /hooks/usePortugalLocation.ts)
@@ -326,6 +327,9 @@ export default function RegisterBraiderPage() {
     freguesia: "",
     address: "",
     postalCode: "",
+    latitude: null as number | null,
+    longitude: null as number | null,
+    geocodingStatus: "idle" as "idle" | "loading" | "success" | "error",
     servesHome: false,
     servesStudio: false,
     servesSalon: false,
@@ -376,6 +380,46 @@ export default function RegisterBraiderPage() {
     return districtData.concelhos[concelho as keyof typeof districtData.concelhos] || []
   }
 
+  // Função para geocodificar automaticamente
+  const geocodeLocation = async (data: {
+    district: string;
+    concelho: string;
+    freguesia?: string;
+    address?: string;
+  }) => {
+    if (!data.district || !data.concelho) return;
+
+    setLocationData(prev => ({ ...prev, geocodingStatus: "loading" }));
+
+    try {
+      const result = await geocodePortugueseAddress({
+        district: data.district,
+        concelho: data.concelho,
+        freguesia: data.freguesia,
+        address: data.address
+      });
+
+      if (result) {
+        setLocationData(prev => ({
+          ...prev,
+          latitude: result.latitude,
+          longitude: result.longitude,
+          geocodingStatus: "success"
+        }));
+        toast.success(`📍 Localização geocodificada: ${result.formatted_address}`, {
+          duration: 3000
+        });
+      } else {
+        setLocationData(prev => ({ ...prev, geocodingStatus: "error" }));
+        toast.error("❌ Não foi possível geocodificar a localização");
+      }
+    } catch (error) {
+      console.error("Geocoding error:", error);
+      setLocationData(prev => ({ ...prev, geocodingStatus: "error" }));
+      toast.error("❌ Erro ao geocodificar localização");
+    }
+  };
+
   const handleDistrictChange = (district: string) => {
     setLocationData(prev => ({
       ...prev,
@@ -394,6 +438,12 @@ export default function RegisterBraiderPage() {
       freguesia: ""
     }))
     setFreguesias(getFreguesias(locationData.district, concelho))
+    
+    // Geocodificar automaticamente quando concelho for selecionado
+    geocodeLocation({
+      district: locationData.district,
+      concelho: concelho
+    })
   }
 
   // Prefill user data when user is loaded
@@ -569,6 +619,8 @@ export default function RegisterBraiderPage() {
         freguesia: locationData.freguesia,
         address: locationData.address,
         postalCode: locationData.postalCode,
+        latitude: locationData.latitude,
+        longitude: locationData.longitude,
         servesHome: locationData.servesHome,
         servesStudio: locationData.servesStudio,
         servesSalon: locationData.servesSalon,
@@ -639,6 +691,9 @@ export default function RegisterBraiderPage() {
           freguesia: "",
           address: "",
           postalCode: "",
+          latitude: null,
+          longitude: null,
+          geocodingStatus: "idle",
           servesHome: false,
           servesStudio: false,
           servesSalon: false,
@@ -1127,7 +1182,15 @@ export default function RegisterBraiderPage() {
                           Freguesia (opcional)
                         </Label>
                         <Select 
-                          onValueChange={(value) => setLocationData(prev => ({...prev, freguesia: value}))} 
+                          onValueChange={(value) => {
+                            setLocationData(prev => ({...prev, freguesia: value}))
+                            // Geocodificar com freguesia para maior precisão
+                            geocodeLocation({
+                              district: locationData.district,
+                              concelho: locationData.concelho,
+                              freguesia: value
+                            })
+                          }} 
                           value={locationData.freguesia}
                           disabled={!locationData.concelho}
                         >
@@ -1174,6 +1237,46 @@ export default function RegisterBraiderPage() {
                         Esta informação não será pública, apenas para contato administrativo.
                       </p>
                     </div>
+
+                    {/* Indicador de Geocodificação */}
+                    {locationData.district && locationData.concelho && (
+                      <div className={cn(
+                        "p-4 rounded-xl border",
+                        locationData.geocodingStatus === "success" && "border-green-200 bg-green-50",
+                        locationData.geocodingStatus === "loading" && "border-blue-200 bg-blue-50",
+                        locationData.geocodingStatus === "error" && "border-red-200 bg-red-50",
+                        locationData.geocodingStatus === "idle" && "border-gray-200 bg-gray-50"
+                      )}>
+                        <div className="flex items-center gap-3">
+                          {locationData.geocodingStatus === "loading" && (
+                            <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                          )}
+                          {locationData.geocodingStatus === "success" && (
+                            <div className="h-4 w-4 text-green-600">✓</div>
+                          )}
+                          {locationData.geocodingStatus === "error" && (
+                            <div className="h-4 w-4 text-red-600">✗</div>
+                          )}
+                          {locationData.geocodingStatus === "idle" && (
+                            <MapPin className="h-4 w-4 text-gray-500" />
+                          )}
+                          
+                          <div className="flex-1">
+                            <div className="text-sm font-medium">
+                              {locationData.geocodingStatus === "loading" && "Geocodificando localização..."}
+                              {locationData.geocodingStatus === "success" && "Localização geocodificada com sucesso"}
+                              {locationData.geocodingStatus === "error" && "Erro ao geocodificar localização"}
+                              {locationData.geocodingStatus === "idle" && "Aguardando seleção de distrito e concelho"}
+                            </div>
+                            {locationData.latitude && locationData.longitude && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                📍 {locationData.latitude.toFixed(6)}, {locationData.longitude.toFixed(6)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="space-y-4">
                       <Label className="text-base font-semibold">Modalidades de Atendimento *</Label>

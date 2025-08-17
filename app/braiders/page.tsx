@@ -11,6 +11,9 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useState, useEffect } from "react"
 import { Search, Star, SlidersHorizontal, MapPin, Filter } from "lucide-react"
+import NearMeButton from "@/components/near-me-button"
+import { calculateDistance } from "@/hooks/useGeolocation"
+import type { NearbyBraider } from "@/lib/api-client"
 import BraiderRegisterButton from "@/components/auth/braider-register-button"
 import { Braider } from "@/lib/data"
 import { portugalDistricts } from "@/lib/portugal-data"
@@ -34,6 +37,47 @@ export default function BraidersPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
   const [totalBraiders, setTotalBraiders] = useState(0)
+  
+  // Geolocation states
+  const [nearbyMode, setNearbyMode] = useState(false)
+  const [userLocation, setUserLocation] = useState<{ lat: number; lon: number } | null>(null)
+  const [nearbyBraiders, setNearbyBraiders] = useState<NearbyBraider[]>([])
+  const [selectedRadius, setSelectedRadius] = useState(25) // km
+
+  // Handle nearby braiders results
+  const handleNearbyResults = (nearbyResults: NearbyBraider[], location: { lat: number; lon: number }) => {
+    setNearbyBraiders(nearbyResults);
+    setUserLocation(location);
+    setNearbyMode(true);
+    console.log('Nearby braiders found:', nearbyResults.length);
+  };
+
+  const handleExitNearbyMode = () => {
+    setNearbyMode(false);
+    setNearbyBraiders([]);
+    setUserLocation(null);
+  };
+
+  // Re-search when radius changes in nearby mode
+  useEffect(() => {
+    if (nearbyMode && userLocation) {
+      const searchWithNewRadius = async () => {
+        try {
+          const { searchNearbyBraiders } = await import('@/lib/api-client');
+          const results = await searchNearbyBraiders({
+            latitude: userLocation.lat,
+            longitude: userLocation.lon,
+            radius: selectedRadius,
+            limit: 20
+          });
+          setNearbyBraiders(results.braiders);
+        } catch (error) {
+          console.error('Error re-searching with new radius:', error);
+        }
+      };
+      searchWithNewRadius();
+    }
+  }, [selectedRadius, nearbyMode, userLocation]);
 
   // Load braiders from database with real ratings
   useEffect(() => {
@@ -114,11 +158,21 @@ export default function BraidersPage() {
     }
   }, [selectedConcelho])
 
-  // Enhanced filtering with Portuguese location hierarchy
-  const filteredBraiders = braiders.filter((braider) => {
+  // Enhanced filtering with Portuguese location hierarchy and distance
+  const filteredBraiders = nearbyMode ? 
+    nearbyBraiders.filter(braider => 
+      braider.distance_km <= selectedRadius &&
+      (searchTerm === "" || 
+        braider.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (braider.district && braider.district.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (braider.concelho && braider.concelho.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (braider.freguesia && braider.freguesia.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        braider.bio.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    ) : 
+    braiders.filter((braider) => {
     const matchesSearch = 
       braider.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      braider.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
       braider.bio.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (braider.district && braider.district.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (braider.concelho && braider.concelho.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -133,15 +187,24 @@ export default function BraidersPage() {
     return matchesSearch && matchesFilter && matchesDistrito && matchesConcelho && matchesFreguesia
   })
 
-  // Enhanced sorting with location option
+  // Enhanced sorting with location option and distance
   const sortedBraiders = [...filteredBraiders].sort((a, b) => {
+    // If in nearby mode, sort by distance first
+    if (nearbyMode && 'distance_km' in a && 'distance_km' in b) {
+      return a.distance_km - b.distance_km;
+    }
+    
     switch (sortBy) {
       case "name":
         return a.name.localeCompare(b.name)
       case "location":
-        return a.location.localeCompare(b.location)
+        const aLocation = [a.district, a.concelho, a.freguesia].filter(Boolean).join(', ') || '';
+        const bLocation = [b.district, b.concelho, b.freguesia].filter(Boolean).join(', ') || '';
+        return aLocation.localeCompare(bLocation)
       case "services":
-        return b.services.length - a.services.length
+        const aServices = 'services' in a ? a.services?.length || 0 : 0;
+        const bServices = 'services' in b ? b.services?.length || 0 : 0;
+        return bServices - aServices
       case "experience":
         const getExperienceWeight = (exp?: string) => {
           if (!exp) return 0
@@ -281,6 +344,50 @@ export default function BraidersPage() {
                       >
                         Novas
                       </Button>
+                      
+                      {/* Separator */}
+                      <div className="w-px h-6 bg-gray-300 mx-2" />
+                      
+                      {/* Near Me Button */}
+                      <NearMeButton 
+                        onResultsFound={handleNearbyResults}
+                        radius={selectedRadius}
+                        className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white border-0"
+                      />
+                      
+                      {/* Exit Nearby Mode Button */}
+                      {nearbyMode && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleExitNearbyMode}
+                          className="rounded-full border-gray-300 text-gray-600 hover:bg-gray-50"
+                        >
+                          Voltar à Lista Completa
+                        </Button>
+                      )}
+                      
+                      {/* Distance Filter (only in nearby mode) */}
+                      {nearbyMode && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-600">Raio:</span>
+                          <Select 
+                            value={selectedRadius.toString()} 
+                            onValueChange={(value) => setSelectedRadius(parseInt(value))}
+                          >
+                            <SelectTrigger className="w-24 bg-gray-50 border-gray-200 rounded-xl">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="5">5 km</SelectItem>
+                              <SelectItem value="10">10 km</SelectItem>
+                              <SelectItem value="25">25 km</SelectItem>
+                              <SelectItem value="50">50 km</SelectItem>
+                              <SelectItem value="100">100 km</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -332,7 +439,7 @@ export default function BraidersPage() {
                       </div>
 
                       {/* Freguesia Filter */}
-                      {availableFreguesias.length > 0 && (
+                      {selectedConcelho !== "all" && (
                         <div className="flex flex-col">
                           <span className="text-xs text-gray-500 mb-1">Freguesia</span>
                           <Select 
@@ -404,6 +511,13 @@ export default function BraidersPage() {
                 {selectedFreguesia !== "all" && (
                   <Badge variant="outline" className="border-purple-200 text-purple-700 bg-purple-50">
                     🏡 {selectedFreguesia}
+                  </Badge>
+                )}
+                
+                {/* Nearby mode and radius badge */}
+                {nearbyMode && (
+                  <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50">
+                    📍 Raio {selectedRadius}km
                   </Badge>
                 )}
               </div>

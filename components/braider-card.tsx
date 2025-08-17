@@ -7,24 +7,34 @@ import { Card, CardContent, CardFooter, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import type { Braider } from "@/lib/data"
 import type { BraiderWithRealRating } from "@/lib/data-supabase-ratings"
+import type { NearbyBraider } from "@/lib/api-client"
 import { useFavorites } from "@/context/favorites-context"
-import { MapPin, Phone, Mail, ChevronLeft, ChevronRight, Star, MessageCircle, Heart } from "lucide-react"
+import { MapPin, Phone, Mail, ChevronLeft, ChevronRight, Star, MessageCircle, Heart, Navigation } from "lucide-react"
 import { useState } from "react"
 
 interface BraiderCardProps {
-  braider: Braider | BraiderWithRealRating
+  braider: Braider | BraiderWithRealRating | NearbyBraider
 }
 
 export default function BraiderCard({ braider }: BraiderCardProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const { isFavoriteBraider, toggleFavoriteBraider } = useFavorites()
 
+  // Type guards for different braider types
+  const hasPortfolio = 'portfolioImages' in braider && braider.portfolioImages && braider.portfolioImages.length > 0;
+  const hasContactPhone = 'contactPhone' in braider && braider.contactPhone;
+  const hasContactEmail = 'contactEmail' in braider && braider.contactEmail;
+
   const handleNextImage = () => {
-    setCurrentImageIndex((prevIndex) => (prevIndex + 1) % braider.portfolioImages.length)
+    if (hasPortfolio && 'portfolioImages' in braider) {
+      setCurrentImageIndex((prevIndex) => (prevIndex + 1) % braider.portfolioImages.length)
+    }
   }
 
   const handlePrevImage = () => {
-    setCurrentImageIndex((prevIndex) => (prevIndex === 0 ? braider.portfolioImages.length - 1 : prevIndex - 1))
+    if (hasPortfolio && 'portfolioImages' in braider) {
+      setCurrentImageIndex((prevIndex) => (prevIndex === 0 ? braider.portfolioImages.length - 1 : prevIndex - 1))
+    }
   }
 
   const handleToggleFavorite = (e: React.MouseEvent) => {
@@ -33,7 +43,7 @@ export default function BraiderCard({ braider }: BraiderCardProps) {
   }
 
   // Verifica se há mais de uma imagem para exibir os controles do carrossel
-  const hasMultipleImages = braider.portfolioImages && braider.portfolioImages.length > 1
+  const hasMultipleImages = hasPortfolio && 'portfolioImages' in braider && braider.portfolioImages.length > 1
 
   // Use real rating data if available, otherwise fallback to defaults
   const rating = 'averageRating' in braider ? braider.averageRating : 0
@@ -45,7 +55,10 @@ export default function BraiderCard({ braider }: BraiderCardProps) {
       {/* Enhanced image section with better carousel */}
       <div className="relative h-64 overflow-hidden">
         <Image
-          src={braider.portfolioImages[currentImageIndex] || "/placeholder.svg?height=300&width=400&text=Trancista"}
+          src={hasPortfolio && 'portfolioImages' in braider ? 
+            braider.portfolioImages[currentImageIndex] : 
+            "/placeholder.svg?height=300&width=400&text=Trancista"
+          }
           alt={braider.name}
           width={400}
           height={300}
@@ -100,8 +113,9 @@ export default function BraiderCard({ braider }: BraiderCardProps) {
             </Button>
             
             {/* Modern dot indicators */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-              {braider.portfolioImages.map((_, index) => (
+            {hasPortfolio && 'portfolioImages' in braider && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                {braider.portfolioImages.map((_, index: number) => (
                 <button
                   key={index}
                   className={`w-2 h-2 rounded-full transition-all duration-300 ${
@@ -112,7 +126,8 @@ export default function BraiderCard({ braider }: BraiderCardProps) {
                   onClick={() => setCurrentImageIndex(index)}
                 />
               ))}
-            </div>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -145,24 +160,34 @@ export default function BraiderCard({ braider }: BraiderCardProps) {
             <div className="w-5 h-5 rounded-full bg-brand-100 flex items-center justify-center">
               <MapPin className="h-3 w-3 text-brand-600" />
             </div>
-            <span>{braider.location}</span>
+            <span>{[braider.district, braider.concelho, braider.freguesia].filter(Boolean).join(', ') || 'Localização não especificada'}</span>
           </div>
           
-          {braider.contactPhone && (
+          {/* Distance info for nearby braiders */}
+          {'distance_km' in braider && braider.distance_km && (
+            <div className="flex items-center gap-2 text-sm text-blue-600 font-medium">
+              <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center">
+                <Navigation className="h-3 w-3 text-blue-600" />
+              </div>
+              <span>{braider.distance_km} km de distância</span>
+            </div>
+          )}
+          
+          {hasContactPhone && (
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <div className="w-5 h-5 rounded-full bg-brand-100 flex items-center justify-center">
                 <Phone className="h-3 w-3 text-brand-600" />
               </div>
-              <span>{braider.contactPhone}</span>
+              <span>{'contactPhone' in braider ? braider.contactPhone : ''}</span>
             </div>
           )}
           
-          {braider.contactEmail && (
+          {hasContactEmail && (
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <div className="w-5 h-5 rounded-full bg-brand-100 flex items-center justify-center">
                 <Mail className="h-3 w-3 text-brand-600" />
               </div>
-              <span className="truncate">{braider.contactEmail}</span>
+              <span className="truncate">{'contactEmail' in braider ? braider.contactEmail : ''}</span>
             </div>
           )}
         </div>

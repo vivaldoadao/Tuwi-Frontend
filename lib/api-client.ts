@@ -322,6 +322,8 @@ export async function registerBraider(braiderData: {
   freguesia?: string
   address?: string
   postalCode?: string
+  latitude?: number | null
+  longitude?: number | null
   servesHome?: boolean
   servesStudio?: boolean
   servesSalon?: boolean
@@ -400,5 +402,218 @@ export async function deleteUserCascadeTest(userId: string): Promise<{
   } catch (error) {
     console.error('Error deleting user:', error)
     throw error
+  }
+}
+
+// === GEOLOCATION API FUNCTIONS ===
+
+export interface NearbyBraider {
+  id: string;
+  name: string;
+  bio: string;
+  location: string;
+  district: string;
+  concelho: string;
+  freguesia: string;
+  latitude: number;
+  longitude: number;
+  distance_km: number;
+  max_travel_distance: number;
+  average_rating: number;
+  total_reviews: number;
+  serves_home: boolean;
+  serves_studio: boolean;
+  serves_salon: boolean;
+}
+
+export interface NearbySearchParams {
+  latitude: number;
+  longitude: number;
+  radius?: number;
+  page?: number;
+  limit?: number;
+}
+
+export interface LocationSearchParams {
+  district: string;
+  concelho?: string;
+  freguesia?: string;
+  page?: number;
+  limit?: number;
+}
+
+/**
+ * Buscar braiders próximas por coordenadas
+ */
+export async function searchNearbyBraiders(params: NearbySearchParams): Promise<{
+  braiders: NearbyBraider[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    hasNext: boolean;
+  };
+  search: {
+    latitude: number;
+    longitude: number;
+    radius: number;
+    found: number;
+  };
+}> {
+  try {
+    const searchParams = new URLSearchParams({
+      lat: params.latitude.toString(),
+      lon: params.longitude.toString(),
+      radius: (params.radius || 50).toString(),
+      page: (params.page || 1).toString(),
+      limit: (params.limit || 20).toString()
+    });
+
+    const response = await fetch(`/api/braiders/nearby?${searchParams}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Erro ao buscar trancistas próximas');
+    }
+
+    const data = await response.json();
+    return data.data;
+  } catch (error) {
+    console.error('Error searching nearby braiders:', error);
+    throw error;
+  }
+}
+
+/**
+ * Buscar braiders por localização (distrito/concelho/freguesia)
+ */
+export async function searchBraidersByLocation(params: LocationSearchParams): Promise<{
+  braiders: any[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    hasNext: boolean;
+  };
+  search: {
+    district: string;
+    concelho?: string;
+    freguesia?: string;
+    found: number;
+  };
+}> {
+  try {
+    const response = await fetch('/api/braiders/nearby', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(params)
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Erro ao buscar trancistas por localização');
+    }
+
+    const data = await response.json();
+    return data.data;
+  } catch (error) {
+    console.error('Error searching braiders by location:', error);
+    throw error;
+  }
+}
+
+/**
+ * Verificar se braider atende em determinada localização
+ */
+export async function checkBraiderCoverage(
+  braiderId: string, 
+  latitude: number, 
+  longitude: number
+): Promise<{
+  serves_location: boolean;
+  braider: {
+    id: string;
+    name: string;
+    location: string;
+    max_travel_distance: number;
+    coordinates: { latitude: number; longitude: number } | null;
+  };
+  distance_km: number | null;
+  client_coordinates: { latitude: number; longitude: number };
+}> {
+  try {
+    const response = await fetch('/api/braiders/coverage', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        braider_id: braiderId,
+        latitude,
+        longitude
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Erro ao verificar cobertura da trancista');
+    }
+
+    const data = await response.json();
+    return data.data;
+  } catch (error) {
+    console.error('Error checking braider coverage:', error);
+    throw error;
+  }
+}
+
+/**
+ * Verificar cobertura de múltiplos braiders
+ */
+export async function checkMultipleBraidersCoverage(
+  braiderIds: string[], 
+  latitude: number, 
+  longitude: number
+): Promise<{
+  total_checked: number;
+  serving_count: number;
+  not_serving_count: number;
+  results: Array<{
+    braider_id: string;
+    serves_location: boolean;
+    error?: string;
+  }>;
+  client_coordinates: { latitude: number; longitude: number };
+}> {
+  try {
+    const response = await fetch('/api/braiders/coverage', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        braider_ids: braiderIds,
+        latitude,
+        longitude
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Erro ao verificar cobertura das trancistas');
+    }
+
+    const data = await response.json();
+    return data.data;
+  } catch (error) {
+    console.error('Error checking multiple braiders coverage:', error);
+    throw error;
   }
 }

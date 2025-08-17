@@ -39,7 +39,9 @@ import {
   TrendingUp,
   Edit3,
   Send,
-  RefreshCw
+  RefreshCw,
+  Trash2,
+  AlertTriangle
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -55,6 +57,9 @@ export default function BraiderDetailsPage() {
   const [processingRejection, setProcessingRejection] = useState(false)
   const [rejectionReason, setRejectionReason] = useState("")
   const [rejectionModalOpen, setRejectionModalOpen] = useState(false)
+  const [processingDeletion, setProcessingDeletion] = useState(false)
+  const [deletionModalOpen, setDeletionModalOpen] = useState(false)
+  const [deletionDependencies, setDeletionDependencies] = useState<any>(null)
 
   useEffect(() => {
     const fetchBraider = async () => {
@@ -125,6 +130,57 @@ export default function BraiderDetailsPage() {
       toast.error('Erro inesperado ao rejeitar trancista')
     } finally {
       setProcessingRejection(false)
+    }
+  }
+
+  const handleCheckDeletionDependencies = async () => {
+    if (!braider) return
+
+    setProcessingDeletion(true)
+    try {
+      const response = await fetch(`/api/admin/delete-braider?id=${braider.id}`)
+      const data = await response.json()
+      
+      if (response.ok) {
+        setDeletionDependencies(data)
+        setDeletionModalOpen(true)
+      } else {
+        toast.error(data.error || 'Erro ao verificar dependências')
+      }
+    } catch (error) {
+      console.error('Error checking deletion dependencies:', error)
+      toast.error('Erro inesperado ao verificar dependências')
+    } finally {
+      setProcessingDeletion(false)
+    }
+  }
+
+  const handleDeleteBraider = async () => {
+    if (!braider) return
+
+    setProcessingDeletion(true)
+    try {
+      const response = await fetch(`/api/admin/delete-braider?id=${braider.id}`, {
+        method: 'DELETE'
+      })
+      const data = await response.json()
+      
+      if (response.ok && data.success) {
+        toast.success('Trancista deletada com sucesso')
+        setDeletionModalOpen(false)
+        // Redirect to braiders list
+        router.push('/dashboard/braiders')
+      } else {
+        toast.error(data.error || 'Erro ao deletar trancista')
+        if (data.blocked_by) {
+          setDeletionDependencies(data)
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting braider:', error)
+      toast.error('Erro inesperado ao deletar trancista')
+    } finally {
+      setProcessingDeletion(false)
     }
   }
 
@@ -747,6 +803,20 @@ export default function BraiderDetailsPage() {
                 <UserX className="h-4 w-4 mr-2" />
                 Gerenciar Conta
               </Button>
+
+              <Button
+                onClick={handleCheckDeletionDependencies}
+                disabled={processingDeletion}
+                variant="outline"
+                className="w-full rounded-xl hover:bg-red-50 hover:border-red-300 hover:text-red-600"
+              >
+                {processingDeletion ? (
+                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Trash2 className="h-4 w-4 mr-2" />
+                )}
+                Deletar Trancista
+              </Button>
             </CardContent>
           </Card>
 
@@ -801,6 +871,135 @@ export default function BraiderDetailsPage() {
           </Card>
         </div>
       </div>
+
+      {/* Deletion Confirmation Modal */}
+      <Dialog open={deletionModalOpen} onOpenChange={setDeletionModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-red-500" />
+              Deletar Trancista
+            </DialogTitle>
+            <DialogDescription>
+              {deletionDependencies?.can_delete 
+                ? "Confirme a deleção permanente desta trancista"
+                : "Não é possível deletar esta trancista no momento"
+              }
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {deletionDependencies && (
+              <>
+                {/* Blocking Dependencies */}
+                {deletionDependencies.blocking_dependencies?.length > 0 && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="flex items-start gap-2 mb-2">
+                      <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5" />
+                      <div className="text-sm text-red-700">
+                        <strong>Dependências Bloqueadoras:</strong>
+                      </div>
+                    </div>
+                    <ul className="space-y-1 text-sm text-red-600">
+                      {deletionDependencies.blocking_dependencies.map((dep: any, index: number) => (
+                        <li key={index} className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-red-400 rounded-full"></span>
+                          {dep.message}
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-2 text-sm text-red-600">
+                      <strong>Solução:</strong> {deletionDependencies.recommendation}
+                    </div>
+                  </div>
+                )}
+
+                {/* Non-blocking Dependencies */}
+                {deletionDependencies.dependencies?.filter((dep: any) => dep.can_delete && dep.total_count > 0).length > 0 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <div className="flex items-start gap-2 mb-2">
+                      <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5" />
+                      <div className="text-sm text-amber-700">
+                        <strong>Dados que serão deletados em cascata:</strong>
+                      </div>
+                    </div>
+                    <ul className="space-y-1 text-sm text-amber-600">
+                      {deletionDependencies.dependencies
+                        .filter((dep: any) => dep.can_delete && dep.total_count > 0)
+                        .map((dep: any, index: number) => (
+                        <li key={index} className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-amber-400 rounded-full"></span>
+                          {dep.message}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Safe to Delete */}
+                {deletionDependencies.can_delete && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                      <div className="text-sm text-green-700">
+                        <strong>Seguro para deletar:</strong> {deletionDependencies.recommendation}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Braider Info */}
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="text-sm text-gray-700">
+                    <strong>Trancista:</strong> {deletionDependencies.braider?.name || braider?.name}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    <strong>ID:</strong> {deletionDependencies.braider?.id || braider?.id}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeletionModalOpen(false)
+                setDeletionDependencies(null)
+              }}
+              className="flex-1"
+              disabled={processingDeletion}
+            >
+              Cancelar
+            </Button>
+            
+            {deletionDependencies?.can_delete ? (
+              <Button
+                onClick={handleDeleteBraider}
+                disabled={processingDeletion}
+                variant="destructive"
+                className="flex-1"
+              >
+                {processingDeletion ? (
+                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Trash2 className="h-4 w-4 mr-2" />
+                )}
+                Confirmar Deleção
+              </Button>
+            ) : (
+              <Button
+                onClick={() => setDeletionModalOpen(false)}
+                variant="outline"
+                className="flex-1"
+              >
+                Entendido
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
