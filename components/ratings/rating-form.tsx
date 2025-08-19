@@ -59,6 +59,7 @@ export function RatingForm({
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [showDetailedRatings, setShowDetailedRatings] = useState(false)
 
   const validateForm = (): boolean => {
@@ -94,6 +95,8 @@ export function RatingForm({
       return
     }
 
+    setIsSubmitting(true)
+
     try {
       await onSubmit({
         braiderId,
@@ -111,9 +114,10 @@ export function RatingForm({
         reviewImages: formData.reviewImages
       })
 
+      // Success feedback
       toast({
-        title: "Avaliação enviada!",
-        description: "Obrigada pelo seu feedback"
+        title: "✅ Avaliação enviada!",
+        description: "Obrigada pelo seu feedback. A avaliação foi publicada com sucesso.",
       })
 
       // Reset form
@@ -130,13 +134,22 @@ export function RatingForm({
         reviewImages: []
       })
 
+      // Auto-close modal after success
+      setTimeout(() => {
+        onCancel?.()
+      }, 1500)
+
     } catch (error) {
       console.error('Error submitting rating:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
+      
       toast({
-        title: "Erro ao enviar avaliação",
-        description: "Tente novamente em alguns instantes",
+        title: "❌ Erro ao enviar avaliação",
+        description: `${errorMessage}. Tente novamente em alguns instantes.`,
         variant: "destructive"
       })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -149,7 +162,17 @@ export function RatingForm({
   }
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
+    <Card className="w-full max-w-2xl mx-auto relative">
+      {/* Loading Overlay */}
+      {isSubmitting && (
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-600 mx-auto mb-4" />
+            <p className="text-sm text-gray-600 font-medium">Enviando sua avaliação...</p>
+          </div>
+        </div>
+      )}
+      
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <User className="w-5 h-5" />
@@ -323,11 +346,14 @@ export function RatingForm({
           <div className="flex gap-4 pt-4">
             <Button
               type="submit"
-              disabled={loading || formData.overallRating === 0}
-              className="flex-1"
+              disabled={isSubmitting || formData.overallRating === 0}
+              className="flex-1 relative"
             >
-              {loading ? (
-                "Enviando..."
+              {isSubmitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  Enviando avaliação...
+                </>
               ) : (
                 <>
                   <Send className="w-4 h-4 mr-2" />
@@ -341,9 +367,10 @@ export function RatingForm({
                 type="button"
                 variant="outline"
                 onClick={onCancel}
-                disabled={loading}
+                disabled={isSubmitting}
+                className="px-6"
               >
-                Cancelar
+                {isSubmitting ? 'Aguarde...' : 'Cancelar'}
               </Button>
             )}
           </div>

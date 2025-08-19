@@ -52,7 +52,7 @@ interface RealtimeChatProps {
   className?: string
   showHeader?: boolean
   headerTitle?: string
-  colorTheme?: 'blue' | 'green' | 'purple'
+  colorTheme?: 'blue' | 'green' | 'purple' | 'sage'
   onCreateConversation?: (participantId: string, message?: string) => void
 }
 
@@ -119,6 +119,13 @@ export function RealtimeChat({
       secondary: 'bg-purple-50',
       accent: 'text-purple-600',
       border: 'border-purple-200'
+    },
+    sage: {
+      primary: 'bg-accent-500',
+      primaryHover: 'hover:bg-accent-600',
+      secondary: 'bg-accent-50',
+      accent: 'text-accent-600',
+      border: 'border-accent-200'
     }
   }
 

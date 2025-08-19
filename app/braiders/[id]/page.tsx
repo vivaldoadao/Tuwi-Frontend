@@ -40,6 +40,7 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
   // Rating states
   const [showRatingForm, setShowRatingForm] = useState(false)
   const [activeTab, setActiveTab] = useState<'services' | 'ratings'>('services')
+  const [startingConversation, setStartingConversation] = useState(false)
   
   console.log('BraiderDetailPage - Received ID:', id)
   
@@ -192,6 +193,8 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
   // Rating handlers
   const handleSubmitRating = async (ratingData: any) => {
     try {
+      console.log('Submitting rating:', ratingData)
+      
       const response = await fetch('/api/ratings', {
         method: 'POST',
         headers: {
@@ -203,12 +206,18 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
       const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.error || 'Erro ao enviar avaliação')
+        const errorMessage = result.error || 'Erro ao enviar avaliação'
+        console.error('Rating submission failed:', errorMessage)
+        throw new Error(errorMessage)
       }
 
-      setShowRatingForm(false)
-      // Refresh ratings by switching tabs
-      setActiveTab('ratings')
+      console.log('Rating submitted successfully:', result)
+      
+      // Modal will close automatically via setTimeout in RatingForm
+      // Switch to ratings tab to show the new rating
+      setTimeout(() => {
+        setActiveTab('ratings')
+      }, 2000)
 
     } catch (error) {
       console.error('Error submitting rating:', error)
@@ -289,6 +298,54 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
     }
   }
 
+  // Handle start conversation with braider
+  const handleStartConversation = async () => {
+    if (!user) {
+      router.push('/login')
+      return
+    }
+
+    if (!braider) {
+      toast.error("Dados da trancista não encontrados")
+      return
+    }
+
+    try {
+      setStartingConversation(true)
+      
+      // Create or get conversation with the braider
+      const response = await fetch('/api/conversations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          participantId: braider.id, // Use braider ID directly
+          initialMessage: `Olá ${braider.name}! Gostaria de conversar sobre os seus serviços.`
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao iniciar conversa')
+      }
+
+      toast.success("Conversa iniciada! Redirecionando...")
+      
+      // Redirect to user profile messages tab
+      setTimeout(() => {
+        router.push('/profile?tab=messages')
+      }, 1000)
+
+    } catch (error) {
+      console.error('Error starting conversation:', error)
+      toast.error(error instanceof Error ? error.message : 'Erro ao iniciar conversa')
+    } finally {
+      setStartingConversation(false)
+    }
+  }
+
 
   // Mock data for enhanced features
   const rating = 4.8
@@ -328,10 +385,10 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
             <CardContent className="p-0">
               <div className="relative">
                 {/* Cover Background */}
-                <div className="h-32 bg-gradient-to-r from-accent-400 via-accent-500 to-accent-600"></div>
+                <div className="h-32 bg-slate-800"></div>
                 
                 {/* Profile Info */}
-                <div className="relative px-6 pb-6 -mt-16">
+                <div className="relative px-6 pb-6 -mt-20">
                   <div className="flex flex-col md:flex-row items-center md:items-end gap-6">
                     {/* Profile Image */}
                     <div className="relative">
@@ -357,7 +414,7 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
                     {/* Name and Basic Info */}
                     <div className="flex-1 text-center md:text-left space-y-3">
                       <div className="space-y-2">
-                        <h2 className="text-3xl md:text-4xl font-bold font-heading text-gray-900">{braider.name}</h2>
+                        <h2 className="text-3xl md:text-4xl font-bold font-heading text-white">{braider.name}</h2>
                         <div className="flex items-center justify-center md:justify-start gap-2">
                           <StarDisplay 
                             rating={braider.averageRating || 0}
@@ -407,12 +464,29 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
                       <div className="flex gap-3">
                         <Button
                           asChild
-                          className="w-full bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white px-6 py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+                          className="flex-1 bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white px-6 py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
                         >
                           <Link href={`/braiders/${braider.id}/book`}>
                             <Calendar className="mr-2 h-4 w-4" />
                             Agendar Serviço
                           </Link>
+                        </Button>
+                        <Button
+                          onClick={handleStartConversation}
+                          disabled={startingConversation}
+                          className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-70"
+                        >
+                          {startingConversation ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                              Iniciando conversa...
+                            </>
+                          ) : (
+                            <>
+                              <MessageSquare className="mr-2 h-4 w-4" />
+                              Iniciar Conversa
+                            </>
+                          )}
                         </Button>
                       </div>
                       
@@ -773,7 +847,16 @@ export default function BraiderDetailPage({ params }: { params: Promise<{ id: st
       {/* Rating Form Modal */}
       {showRatingForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="relative max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Botão X para fechar */}
+            <button
+              onClick={() => setShowRatingForm(false)}
+              className="absolute top-4 right-4 z-10 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100 transition-colors"
+              aria-label="Fechar modal"
+            >
+              <ChevronLeft className="w-5 h-5 rotate-45" />
+            </button>
+            
             <RatingForm
               braiderId={braider.id}
               braiderName={braider.name}

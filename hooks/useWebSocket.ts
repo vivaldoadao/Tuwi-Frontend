@@ -93,11 +93,11 @@ export const useWebSocket = (): UseWebSocketReturn => {
     }
   }, [user])
 
-  // Conectar ao WebSocket
+  // Conectar ao WebSocket (ou usar fallback)
   const connect = useCallback(async () => {
     if (!user || socketRef.current?.connected) return
 
-    console.log('🔌 Connecting to WebSocket server...')
+    console.log('🔌 Attempting WebSocket connection...')
     setIsConnecting(true)
     setError(null)
 
@@ -111,17 +111,18 @@ export const useWebSocket = (): UseWebSocketReturn => {
         ? window.location.origin 
         : 'http://localhost:3000'
       
-      console.log('🌐 Connecting to:', baseUrl + '/api/socket/io')
+      console.log('🌐 Connecting to:', baseUrl)
       console.log('🎫 Using auth token:', !!token)
       
+      // CORREÇÃO: Socket.io está no Pages Router, não App Router
       const socket = io(baseUrl, {
-        path: '/api/socket/io',
+        path: '/api/socket/io', // Caminho Pages Router funciona
         auth: {
           token: token
         },
         transports: ['polling', 'websocket'], // Try polling first
         timeout: 15000,
-        reconnection: false, // Disable auto-reconnection for testing
+        reconnection: true, // Habilitar reconexão automática
         forceNew: true
       })
       

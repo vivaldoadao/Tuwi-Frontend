@@ -294,6 +294,23 @@ async function notifyBookingStatusUpdate(io: any, bookingId: string, oldStatus: 
   }
 }
 
+// Função helper para enviar notificação via WebSocket
+export function sendNotificationToUser(io: any, userId: string, notification: any) {
+  try {
+    const notificationRoom = `notifications_${userId}`
+    console.log(`📢 Sending notification to user ${userId} in room ${notificationRoom}`)
+    
+    io.to(notificationRoom).emit('new-notification', {
+      ...notification,
+      timestamp: new Date().toISOString()
+    })
+    
+    console.log('✅ Notification sent via WebSocket')
+  } catch (error) {
+    console.error('❌ Error sending notification via WebSocket:', error)
+  }
+}
+
 export default function handler(_req: NextApiRequest, res: NextApiResponseServerIO) {
   console.log('🔌 WebSocket handler called')
   
@@ -388,6 +405,53 @@ export default function handler(_req: NextApiRequest, res: NextApiResponseServer
         socket.emit('test-response', { echo: data, timestamp: Date.now() })
       })
       console.log('✅ test-message listener registered')
+
+      // 🔔 NOTIFICATION HANDLERS
+      socket.on('join-notifications', () => {
+        try {
+          console.log(`🔔 ${userEmail} joining notifications room`)
+          
+          // Join user-specific notification room
+          const notificationRoom = `notifications_${userId}`
+          socket.join(notificationRoom)
+          console.log(`✅ ${userEmail} joined notification room: ${notificationRoom}`)
+          
+          socket.emit('notifications-joined', {
+            room: notificationRoom,
+            message: 'Joined notifications successfully'
+          })
+        } catch (error) {
+          console.error('❌ Error joining notifications:', error)
+          socket.emit('error', { 
+            message: 'Error joining notifications', 
+            code: 'NOTIFICATIONS_JOIN_ERROR'
+          })
+        }
+      })
+
+      socket.on('mark-notification-read', async (data: { notificationId: string, isRead: boolean }) => {
+        try {
+          console.log(`📋 ${userEmail} marking notification as ${data.isRead ? 'read' : 'unread'}: ${data.notificationId}`)
+          
+          // Emitir evento de confirmação para o próprio usuário
+          socket.emit('notification-read', {
+            notificationId: data.notificationId,
+            isRead: data.isRead,
+            readBy: userId,
+            readAt: new Date().toISOString()
+          })
+          
+          console.log('✅ Notification read status updated')
+        } catch (error) {
+          console.error('❌ Error marking notification as read:', error)
+          socket.emit('error', { 
+            message: 'Error updating notification status', 
+            code: 'NOTIFICATION_UPDATE_ERROR'
+          })
+        }
+      })
+
+      console.log('✅ notification handlers registered')
 
       // Join conversation
       socket.on('join-conversation', async (data: { conversationId: string }) => {

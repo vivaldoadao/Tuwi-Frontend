@@ -155,9 +155,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     console.log('🚀 Starting create conversation API...')
+    console.log('📧 Request headers:', Object.fromEntries(request.headers.entries()))
     
     // Get the current user session
     const session = await auth()
+    console.log('🔐 Session result:', session ? { user: session.user } : 'No session')
     
     if (!session?.user?.email) {
       console.log('❌ No session found')
@@ -186,13 +188,17 @@ export async function POST(request: NextRequest) {
     const serviceSupabase = getServiceClient()
 
     // Get current user ID
+    console.log('🔍 Searching for user with email:', session.user.email)
     const { data: userData, error: userError } = await serviceSupabase
       .from('users')
-      .select('id')
+      .select('id, email, name')
       .eq('email', session.user.email)
       .single()
 
+    console.log('👤 User search result:', { userData, userError })
+
     if (userError || !userData) {
+      console.error('❌ User not found:', { email: session.user.email, error: userError })
       return NextResponse.json(
         { success: false, error: 'Usuário não encontrado' },
         { status: 404 }
@@ -203,19 +209,68 @@ export async function POST(request: NextRequest) {
     let targetUserId = participantId
     
     // First, check if participantId is a braider ID
+    console.log('🔍 Looking for braider with ID:', participantId)
     const { data: braiderData, error: braiderError } = await serviceSupabase
       .from('braiders')
-      .select('id, name, user_id')
+      .select('id, name, user_id, contact_email')
       .eq('id', participantId)
       .single()
 
-    if (braiderData && braiderData.user_id) {
-      // Found braider, use their user_id
-      targetUserId = braiderData.user_id
-      console.log('✅ Found braider, using user_id:', targetUserId)
+    console.log('👤 Braider search result:', { braiderData, braiderError })
+
+    if (braiderData) {
+      // Found braider, now find their user by email
+      if (braiderData.user_id) {
+        // Use existing user_id if available
+        targetUserId = braiderData.user_id
+        console.log('✅ Found braider with user_id:', targetUserId)
+      } else if (braiderData.contact_email) {
+        // Find user by braider's email
+        console.log('🔍 Looking for user with braider email:', braiderData.contact_email)
+        const { data: braiderUser, error: braiderUserError } = await serviceSupabase
+          .from('users')
+          .select('id, role')
+          .eq('email', braiderData.contact_email)
+          .single()
+        
+        if (braiderUser) {
+          targetUserId = braiderUser.id
+          console.log('✅ Found braider user by email:', targetUserId)
+        } else {
+          console.error('❌ Braider user not found by email:', braiderData.contact_email, braiderUserError)
+          return NextResponse.json(
+            { success: false, error: 'Usuário da trancista não encontrado' },
+            { status: 404 }
+          )
+        }
+      } else {
+        console.error('❌ Braider has no user_id or contact_email')
+        return NextResponse.json(
+          { success: false, error: 'Dados da trancista incompletos' },
+          { status: 400 }
+        )
+      }
     } else {
-      // Braider not found, assume participantId is already a user_id
-      console.log('⚠️ Braider not found, assuming participantId is user_id:', participantId)
+      // Braider not found, maybe participantId is already a user_id
+      console.log('⚠️ Braider not found, checking if participantId is a user_id:', participantId)
+      
+      // Check if participantId exists as a user_id
+      const { data: directUser } = await serviceSupabase
+        .from('users')
+        .select('id, role')
+        .eq('id', participantId)
+        .single()
+      
+      if (directUser) {
+        targetUserId = participantId
+        console.log('✅ Found direct user with ID:', targetUserId)
+      } else {
+        console.error('❌ Neither braider nor user found with ID:', participantId)
+        return NextResponse.json(
+          { success: false, error: 'Profissional não encontrado' },
+          { status: 404 }
+        )
+      }
     }
 
     // Verify the target user exists and has braider role

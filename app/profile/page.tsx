@@ -262,7 +262,7 @@ export default function ProfilePage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          participantId: booking.braider.id, // Use braider's ID directly
+          participantId: booking.braider.user_id || booking.braider.id, // Use braider's user_id first, fallback to braider ID
           initialMessage: `Olá ${booking.braider.name}! Tenho um agendamento confirmado para ${booking.service?.name} no dia ${new Date(booking.date).toLocaleDateString('pt-BR')} às ${booking.time}. Gostaria de conversar sobre os detalhes.`
         })
       })

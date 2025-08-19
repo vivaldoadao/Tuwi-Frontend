@@ -155,11 +155,11 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             
             {/* Modern Product Gallery */}
             <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-3xl border-0 overflow-hidden group">
-              <CardContent className="p-8">
+              <CardContent className="p-6">
                 <div className="space-y-6">
                   {/* Main Image with modern styling */}
                   <div className="relative">
-                    <div className="relative w-full max-w-lg mx-auto h-96 rounded-2xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 shadow-lg group-hover:shadow-xl transition-all duration-500">
+                    <div className="relative w-full max-w-md mx-auto h-80 rounded-2xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 shadow-lg group-hover:shadow-xl transition-all duration-500">
                       <Image
                         src={productImages[selectedImageIndex]}
                         alt={product.name}
@@ -263,13 +263,13 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
             {/* Modern Product Details */}
             <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-3xl border-0 hover:shadow-2xl transition-all duration-500">
-              <CardContent className="p-8 space-y-8">
+              <CardContent className="p-6 space-y-6">
                 
                 {/* Price and Actions */}
                 <div className="space-y-6">
                   <div className="flex items-start justify-between">
                     <div className="space-y-2">
-                      <div className="text-5xl font-bold bg-gradient-to-r from-accent-600 to-accent-500 bg-clip-text text-transparent">
+                      <div className="text-3xl font-bold bg-gradient-to-r from-accent-600 to-accent-500 bg-clip-text text-transparent">
                         {formatEuro(product.price)}
                       </div>
                       <div className="flex items-center gap-3">
@@ -323,7 +323,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                       ))}
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-lg font-bold text-yellow-700">{rating}</span>
+                      <span className="text-base font-bold text-yellow-700">{rating}</span>
                       <span className="text-sm text-gray-600">({reviewCount} avaliações)</span>
                     </div>
                   </div>
@@ -340,7 +340,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                       <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-lg"></div>
                       <CheckCircle className="h-6 w-6 text-green-600" />
                       <div className="flex-1">
-                        <span className="text-green-800 font-semibold text-lg">Em estoque</span>
+                        <span className="text-green-800 font-semibold text-base">Em estoque</span>
                         <p className="text-green-600 text-sm">Disponível para entrega imediata</p>
                       </div>
                     </>
@@ -349,7 +349,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                       <div className="w-3 h-3 bg-red-500 rounded-full shadow-lg"></div>
                       <Info className="h-6 w-6 text-red-600" />
                       <div className="flex-1">
-                        <span className="text-red-800 font-semibold text-lg">Fora de estoque</span>
+                        <span className="text-red-800 font-semibold text-base">Fora de estoque</span>
                         <p className="text-red-600 text-sm">Produto temporariamente indisponível</p>
                       </div>
                     </>
@@ -360,12 +360,12 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
                     <div className="w-1 h-6 bg-gradient-to-b from-accent-500 to-accent-600 rounded-full"></div>
-                    <h3 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                    <h3 className="text-lg font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
                       Sobre o Produto
                     </h3>
                   </div>
-                  <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200">
-                    <p className="text-gray-700 leading-relaxed text-lg">
+                  <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                    <p className="text-gray-700 leading-relaxed text-base">
                       {product.longDescription || product.description}
                     </p>
                   </div>
@@ -375,12 +375,12 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
                     <div className="w-1 h-6 bg-gradient-to-b from-accent-500 to-accent-600 rounded-full"></div>
-                    <h3 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                    <h3 className="text-lg font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
                       Quantidade
                     </h3>
                   </div>
                   
-                  <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl border border-gray-200">
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
                     <Button
                       variant="outline"
                       size="icon"
@@ -392,7 +392,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                     </Button>
                     
                     <div className="flex-1 text-center">
-                      <div className="text-3xl font-bold text-gray-900">
+                      <div className="text-2xl font-bold text-gray-900">
                         {quantity}
                       </div>
                       <div className="text-sm text-gray-500">
@@ -426,7 +426,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   <Button
                     onClick={handleAddToCart}
                     disabled={!inStock || isAddingToCart}
-                    className="w-full bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white h-16 text-xl font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:hover:scale-100 disabled:opacity-50"
+                    className="w-full bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white h-12 text-lg font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:hover:scale-100 disabled:opacity-50"
                   >
                     {isAddingToCart ? (
                       <div className="flex items-center gap-3">

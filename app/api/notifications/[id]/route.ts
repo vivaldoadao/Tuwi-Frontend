@@ -9,7 +9,7 @@ export async function PATCH(
 ) {
   try {
     const session = await auth()
-    if (!session?.user?.id) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -24,11 +24,23 @@ export async function PATCH(
 
     const supabase = await createClient()
 
+    // SEGURANÇA NA API: Buscar user_id pelo email
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', session.user.email)
+      .single()
+
+    if (userError || !userData) {
+      console.error('User not found:', userError)
+      return NextResponse.json({ error: 'User validation failed' }, { status: 400 })
+    }
+
     const { data: notification, error } = await supabase
       .from('notifications')
       .update({ is_read: isRead })
       .eq('id', (await params).id)
-      .eq('user_id', session.user.id) // Ensure user can only update their own notifications
+      .eq('user_id', userData.id) // CRÍTICO: Filtro de segurança por email validado
       .select()
       .single()
 
@@ -56,17 +68,29 @@ export async function DELETE(
 ) {
   try {
     const session = await auth()
-    if (!session?.user?.id) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const supabase = await createClient()
 
+    // SEGURANÇA NA API: Buscar user_id pelo email
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', session.user.email)
+      .single()
+
+    if (userError || !userData) {
+      console.error('User not found:', userError)
+      return NextResponse.json({ error: 'User validation failed' }, { status: 400 })
+    }
+
     const { error } = await supabase
       .from('notifications')
       .delete()
       .eq('id', (await params).id)
-      .eq('user_id', session.user.id) // Ensure user can only delete their own notifications
+      .eq('user_id', userData.id) // CRÍTICO: Filtro de segurança por email validado
 
     if (error) {
       console.error('Error deleting notification:', error)

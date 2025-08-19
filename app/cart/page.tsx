@@ -103,20 +103,20 @@ export default function CartPage() {
           {cartItems.length === 0 ? (
             /* Empty Cart State */
             <Card className="bg-white/95 backdrop-blur-sm shadow-2xl rounded-3xl border-0 overflow-hidden">
-              <CardContent className="text-center py-16 px-8">
-                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <ShoppingBag className="h-12 w-12 text-gray-400" />
+              <CardContent className="text-center py-12 px-6">
+                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <ShoppingBag className="h-10 w-10 text-gray-400" />
                 </div>
-                <h2 className="text-3xl font-bold font-heading text-gray-900 mb-4">
+                <h2 className="text-2xl font-bold font-heading text-gray-900 mb-3">
                   Seu carrinho está vazio
                 </h2>
-                <p className="text-lg text-gray-600 mb-8 max-w-md mx-auto">
+                <p className="text-base text-gray-600 mb-6 max-w-md mx-auto">
                   Parece que você ainda não adicionou nenhum produto. Que tal explorar nossa coleção?
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Button
                     asChild
-                    className="bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white px-8 py-3 text-lg font-semibold rounded-xl shadow-lg"
+                    className="bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white px-6 py-2 text-base font-semibold rounded-xl shadow-lg"
                   >
                     <Link href="/products">
                       <Package className="mr-2 h-5 w-5" />
@@ -126,7 +126,7 @@ export default function CartPage() {
                   <Button
                     asChild
                     variant="outline"
-                    className="px-8 py-3 text-lg font-semibold rounded-xl"
+                    className="px-6 py-2 text-base font-semibold rounded-xl"
                   >
                     <Link href="/braiders">
                       <Heart className="mr-2 h-5 w-5" />
@@ -144,7 +144,7 @@ export default function CartPage() {
                 <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-3xl border-0">
                   <CardHeader className="pb-4">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-2xl font-bold font-heading text-gray-900 flex items-center gap-2">
+                      <CardTitle className="text-xl font-bold font-heading text-gray-900 flex items-center gap-2">
                         <ShoppingBag className="h-6 w-6" />
                         Seus Produtos ({itemCount})
                       </CardTitle>
@@ -176,18 +176,18 @@ export default function CartPage() {
                     {cartItems.map((item) => (
                       <div
                         key={item.id}
-                        className={`relative bg-gray-50 rounded-2xl p-6 transition-all duration-300 ${
+                        className={`relative bg-gray-50 rounded-xl p-4 transition-all duration-300 ${
                           isUpdating === item.id ? 'opacity-50' : 'hover:shadow-md'
                         }`}
                       >
-                        <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-4">
                           <div className="relative">
                             <Image
                               src={item.imageUrl || "/placeholder.svg"}
                               alt={item.name}
-                              width={120}
-                              height={120}
-                              className="rounded-xl object-cover shadow-md"
+                              width={80}
+                              height={80}
+                              className="rounded-lg object-cover shadow-md"
                               unoptimized={true}
                             />
                             <Badge className="absolute -top-2 -right-2 bg-accent-500 text-white">
@@ -195,10 +195,10 @@ export default function CartPage() {
                             </Badge>
                           </div>
                           
-                          <div className="flex-1 space-y-3">
+                          <div className="flex-1 space-y-2">
                             <div>
                               <Link href={`/products/${item.id}`}>
-                                <h3 className="text-xl font-bold font-heading text-gray-900 hover:text-accent-600 transition-colors">
+                                <h3 className="text-lg font-bold font-heading text-gray-900 hover:text-accent-600 transition-colors">
                                   {item.name}
                                 </h3>
                               </Link>
@@ -207,7 +207,7 @@ export default function CartPage() {
                             
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
-                                <span className="text-2xl font-bold text-accent-600">
+                                <span className="text-xl font-bold text-accent-600">
                                   €{item.price.toFixed(2)}
                                 </span>
                                 <span className="text-sm text-gray-500">por unidade</span>
@@ -215,7 +215,7 @@ export default function CartPage() {
                               
                               <div className="text-right">
                                 <div className="text-sm text-gray-500">Subtotal</div>
-                                <div className="text-xl font-bold text-gray-900">
+                                <div className="text-lg font-bold text-gray-900">
                                   €{(item.price * item.quantity).toFixed(2)}
                                 </div>
                               </div>
@@ -224,7 +224,7 @@ export default function CartPage() {
                         </div>
 
                         {/* Quantity Controls */}
-                        <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
+                        <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200">
                           <div className="flex items-center gap-3">
                             <span className="text-sm font-medium text-gray-700">Quantidade:</span>
                             <div className="flex items-center border-2 border-gray-200 rounded-xl bg-white">
@@ -279,7 +279,7 @@ export default function CartPage() {
               <div className="lg:col-span-1 space-y-6">
                 <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-3xl border-0 sticky top-8">
                   <CardHeader>
-                    <CardTitle className="text-2xl font-bold font-heading text-gray-900 flex items-center gap-2">
+                    <CardTitle className="text-xl font-bold font-heading text-gray-900 flex items-center gap-2">
                       <CreditCard className="h-6 w-6" />
                       Resumo do Pedido
                     </CardTitle>
@@ -324,14 +324,14 @@ export default function CartPage() {
 
                     <hr className="border-gray-300" />
                     
-                    <div className="flex justify-between text-xl font-bold text-gray-900">
+                    <div className="flex justify-between text-lg font-bold text-gray-900">
                       <span>Total</span>
                       <span className="text-accent-600">€{finalTotal.toFixed(2)}</span>
                     </div>
 
                     <Button
                       asChild
-                      className="w-full bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white px-8 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                      className="w-full bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white px-6 py-3 text-base font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
                     >
                       <Link href="/checkout">
                         <CreditCard className="mr-2 h-5 w-5" />

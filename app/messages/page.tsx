@@ -168,10 +168,49 @@ function MessagesContent() {
 
   // Get conversation ID from URL params
   const conversationId = searchParams?.get('conversation')
+  const braiderId = searchParams?.get('braider')
+  const braiderName = searchParams?.get('name')
 
   useEffect(() => {
     if (!user) {
       router.push("/login")
+      return
+    }
+
+    // Check if we need to create a new conversation with a braider
+    if (braiderId && braiderName) {
+      // Check if conversation already exists
+      let existingConversation = conversations.find(c => c.participant.id === braiderId)
+      
+      if (!existingConversation) {
+        // Create new conversation
+        const newConversation: Conversation = {
+          id: `conv-${braiderId}`,
+          participant: {
+            id: braiderId,
+            name: decodeURIComponent(braiderName),
+            avatar: "/placeholder.svg?height=50&width=50&text=" + braiderName.charAt(0).toUpperCase(),
+            role: "braider",
+            isOnline: true,
+            lastSeen: "Online"
+          },
+          lastMessage: {
+            content: "",
+            timestamp: new Date().toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
+            isRead: true,
+            sender: "system"
+          },
+          unreadCount: 0
+        }
+        
+        setConversations(prev => [newConversation, ...prev])
+        setSelectedConversation(newConversation)
+      } else {
+        setSelectedConversation(existingConversation)
+      }
+      
+      // Clear URL params after processing
+      router.replace('/messages', { scroll: false })
       return
     }
 
@@ -181,11 +220,11 @@ function MessagesContent() {
       if (conversation) {
         setSelectedConversation(conversation)
       }
-    } else if (conversations.length > 0) {
+    } else if (conversations.length > 0 && !selectedConversation) {
       // Default to first conversation if no specific one selected
       setSelectedConversation(conversations[0])
     }
-  }, [user, router, conversationId, conversations])
+  }, [user, router, conversationId, braiderId, braiderName, conversations])
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return

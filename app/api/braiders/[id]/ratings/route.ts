@@ -15,8 +15,9 @@ const supabase = createClient(
 // GET - Ratings de uma braider específica
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get('limit') || '20')
@@ -31,7 +32,7 @@ export async function GET(
     const { data: braider, error: braiderError } = await supabase
       .from('braiders')
       .select('id, name, average_rating, total_reviews')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (braiderError || !braider) {
@@ -62,7 +63,7 @@ export async function GET(
         services(id, name, price),
         bookings(id, booking_date, booking_time)
       `, { count: 'exact' })
-      .eq('braider_id', params.id)
+      .eq('braider_id', id)
       .eq('status', 'active')
       .order('created_at', { ascending: false })
 
@@ -100,7 +101,7 @@ export async function GET(
       const { data: statsData } = await supabase
         .from('braider_rating_stats')
         .select('*')
-        .eq('braider_id', params.id)
+        .eq('braider_id', id)
         .single()
 
       // Calcular estatísticas adicionais se necessário
@@ -119,7 +120,7 @@ export async function GET(
         const { data: basicStats } = await supabase
           .from('ratings')
           .select('overall_rating')
-          .eq('braider_id', params.id)
+          .eq('braider_id', id)
           .eq('status', 'active')
 
         if (basicStats && basicStats.length > 0) {

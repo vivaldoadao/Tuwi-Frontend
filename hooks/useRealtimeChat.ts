@@ -869,8 +869,26 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
         } else if (status === 'CHANNEL_ERROR') {
           console.error('❌ Real-time message subscription FAILED!')
           console.error('💡 Check: RLS policies, Supabase real-time settings')
+          console.log('🔄 Falling back to polling mode...')
+          
+          // Auto-fallback to polling when real-time fails
+          if (!pollingInterval.current) {
+            pollingInterval.current = setInterval(() => {
+              console.log('🔄 Polling for new messages (fallback mode)')
+              loadMessages(selectedConversation.id, false, true)
+            }, 3000) // Poll every 3 seconds
+          }
         } else if (status === 'CLOSED') {
           console.warn('⚠️ Real-time message subscription CLOSED')
+          console.log('🔄 Activating polling fallback...')
+          
+          // Auto-fallback to polling when connection is closed
+          if (!pollingInterval.current) {
+            pollingInterval.current = setInterval(() => {
+              console.log('🔄 Polling for new messages (connection closed)')
+              loadMessages(selectedConversation.id, false, true)
+            }, 3000)
+          }
         }
       })
 

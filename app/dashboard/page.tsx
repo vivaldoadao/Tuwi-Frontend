@@ -47,7 +47,7 @@ export default function DashboardOverviewPage() {
                   Dashboard Administrativo 🛠️
                 </h1>
                 <p className="text-white/90 text-lg">
-                  Gerencie toda a plataforma Wilnara Tranças
+                  Gerencie toda a plataforma Tuwi
                 </p>
                 <p className="text-white/80 text-sm mt-1">
                   Visão geral do sistema e métricas principais
@@ -68,11 +68,11 @@ export default function DashboardOverviewPage() {
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 text-center">
               <div className="text-2xl font-bold">{stats?.totalUsers || 0}</div>
-              <div className="text-white/80 text-sm">Usuários</div>
+              <div className="text-white/80 text-sm">Utilizadores</div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 text-center">
               <div className="text-2xl font-bold">{stats?.totalBraiders || 0}</div>
-              <div className="text-white/80 text-sm">Trancistas</div>
+              <div className="text-white/80 text-sm">Profissionais</div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 text-center">
               <div className="text-2xl font-bold">{stats?.totalOrders || 0}</div>

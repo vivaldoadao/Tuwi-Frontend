@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { createClient } from '@/lib/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { auth } from '@/lib/auth'
 
-const supabase = createClient(
+// Usar createClient para operações administrativas
+const adminSupabase = createSupabaseClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
   {
@@ -25,6 +26,8 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0')
     const includeStats = searchParams.get('includeStats') === 'true'
 
+    const supabase = await createClient()
+    
     let query = supabase
       .from('ratings')
       .select(`
@@ -94,12 +97,26 @@ export async function GET(request: NextRequest) {
 // POST - Criar rating
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
+    const session = await auth()
+    if (!session?.user?.email) {
       return NextResponse.json(
         { error: 'Autenticação necessária' },
         { status: 401 }
       )
+    }
+
+    const supabase = await createClient()
+
+    // SEGURANÇA NA API: Buscar user_id pelo email
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id, name, email')
+      .eq('email', session.user.email)
+      .single()
+
+    if (userError || !userData) {
+      console.error('User not found:', userError)
+      return NextResponse.json({ error: 'User validation failed' }, { status: 400 })
     }
 
     const body = await request.json()
@@ -156,7 +173,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      if (booking.client_id !== session.user.id) {
+      if (booking.client_id !== userData.id) {
         return NextResponse.json(
           { error: 'Você só pode avaliar seus próprios bookings' },
           { status: 403 }
@@ -178,19 +195,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Buscar dados do usuário
-    const { data: user } = await supabase
-      .from('users')
-      .select('name, email')
-      .eq('id', session.user.id)
-      .single()
-
     // Criar rating
     const { data: rating, error: insertError } = await supabase
       .from('ratings')
       .insert({
         braider_id: braiderId,
-        client_id: session.user.id,
+        client_id: userData.id,
         booking_id: bookingId || null,
         service_id: serviceId || null,
         overall_rating: overallRating,
@@ -200,8 +210,8 @@ export async function POST(request: NextRequest) {
         professionalism_rating: professionalismRating || null,
         review_title: reviewTitle || null,
         review_text: reviewText || null,
-        client_name: clientName || user?.name || 'Cliente Anônimo',
-        client_email: clientEmail || user?.email || session.user.email,
+        client_name: clientName || userData.name || 'Cliente Anônimo',
+        client_email: clientEmail || userData.email,
         review_images: reviewImages || [],
         status: 'active',
         is_verified: !!bookingId
@@ -221,8 +231,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Recalcular estatísticas da braider
-    await supabase.rpc('update_braider_rating_stats', {
+    // Recalcular estatísticas da braider usando adminSupabase para RPC
+    await adminSupabase.rpc('update_braider_rating_stats', {
       p_braider_id: braiderId
     })
 

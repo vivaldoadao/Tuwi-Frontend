@@ -12,10 +12,30 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createClient()
 
+    // SEGURANÇA NA API: Buscar user_id pelo email
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', session.user.email)
+      .single()
+
+    if (userError || !userData) {
+      console.error('User not found:', userError)
+      return NextResponse.json({ 
+        settings: {
+          enable_toasts: true,
+          enable_sound: true,
+          enable_desktop: false,
+          auto_mark_as_read: false
+        },
+        note: 'User validation failed - using defaults'
+      })
+    }
+
     const { data: settings, error } = await supabase
       .from('notification_settings')
       .select('*')
-      .eq('user_id', session.user.id)
+      .eq('user_id', userData.id) // CRÍTICO: Filtro de segurança por email validado
       .single()
 
     if (error) {
@@ -24,7 +44,7 @@ export async function GET(request: NextRequest) {
         const { data: newSettings, error: createError } = await supabase
           .from('notification_settings')
           .insert([{
-            user_id: session.user.id,
+            user_id: userData.id, // SEGURANÇA: Usar ID validado por email
             enable_toasts: true,
             enable_sound: true,
             enable_desktop: false,
@@ -81,11 +101,23 @@ export async function PUT(request: NextRequest) {
 
     const supabase = await createClient()
 
+    // SEGURANÇA NA API: Buscar user_id pelo email
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', session.user.email)
+      .single()
+
+    if (userError || !userData) {
+      console.error('User not found:', userError)
+      return NextResponse.json({ error: 'User validation failed' }, { status: 400 })
+    }
+
     // Usar upsert para criar ou atualizar
     const { data: settings, error } = await supabase
       .from('notification_settings')
       .upsert([{
-        user_id: session.user.id,
+        user_id: userData.id, // SEGURANÇA: Usar ID validado por email
         enable_toasts: enableToasts,
         enable_sound: enableSound,
         enable_desktop: enableDesktop,
