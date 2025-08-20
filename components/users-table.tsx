@@ -43,9 +43,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
-import { getAllUsers, updateUserRole, toggleUserStatus, type User as UserType } from "@/lib/data-supabase"
+import { getAllUsersDjango, convertDjangoUserToFrontend, updateUserRoleDjango, toggleUserStatusDjango, deleteUserDjango } from "@/lib/data-django"
+import { type User as UserType } from "@/lib/data-supabase"
 import { EditUserForm } from "@/components/edit-user-form"
-import { deleteUserCascadeTest } from "@/lib/api-client"
 import { toast } from "react-hot-toast"
 
 export function UsersTable() {
@@ -62,17 +62,17 @@ export function UsersTable() {
   const fetchUsers = React.useCallback(async (page: number = 1, search?: string) => {
     setLoading(true)
     try {
-      const { users: fetchedUsers, total, hasMore: moreUsers } = await getAllUsers(
-        page, 
-        usersPerPage, 
-        search
-      )
-      setUsers(fetchedUsers)
-      setTotalUsers(total)
-      setHasMore(moreUsers)
+      const response = await getAllUsersDjango(page, usersPerPage, search || '')
+      
+      // Convert Django users to frontend format
+      const convertedUsers = response.users.map(convertDjangoUserToFrontend)
+      
+      setUsers(convertedUsers)
+      setTotalUsers(response.pagination.total)
+      setHasMore(response.pagination.has_next)
       setCurrentPage(page)
     } catch (error) {
-      console.error('Error fetching users:', error)
+      console.error('Error fetching users from Django:', error)
       toast.error('Erro ao carregar usuários')
     } finally {
       setLoading(false)
@@ -101,9 +101,14 @@ export function UsersTable() {
   }
 
   const handleRoleChange = async (userId: string, newRole: 'customer' | 'braider' | 'admin') => {
+    if (!userId || userId === 'undefined') {
+      toast.error('Erro: ID do usuário inválido')
+      return
+    }
+
     setActionLoading(userId)
     try {
-      const { success, error } = await updateUserRole(userId, newRole)
+      const { success, error } = await updateUserRoleDjango(userId, newRole)
       if (success) {
         toast.success('Papel do usuário atualizado com sucesso')
         fetchUsers(currentPage, searchQuery) // Refresh current page
@@ -119,9 +124,14 @@ export function UsersTable() {
   }
 
   const handleToggleStatus = async (userId: string) => {
+    if (!userId || userId === 'undefined') {
+      toast.error('Erro: ID do usuário inválido')
+      return
+    }
+
     setActionLoading(userId)
     try {
-      const { success, error } = await toggleUserStatus(userId)
+      const { success, error } = await toggleUserStatusDjango(userId)
       if (success) {
         toast.success('Status do usuário alterado com sucesso')
         fetchUsers(currentPage, searchQuery) // Refresh current page
@@ -137,7 +147,6 @@ export function UsersTable() {
   }
 
   const handleViewDetails = (userId: string) => {
-    // Navigate to user details page
     window.location.href = `/dashboard/users/${userId}`
   }
 
@@ -154,10 +163,9 @@ export function UsersTable() {
     if (!user) return
 
     const confirmDelete = confirm(
-      `⚠️ TESTE DE CASCADE\n\n` +
+      `⚠️ DELETAR USUÁRIO\n\n` +
       `Isso vai DELETAR permanentemente o usuário:\n` +
       `${user.name} (${user.email})\n\n` +
-      `E testar se o perfil de trancista é deletado automaticamente.\n\n` +
       `Esta ação NÃO pode ser desfeita!\n\n` +
       `Continuar?`
     )
@@ -166,29 +174,25 @@ export function UsersTable() {
 
     setActionLoading(userId)
     try {
-      const result = await deleteUserCascadeTest(userId)
+      const result = await deleteUserDjango(userId)
       
       if (result.success) {
         // Remove user from local state
         setUsers(users.filter(u => u.id !== userId))
         setTotalUsers(prev => prev - 1)
         
-        // Show detailed result
-        toast.success(
-          `✅ ${result.message}\n\n` +
-          `Teste de Cascade:\n` +
-          `• Usuário deletado: ${result.cascadeTest.userDeleted ? 'Sim' : 'Não'}\n` +
-          `• Tinha perfil trancista: ${result.cascadeTest.hadBraiderProfile ? 'Sim' : 'Não'}\n` +
-          `• ID do braider: ${result.cascadeTest.braiderId || 'N/A'}`,
-          { duration: 8000 }
-        )
-        console.log('CASCADE TEST RESULT:', result.cascadeTest)
+        // Show success message
+        toast.success(result.message || 'Usuário deletado com sucesso!')
+        
+        if (result.cascadeTest) {
+          console.log('CASCADE TEST RESULT:', result.cascadeTest)
+        }
       } else {
-        toast.error(`Erro: ${result.message}`)
+        toast.error(result.error || 'Erro ao deletar usuário')
       }
     } catch (error) {
-      console.error('Error testing cascade deletion:', error)
-      toast.error('Erro ao testar deleção em cascade')
+      console.error('Error deleting user:', error)
+      toast.error('Erro ao deletar usuário')
     } finally {
       setActionLoading(null)
     }
@@ -228,8 +232,9 @@ export function UsersTable() {
   const totalPages = Math.ceil(totalUsers / usersPerPage)
 
   return (
-    <Card className="w-full bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0">
-      <CardHeader>
+    <div>
+      <Card className="w-full bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0">
+        <CardHeader>
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2 text-xl font-bold font-heading text-gray-900">
@@ -299,8 +304,14 @@ export function UsersTable() {
                   </TableRow>
                 ))
               ) : users.length > 0 ? (
-                users.map((user) => (
-                  <TableRow key={user.id} className="hover:bg-gray-50 transition-colors">
+                users.map((user, index) => {
+                  // Capture variables to prevent closure issues
+                  const userIdCapture = String(user.id)
+                  const userRoleCapture = user.role
+                  const userIsActiveCapture = user.isActive
+                  
+                  return (
+                  <TableRow key={user.id || `fallback-${index}`} className="hover:bg-gray-50 transition-colors">
                     <TableCell>
                       <div>
                         <div className="font-medium text-gray-900">{user.name}</div>
@@ -362,22 +373,22 @@ export function UsersTable() {
                           
                           {/* Mudança de Papéis */}
                           <DropdownMenuItem 
-                            onClick={() => handleRoleChange(user.id, 'customer')}
-                            disabled={user.role === 'customer'}
+                            onClick={() => handleRoleChange(userIdCapture, 'customer')}
+                            disabled={userRoleCapture === 'customer'}
                           >
                             <User className="h-4 w-4 mr-2" />
                             Definir como Cliente
                           </DropdownMenuItem>
                           <DropdownMenuItem 
-                            onClick={() => handleRoleChange(user.id, 'braider')}
-                            disabled={user.role === 'braider'}
+                            onClick={() => handleRoleChange(userIdCapture, 'braider')}
+                            disabled={userRoleCapture === 'braider'}
                           >
                             <UserCheck className="h-4 w-4 mr-2" />
                             Definir como Trancista
                           </DropdownMenuItem>
                           <DropdownMenuItem 
-                            onClick={() => handleRoleChange(user.id, 'admin')}
-                            disabled={user.role === 'admin'}
+                            onClick={() => handleRoleChange(userIdCapture, 'admin')}
+                            disabled={userRoleCapture === 'admin'}
                           >
                             <Shield className="h-4 w-4 mr-2" />
                             Definir como Admin
@@ -388,10 +399,10 @@ export function UsersTable() {
                           
                           {/* Ativar/Desativar */}
                           <DropdownMenuItem 
-                            onClick={() => handleToggleStatus(user.id)}
-                            className={user.isActive ? "text-red-600" : "text-green-600"}
+                            onClick={() => handleToggleStatus(userIdCapture)}
+                            className={userIsActiveCapture ? "text-red-600" : "text-green-600"}
                           >
-                            {user.isActive ? (
+                            {userIsActiveCapture ? (
                               <>
                                 <Ban className="h-4 w-4 mr-2" />
                                 Desativar Usuário
@@ -409,17 +420,18 @@ export function UsersTable() {
                           
                           {/* Teste de Cascade */}
                           <DropdownMenuItem 
-                            onClick={() => handleCascadeTest(user.id)}
+                            onClick={() => handleCascadeTest(userIdCapture)}
                             className="text-orange-600 hover:bg-orange-50"
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
-                            Testar Cascade Delete
+                            Deletar Usuário
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ))
+                  )
+                })
               ) : (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-12">
@@ -475,5 +487,6 @@ export function UsersTable() {
         )}
       </CardContent>
     </Card>
+    </div>
   )
 }

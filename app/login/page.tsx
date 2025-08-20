@@ -67,14 +67,33 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     setLoading(true)
     setError(null)
-
+    
     try {
-      // TODO: Implementar Google OAuth com Django quando necessário
-      setError("Login com Google será implementado em breve")
-      setLoading(false)
+      console.log('🔐 Iniciando login com Google...')
+      
+      // Get Google authorization URL from our API
+      const response = await fetch('/api/auth/google/url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({})
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao inicializar autenticação Google')
+      }
+
+      console.log('🔗 URL de autorização obtida:', data.auth_url)
+      
+      // Redirect to Google OAuth
+      window.location.href = data.auth_url
+      
     } catch (error) {
-      console.error('Erro no Google login:', error)
-      setError("Erro ao fazer login com Google")
+      console.error('❌ Erro no Google login:', error)
+      setError(error instanceof Error ? error.message : 'Erro ao fazer login com Google')
       setLoading(false)
     }
   }

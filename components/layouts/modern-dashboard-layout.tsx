@@ -3,7 +3,7 @@
 import React, { useState } from "react"
 import { ModernSidebar } from "@/components/modern-sidebar"
 import { ModernDashboardHeader } from "@/components/modern-dashboard-header"
-import { useAuth } from "@/context/auth-context"
+import { useAuth } from "@/context/django-auth-context"
 import { usePathname } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 

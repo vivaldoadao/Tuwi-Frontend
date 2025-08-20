@@ -45,15 +45,21 @@ class DjangoAPIClient {
   private baseURL: string
   private accessToken: string | null = null
   private refreshToken: string | null = null
+  private onSessionExpired?: () => void
 
   constructor() {
-    this.baseURL = process.env.NEXT_PUBLIC_DJANGO_API_URL || 'http://localhost:8000/api'
+    this.baseURL = process.env.NEXT_PUBLIC_DJANGO_API_URL || 'http://localhost:8000/api/v1'
     
     // Carregar tokens do localStorage
     if (typeof window !== 'undefined') {
       this.accessToken = localStorage.getItem('access_token')
       this.refreshToken = localStorage.getItem('refresh_token')
     }
+  }
+
+  // Definir callback para quando sessão expira
+  setOnSessionExpired(callback: () => void) {
+    this.onSessionExpired = callback
   }
 
   // ============================================================================
@@ -100,6 +106,16 @@ class DjangoAPIClient {
           if (refreshed) {
             // Retry original request
             return this.request(endpoint, options)
+          } else {
+            // Não conseguiu fazer refresh, sessão expirou
+            if (this.onSessionExpired) {
+              this.onSessionExpired()
+            }
+          }
+        } else if (response.status === 401) {
+          // Token não existe ou inválido
+          if (this.onSessionExpired) {
+            this.onSessionExpired()
           }
         }
 
@@ -205,7 +221,7 @@ class DjangoAPIClient {
       }
     }
 
-    return this.request<User>('/auth/me/')
+    return this.request<User>('/auth/profile/')
   }
 
   async refreshAccessToken(): Promise<boolean> {
@@ -215,7 +231,7 @@ class DjangoAPIClient {
     }
 
     try {
-      const response = await this.request<{ access: string }>('/auth/refresh/', {
+      const response = await this.request<{ access: string }>('/auth/refresh-token/', {
         method: 'POST',
         body: JSON.stringify({ refresh: this.refreshToken }),
       })

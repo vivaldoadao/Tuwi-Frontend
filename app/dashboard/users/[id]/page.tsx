@@ -18,7 +18,8 @@ import {
   Ban,
   CheckCircle
 } from "lucide-react"
-import { getUserById, updateUserRole, toggleUserStatus, type User as UserType } from "@/lib/data-supabase"
+import { getUserByIdDjango, updateUserRoleDjango, toggleUserStatusDjango } from "@/lib/data-django"
+import { type User as UserType } from "@/lib/data-supabase"
 import { EditUserForm } from "@/components/edit-user-form"
 import { toast } from "react-hot-toast"
 import Link from "next/link"
@@ -28,6 +29,7 @@ export default function UserDetailsPage() {
   const router = useRouter()
   const userId = params?.id as string
   
+  
   const [user, setUser] = useState<UserType | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
@@ -35,7 +37,7 @@ export default function UserDetailsPage() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const userData = await getUserById(userId)
+        const userData = await getUserByIdDjango(userId)
         setUser(userData)
       } catch (error) {
         console.error('Error fetching user:', error)
@@ -55,7 +57,7 @@ export default function UserDetailsPage() {
     
     setActionLoading(true)
     try {
-      const { success, error } = await updateUserRole(user.id, newRole)
+      const { success, error } = await updateUserRoleDjango(user.id, newRole)
       if (success) {
         setUser({ ...user, role: newRole })
         toast.success('Papel do usuário atualizado com sucesso')
@@ -75,7 +77,7 @@ export default function UserDetailsPage() {
     
     setActionLoading(true)
     try {
-      const { success, error } = await toggleUserStatus(user.id)
+      const { success, error } = await toggleUserStatusDjango(user.id)
       if (success) {
         setUser({ ...user, isActive: !user.isActive })
         toast.success('Status do usuário alterado com sucesso')

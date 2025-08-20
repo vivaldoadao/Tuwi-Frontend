@@ -10,9 +10,12 @@ import {
   Award
 } from "lucide-react"
 import { UsersTable } from "@/components/users-table"
-import { getAllUsers, type User } from "@/lib/data-supabase"
+import { getAllUsersDjango } from "@/lib/data-django"
+import { useAdminGuard } from "@/hooks/use-admin-guard"
+import { toast } from "react-hot-toast"
 
 export default function DashboardUsersPage() {
+  const { isAdmin, isLoading: authLoading } = useAdminGuard()
   const [stats, setStats] = useState({
     totalUsers: 0,
     activeUsers: 0,
@@ -24,31 +27,32 @@ export default function DashboardUsersPage() {
 
   useEffect(() => {
     const fetchStats = async () => {
-      try {
-        // Fetch first page to get total count and calculate stats
-        const { users, total } = await getAllUsers(1, 100) // Get more users for stats
-        
-        const activeUsers = users.filter(u => u.isActive).length
-        const customerUsers = users.filter(u => u.role === 'customer').length
-        const braiderUsers = users.filter(u => u.role === 'braider').length
-        const adminUsers = users.filter(u => u.role === 'admin').length
+      if (authLoading || !isAdmin) {
+        setLoading(false)
+        return
+      }
 
+      try {
+        // Fetch first page to get stats from Django
+        const response = await getAllUsersDjango(1, 100)
+        
         setStats({
-          totalUsers: total,
-          activeUsers,
-          customerUsers,
-          braiderUsers,
-          adminUsers
+          totalUsers: response.stats.total_users,
+          activeUsers: response.stats.active_users,
+          customerUsers: response.stats.customer_users,
+          braiderUsers: response.stats.braider_users,
+          adminUsers: response.stats.admin_users
         })
       } catch (error) {
-        console.error('Error fetching user stats:', error)
+        console.error('Error fetching user stats from Django:', error)
+        toast.error('Erro ao carregar estatísticas de usuários')
       } finally {
         setLoading(false)
       }
     }
 
     fetchStats()
-  }, [])
+  }, [authLoading, isAdmin])
 
   return (
     <div className="w-full max-w-full space-y-8">

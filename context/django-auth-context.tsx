@@ -1,6 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'react-hot-toast'
 import djangoAPI, { User, LoginCredentials, RegisterData, ApiResponse } from '@/lib/django-api'
 
@@ -37,6 +38,7 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
+  const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -47,6 +49,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     initializeAuth()
+    
+    // Configurar callback para sessão expirada
+    djangoAPI.setOnSessionExpired(() => {
+      handleSessionExpired()
+    })
   }, [])
 
   const initializeAuth = async () => {
@@ -129,7 +136,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
-  const logout = async (): Promise<void> => {
+  const logout = async (redirectToLogin = true, showToast = true): Promise<void> => {
     try {
       // Chamar logout no backend (opcional, pode falhar)
       await djangoAPI.logout()
@@ -139,7 +146,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Sempre limpar estado local
       setUser(null)
       setIsAuthenticated(false)
-      toast.success('Logout realizado com sucesso')
+      
+      if (showToast) {
+        toast.success('Logout realizado com sucesso')
+      }
+      
+      // Redirecionar para login se solicitado
+      if (redirectToLogin) {
+        router.push('/login')
+      }
     }
   }
 
@@ -153,12 +168,41 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setUser(response.data)
       } else {
         // Se falhou, fazer logout
-        await logout()
+        await handleSessionExpired()
       }
     } catch (error) {
       console.error('Erro ao atualizar usuário:', error)
+      await handleSessionExpired()
     }
   }
+
+  // Função para lidar com sessão expirada
+  const handleSessionExpired = async () => {
+    toast.error('Sua sessão expirou. Redirecionando para o login...')
+    await logout(true, false) // Redirecionar mas não mostrar toast de sucesso
+  }
+
+  // Verificação periódica de sessão
+  useEffect(() => {
+    if (!isAuthenticated) return
+
+    const checkSession = async () => {
+      try {
+        const response = await djangoAPI.getCurrentUser()
+        if (!response.success) {
+          await handleSessionExpired()
+        }
+      } catch (error) {
+        console.error('Erro na verificação de sessão:', error)
+        await handleSessionExpired()
+      }
+    }
+
+    // Verificar sessão a cada 5 minutos
+    const interval = setInterval(checkSession, 5 * 60 * 1000)
+
+    return () => clearInterval(interval)
+  }, [isAuthenticated])
 
   // ============================================================================
   // MÉTODOS DE PERFIL

@@ -14,9 +14,8 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/context/auth-context"
+import { useAuth } from "@/context/django-auth-context"
 import { useNotifications } from "@/context/notifications-context-v2"
 import { NotificationCenter } from "@/components/notification-center"
 import AvatarWithInitials from "@/components/avatar-with-initials"
@@ -42,14 +41,19 @@ export const ModernDashboardHeader = ({
   onMobileMenuToggle,
   showMobileMenu = false
 }: ModernDashboardHeaderProps) => {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const { unreadCount } = useNotifications()
   const router = useRouter()
   const [notificationOpen, setNotificationOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
 
   const handleLogout = async () => {
-    await signOut({ callbackUrl: "/login" })
+    try {
+      await logout()
+      router.push('/login')
+    } catch (error) {
+      console.error('Error during logout:', error)
+    }
   }
 
   const getRoleName = () => {
@@ -159,7 +163,7 @@ export const ModernDashboardHeader = ({
               >
                 <AvatarWithInitials
                   name={user?.name || "U"}
-                  avatarUrl={user?.image}
+                  avatarUrl={user?.avatar_url}
                   size="sm"
                   className="h-7 w-7 md:h-8 md:w-8"
                 />
@@ -167,15 +171,42 @@ export const ModernDashboardHeader = ({
               </Button>
             </DropdownMenuTrigger>
             
-            <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-xl border-gray-200">
-              <div className="px-3 py-2 border-b border-gray-100">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {user?.name || "Utilizador"}
-                </p>
+            <DropdownMenuContent align="end" className="w-64 rounded-xl shadow-xl border-gray-200">
+              <div className="px-3 py-3 border-b border-gray-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <AvatarWithInitials
+                    name={user?.name || "U"}
+                    avatarUrl={user?.avatar_url}
+                    size="sm"
+                    className="h-8 w-8"
+                  />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {user?.name || "Utilizador"}
+                    </p>
+                    <p className="text-xs text-brand-600 font-medium">
+                      {getRoleName()}
+                    </p>
+                  </div>
+                </div>
                 <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-                <p className="text-xs text-brand-600 font-medium mt-1">
-                  {getRoleName()}
-                </p>
+                {user?.is_verified && (
+                  <div className="flex items-center gap-1 mt-1">
+                    <div className="h-1.5 w-1.5 bg-green-500 rounded-full"></div>
+                    <p className="text-xs text-green-600">Email verificado</p>
+                  </div>
+                )}
+                {user?.phone && (
+                  <p className="text-xs text-gray-400 mt-1">{user.phone}</p>
+                )}
+                {user?.role === 'admin' && user?.created_at && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Membro desde {new Date(user.created_at).toLocaleDateString('pt-BR', { 
+                      month: 'short', 
+                      year: 'numeric' 
+                    })}
+                  </p>
+                )}
               </div>
               
               <DropdownMenuItem asChild className="cursor-pointer">

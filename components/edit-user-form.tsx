@@ -15,7 +15,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Edit, Save, X } from "lucide-react"
-import { updateUser, type User } from "@/lib/data-supabase"
+import { updateUserDjango } from "@/lib/data-django"
+import { type User } from "@/lib/data-supabase"
 import { toast } from "react-hot-toast"
 
 interface EditUserFormProps {
@@ -76,7 +77,7 @@ export function EditUserForm({ user, onUserUpdated, trigger }: EditUserFormProps
 
     setLoading(true)
     try {
-      const { success, error } = await updateUser(user.id, {
+      const { success, error } = await updateUserDjango(user.id, {
         name: formData.name.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim() || undefined
