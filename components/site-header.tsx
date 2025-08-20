@@ -8,10 +8,10 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { useCart } from "@/context/cart-context"
 import { useAuth } from "@/context/auth-context"
+import { useAuth as useDjangoAuth } from "@/context/django-auth-context"
 import { useFavorites } from "@/context/favorites-context"
 import { useNotifications } from "@/context/notifications-context-v2"
 import { NotificationCenter } from "@/components/notification-center"
-import { signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -19,6 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 export default function SiteHeader() {
   const { cartItemCount } = useCart()
   const { user } = useAuth()
+  const { logout } = useDjangoAuth()
   const { favoriteProducts, favoriteBraiders } = useFavorites()
   const { unreadCount } = useNotifications()
   const router = useRouter()
@@ -27,7 +28,8 @@ export default function SiteHeader() {
   const favoriteCount = favoriteProducts.length + favoriteBraiders.length
 
   const handleLogout = async () => {
-    await signOut({ callbackUrl: "/login" })
+    await logout()
+    router.push("/login")
   }
 
   // Função para determinar o link e texto do dashboard baseado na role

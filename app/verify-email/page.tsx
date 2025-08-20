@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { signIn } from "next-auth/react"
 import Link from "next/link"
+import { djangoAPI } from "@/lib/django-api"
+import { useAuth } from "@/context/django-auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -22,6 +23,7 @@ export default function VerifyEmailPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
+  const { setUser, setIsAuthenticated } = useAuth()
 
   useEffect(() => {
     const emailParam = searchParams?.get('email')
@@ -65,27 +67,16 @@ export default function VerifyEmailPage() {
     }
 
     try {
-      const response = await fetch('/api/auth/verify-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          code: verificationCode,
-        }),
-      })
+      const response = await djangoAPI.verifyEmail(email, verificationCode)
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.error || 'Código inválido ou expirado')
-        setLoading(false)
-        return
+      if (response.success && response.data) {
+        // Email verified successfully and user is now logged in
+        setUser(response.data.user)
+        setIsAuthenticated(true)
+        router.push('/dashboard?message=Email verificado com sucesso! Bem-vindo!')
+      } else {
+        setError(response.error || 'Código inválido ou expirado')
       }
-
-      // Email verified successfully, now auto-login and send welcome email
-      router.push('/login?message=Email verificado com sucesso! Você pode fazer login agora.')
     } catch (error) {
       setError("Erro ao verificar código")
     } finally {
@@ -99,22 +90,14 @@ export default function VerifyEmailPage() {
     setError(null)
 
     try {
-      const response = await fetch('/api/auth/resend-verification', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      })
+      const response = await djangoAPI.resendVerification(email)
 
-      const data = await response.json()
-
-      if (response.ok) {
+      if (response.success) {
         setResendMessage("Novo código enviado para seu email!")
         setCode(["", "", "", "", "", ""]) // Clear current code
         inputRefs.current[0]?.focus()
       } else {
-        setError(data.error || 'Erro ao reenviar código')
+        setError(response.error || 'Erro ao reenviar código')
       }
     } catch (error) {
       setError("Erro ao reenviar código")

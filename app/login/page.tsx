@@ -3,12 +3,10 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import { signIn, getSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import SiteHeader from "@/components/site-header"
 import { useNotificationHelpers } from "@/hooks/use-notification-helpers"
-import { useAuth } from "@/context/auth-context"
-import { AuthRedirect } from "@/components/auth-redirect"
+import { useAuth } from "@/context/django-auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -26,20 +24,20 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const { notifyWelcome } = useNotificationHelpers()
-  const { session, isLoading } = useAuth()
+  const { user, isLoading, isAuthenticated, login } = useAuth()
 
   // Se já estiver logado, redirecionar automaticamente
   useEffect(() => {
-    if (session?.user && !isLoading) {
-      if (session.user.role === "admin") {
+    if (isAuthenticated && user && !isLoading) {
+      if (user.role === "admin") {
         router.push("/dashboard" as any)
-      } else if (session.user.role === "braider") {
+      } else if (user.role === "braider") {
         router.push("/braider-dashboard" as any)
       } else {
         router.push("/" as any)
       }
     }
-  }, [session, isLoading, router])
+  }, [isAuthenticated, user, isLoading, router])
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,29 +45,17 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      })
-
-      if (result?.error) {
-        setError("Credenciais inválidas")
-      } else {
-        const session = await getSession()
-        
+      const success = await login({ email, password })
+      
+      if (success) {
         // Trigger welcome notification
-        if (session?.user?.name) {
-          notifyWelcome(session.user.name)
+        if (user?.name) {
+          notifyWelcome(user.name)
         }
         
-        if (session?.user?.role === "admin") {
-          router.push("/dashboard" as any)
-        } else if (session?.user?.role === "braider") {
-          router.push("/braider-dashboard" as any)
-        } else {
-          router.push("/")
-        }
+        // Redirecionamento será feito pelo useEffect acima automaticamente
+      } else {
+        setError("Credenciais inválidas")
       }
     } catch (error) {
       setError("Erro ao fazer login")
@@ -83,11 +69,9 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      console.log('Iniciando login com Google...')
-      // O NextAuth vai redirecionar para nossa página de callback automaticamente
-      await signIn("google", { 
-        redirect: true 
-      })
+      // TODO: Implementar Google OAuth com Django quando necessário
+      setError("Login com Google será implementado em breve")
+      setLoading(false)
     } catch (error) {
       console.error('Erro no Google login:', error)
       setError("Erro ao fazer login com Google")

@@ -1,66 +1,55 @@
+/**
+ * Wrapper de compatibilidade para o contexto de autenticação Django
+ * Mapeia a interface antiga para a nova implementação Django
+ */
+
 "use client"
 
-import type React from "react"
-import { createContext, useContext, useEffect } from "react"
-import { useSession } from "next-auth/react"
-import type { Session } from "next-auth"
+import React from "react"
+import { useAuth as useDjangoAuth } from '@/context/django-auth-context'
 
-interface AuthContextType {
-  session: Session | null
+// Tipos de compatibilidade para manter interface original
+export interface AuthUser {
+  id: string
+  name: string
+  email: string
+  role: 'customer' | 'braider' | 'admin'
+  image?: string
+  phone?: string
+}
+
+export interface AuthSession {
+  user: AuthUser
+}
+
+export interface AuthContextType {
+  session: AuthSession | null
   isLoading: boolean
-  user: Session['user'] | null
+  user: AuthUser | null
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+// Hook de compatibilidade que mapeia a interface Django para a antiga
+export function useAuth(): AuthContextType {
+  const { user, isLoading, isAuthenticated } = useDjangoAuth()
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { data: session, status } = useSession()
-  const isLoading = status === "loading"
+  // Mapear user Django para formato esperado pelo componente antigo
+  const mappedUser = user ? {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    image: user.avatar_url,
+    phone: user.phone
+  } : null
 
-  // Automatically initialize user presence when user logs in
-  useEffect(() => {
-    const initializePresence = async () => {
-      if (session?.user?.id && !isLoading) {
-        try {
-          // Set user online automatically on login
-          const response = await fetch('/api/user-presence/update', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              userId: session.user.id,
-              isOnline: true,
-              userAgent: navigator.userAgent
-            }),
-          })
-
-          const result = await response.json()
-          if (result.success) {
-            console.log('✅ User presence initialized automatically:', session.user.email)
-          }
-        } catch (error) {
-          console.error('⚠️ Failed to initialize user presence:', error)
-        }
-      }
-    }
-
-    initializePresence()
-  }, [session?.user?.id, session?.user?.email, isLoading])
-
-  const value = {
-    session,
+  return {
+    session: user && isAuthenticated && mappedUser ? { user: mappedUser } : null,
     isLoading,
-    user: session?.user || null
+    user: mappedUser,
   }
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-export const useAuth = () => {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider")
-  }
-  return context
+// Componente provider de compatibilidade (não usado, mas mantido para compatibilidade)
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  return <>{children}</>
 }

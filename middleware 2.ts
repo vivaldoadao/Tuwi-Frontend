@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { auth } from '@/lib/auth'
+import { canAccessRoute, getDefaultRedirectPath } from '@/lib/roles'
 
 // Public routes that don't require authentication
 const publicRoutes = [
@@ -45,12 +47,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Check for authentication token
-  const accessToken = request.cookies.get('access_token')?.value || 
-                     request.headers.get('authorization')?.replace('Bearer ', '')
+  // Get the session
+  const session = await auth()
 
   // Redirect unauthenticated users to login for protected routes
-  if (!accessToken) {
+  if (!session?.user) {
     if (protectedRoutes.some(route => pathname.startsWith(route)) ||
         adminRoutes.some(route => pathname.startsWith(route)) ||
         braiderRoutes.some(route => pathname.startsWith(route))) {
@@ -61,9 +62,27 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // TODO: Para uma implementação mais robusta, podemos validar o token e extrair o role
-  // Por enquanto, deixamos a validação de roles ser feita nos componentes/páginas individuais
-  // usando o hook useAuthGuard do contexto Django
+  // Check role-based access for admin routes
+  if (adminRoutes.some(route => pathname.startsWith(route))) {
+    if (session.user.role !== 'admin') {
+      const defaultPath = getDefaultRedirectPath(session)
+      return NextResponse.redirect(new URL(defaultPath, request.url))
+    }
+  }
+
+  // Check role-based access for braider routes
+  if (braiderRoutes.some(route => pathname.startsWith(route))) {
+    if (session.user.role !== 'braider' && session.user.role !== 'admin') {
+      const defaultPath = getDefaultRedirectPath(session)
+      return NextResponse.redirect(new URL(defaultPath, request.url))
+    }
+  }
+
+  // Use the general role-based access check for any other route
+  if (!canAccessRoute(session, pathname)) {
+    const defaultPath = getDefaultRedirectPath(session)
+    return NextResponse.redirect(new URL(defaultPath, request.url))
+  }
 
   return NextResponse.next()
 }

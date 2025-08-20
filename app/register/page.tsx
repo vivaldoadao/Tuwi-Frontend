@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/context/django-auth-context"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,6 +22,7 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const { register } = useAuth()
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,50 +36,29 @@ export default function RegisterPage() {
       return
     }
 
-    if (password.length < 6) {
-      setError("A senha deve ter pelo menos 6 caracteres")
+    if (password.length < 8) {
+      setError("A senha deve ter pelo menos 8 caracteres")
       setLoading(false)
       return
     }
 
     try {
-      // Register user
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name,
-          email,
-          password,
-        }),
+      const result = await register({
+        name,
+        email,
+        password,
       })
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.error || 'Erro ao criar conta')
-        setLoading(false)
-        return
-      }
-
-      // If account requires verification, redirect to verify page
-      if (data.requiresVerification) {
-        router.push(`/verify-email?email=${encodeURIComponent(email)}`)
-      } else {
-        // Auto login if verification not required (fallback)
-        const result = await signIn("credentials", {
-          email,
-          password,
-          redirect: false,
-        })
-
-        if (result?.error) {
-          setError("Conta criada mas erro no login")
+      if (result.success) {
+        if (result.requiresVerification) {
+          // Redirecionar para página de verificação
+          router.push(`/verify-email?email=${encodeURIComponent(result.email || email)}`)
         } else {
+          // Login direto (caso especial)
           router.push("/")
         }
+      } else {
+        setError("Erro ao criar conta")
       }
     } catch (error) {
       setError("Erro ao criar conta")
@@ -90,7 +70,9 @@ export default function RegisterPage() {
   const handleGoogleLogin = async () => {
     setLoading(true)
     try {
-      await signIn("google", { callbackUrl: "/" })
+      // TODO: Implementar Google OAuth com Django quando necessário
+      setError("Login com Google será implementado em breve")
+      setLoading(false)
     } catch (error) {
       setError("Erro ao fazer login com Google")
       setLoading(false)
@@ -205,7 +187,7 @@ export default function RegisterPage() {
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="Mínimo 6 caracteres"
+                      placeholder="Mínimo 8 caracteres"
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -224,6 +206,25 @@ export default function RegisterPage() {
                         <Eye className="h-4 w-4 text-gray-500" />
                       )}
                     </Button>
+                  </div>
+                  
+                  {/* Regras de senha */}
+                  <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded-lg">
+                    <p className="font-medium mb-1">A senha deve ter:</p>
+                    <ul className="space-y-1">
+                      <li className={`flex items-center gap-1 ${password.length >= 8 ? 'text-green-600' : 'text-gray-500'}`}>
+                        <span className="text-xs">•</span> Pelo menos 8 caracteres
+                      </li>
+                      <li className={`flex items-center gap-1 ${/[A-Z]/.test(password) && /[a-z]/.test(password) ? 'text-green-600' : 'text-gray-500'}`}>
+                        <span className="text-xs">•</span> Letras maiúsculas e minúsculas
+                      </li>
+                      <li className={`flex items-center gap-1 ${/[0-9]/.test(password) ? 'text-green-600' : 'text-gray-500'}`}>
+                        <span className="text-xs">•</span> Pelo menos um número
+                      </li>
+                      <li className={`flex items-center gap-1 ${/[!@#$%^&*(),.?":{}|<>]/.test(password) ? 'text-green-600' : 'text-gray-500'}`}>
+                        <span className="text-xs">•</span> Pelo menos um símbolo especial
+                      </li>
+                    </ul>
                   </div>
                 </div>
                 

@@ -34,7 +34,24 @@ interface UseWebSocketNotificationsReturn {
   markNotificationAsRead: (notificationId: string, isRead: boolean) => void
 }
 
+// WEBSOCKET TEMPORARIAMENTE DESABILITADO
+const WEBSOCKET_DISABLED = true
+
 export const useWebSocketNotifications = (): UseWebSocketNotificationsReturn => {
+  // Se WebSocket estiver desabilitado, retornar valores padrão
+  if (WEBSOCKET_DISABLED) {
+    return {
+      isConnected: false,
+      isConnecting: false,
+      error: null,
+      onNewNotification: () => () => {},
+      onNotificationRead: () => () => {},
+      onNotificationDeleted: () => () => {},
+      joinNotifications: () => {},
+      markNotificationAsRead: () => {}
+    }
+  }
+
   const {
     isConnected,
     isConnecting,

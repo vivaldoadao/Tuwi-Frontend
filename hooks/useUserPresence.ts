@@ -27,7 +27,23 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+// PRESENÇA DE USUÁRIO TEMPORARIAMENTE DESABILITADA
+const USER_PRESENCE_DISABLED = true
+
 export const useUserPresence = (): UseUserPresenceReturn => {
+  // Se presença estiver desabilitada, retornar valores padrão
+  if (USER_PRESENCE_DISABLED) {
+    return {
+      isOnline: false,
+      lastSeen: null,
+      setUserOnline: async () => {},
+      setUserOffline: async () => {},
+      getUserPresence: () => null,
+      getMultiplePresence: () => [],
+      updateActivity: async () => {},
+      loadUserPresence: async () => null
+    }
+  }
   const { user } = useAuth()
   const [isOnline, setIsOnline] = useState(false)
   const [lastSeen, setLastSeen] = useState<string | null>(null)

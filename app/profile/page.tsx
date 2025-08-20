@@ -10,8 +10,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useAuth } from "@/context/auth-context"
-import { getUserOrdersByEmail, getUserByEmail, getUserBookingsConfirmed, type Order, type User, type UserBooking } from "@/lib/data-supabase"
+import { useAuth as useDjangoAuth } from "@/context/django-auth-context"
+import { djangoAPI } from "@/lib/django-api"
 import { 
   MapPin, 
   Home, 
@@ -35,18 +35,53 @@ import {
   Edit3,
   MessageCircle
 } from "lucide-react"
+
+// Tipos temporários (serão substituídos por dados reais da API Django)
+interface Order {
+  id: string
+  total: number
+  status: string
+  created_at: string
+}
+
+interface UserBooking {
+  id: string
+  date: string
+  time: string
+  status: string
+  braider?: {
+    id: string
+    name: string
+    user_id?: string
+    location?: string
+    contactPhone?: string
+  }
+  service?: {
+    name: string
+    price: number
+    durationMinutes: number
+  }
+  bookingType: string
+  clientAddress?: string
+}
+
+interface User {
+  id: string
+  name: string
+  email: string
+  phone?: string
+  avatar_url?: string
+}
 import Image from "next/image"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
-import { UserOrdersSummary } from "@/components/user-orders-summary"
-import { RealtimeChat } from "@/components/realtime-chat"
 import AvatarWithInitials from "@/components/avatar-with-initials"
 import { toast } from "react-hot-toast"
 
 // Real-time chat is now handled by the RealtimeChat component
 
 export default function ProfilePage() {
-  const { user } = useAuth()
+  const { user: djangoUser, updateProfile } = useDjangoAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   const [orders, setOrders] = useState<Order[]>([])
@@ -70,49 +105,43 @@ export default function ProfilePage() {
   })
 
   useEffect(() => {
-    if (!user) {
+    if (!djangoUser) {
       router.push("/login")
     } else {
       const fetchUserData = async () => {
         try {
-          // Load user data from database
           setLoadingUser(true)
-          const dbUserData = await getUserByEmail(user.email)
-          setDbUser(dbUserData)
           
-          if (dbUserData) {
+          // Use Django user data directly from context
+          if (djangoUser) {
             setUserInfo({
-              name: dbUserData.name || "",
-              email: dbUserData.email || "",
-              phone: dbUserData.phone || "",
+              name: djangoUser.name || "",
+              email: djangoUser.email || "",
+              phone: djangoUser.phone || "",
               address: "Lisboa, Portugal", // Static for now
               bio: "Apaixonada por tranças e cuidados capilares africanos.", // Static for now
-              avatar: dbUserData.avatar_url || ""
+              avatar: djangoUser.avatar_url || ""
             })
-          } else {
-            // Fallback to auth context data
-            setUserInfo({
-              name: user.name || "",
-              email: user.email || "",
-              phone: "",
-              address: "Lisboa, Portugal",
-              bio: "Apaixonada por tranças e cuidados capilares africanos.",
-              avatar: ""
+            setDbUser({
+              id: djangoUser.id,
+              name: djangoUser.name,
+              email: djangoUser.email,
+              phone: djangoUser.phone,
+              avatar_url: djangoUser.avatar_url
             })
           }
           setLoadingUser(false)
 
-          // Load orders
+          // Load orders (mock data for now since Django endpoints not implemented yet)
           setLoadingOrders(true)
-          const userOrders = await getUserOrdersByEmail(user.email)
-          setOrders(userOrders)
+          // TODO: Implement Django orders endpoint
+          setOrders([]) // Empty for now
           setLoadingOrders(false)
 
-          // Load confirmed bookings
+          // Load confirmed bookings (mock data for now since Django endpoints not implemented yet)
           setLoadingBookings(true)
-          const userBookings = await getUserBookingsConfirmed(user.email)
-          console.log('📅 User bookings loaded:', userBookings)
-          setBookings(userBookings)
+          // TODO: Implement Django bookings endpoint
+          setBookings([]) // Empty for now
           setLoadingBookings(false)
         } catch (error) {
           console.error('Error fetching user data:', error)
@@ -124,49 +153,37 @@ export default function ProfilePage() {
       
       fetchUserData()
     }
-  }, [user, router])
+  }, [djangoUser, router])
 
   const handleSave = async () => {
-    if (!user) return
+    if (!djangoUser) return
     
     setSaving(true)
     
     try {
       console.log('💾 Saving profile changes:', userInfo)
       
-      const response = await fetch('/api/update-profile', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: user.email,
-          updates: {
-            name: userInfo.name.trim(),
-            phone: userInfo.phone.trim() || null
-          }
-        }),
+      // Use Django API to update profile
+      const success = await updateProfile({
+        name: userInfo.name.trim(),
+        phone: userInfo.phone.trim() || ""
       })
-
-      const result = await response.json()
       
-      if (result.success) {
+      if (success) {
         console.log('✅ Profile updated successfully')
-        // Re-fetch user data to ensure we have the latest from the database
-        const updatedUser = await getUserByEmail(user.email)
-        if (updatedUser) {
-          setDbUser(updatedUser)
-          setUserInfo(prev => ({
-            ...prev,
-            name: updatedUser.name || "",
-            phone: updatedUser.phone || ""
-          }))
-        }
+        // Update local state with the new values
+        setUserInfo(prev => ({
+          ...prev,
+          name: userInfo.name.trim(),
+          phone: userInfo.phone.trim()
+        }))
+        setDbUser(prev => prev ? {
+          ...prev,
+          name: userInfo.name.trim(),
+          phone: userInfo.phone.trim()
+        } : null)
         setIsEditing(false)
-        toast.success('Perfil atualizado com sucesso! 🎉')
-      } else {
-        console.error('❌ Failed to update profile:', result.error)
-        toast.error(`Erro ao atualizar perfil: ${result.error}`)
+        // Note: toast is already shown in the updateProfile function
       }
     } catch (error) {
       console.error('❌ Unexpected error saving profile:', error)
@@ -185,23 +202,15 @@ export default function ProfilePage() {
       setDbUser(prev => prev ? { ...prev, avatar_url: newAvatarUrl } : null)
     }
     
-    // Re-fetch user data from database to ensure consistency
-    try {
-      const updatedUser = await getUserByEmail(user!.email)
-      if (updatedUser && updatedUser.avatar_url) {
-        setDbUser(updatedUser)
-        setUserInfo(prev => ({ ...prev, avatar: updatedUser.avatar_url || "" }))
-      }
-    } catch (error) {
-      console.error('Error re-fetching user data after avatar upload:', error)
-    }
+    // TODO: Implement Django API call to update avatar
+    // For now, just update local state
     
     toast.success('Avatar atualizado com sucesso! 🎉')
   }
 
   // Real-time chat functionality is now handled by the RealtimeChat component
 
-  if (!user) {
+  if (!djangoUser) {
     return null
   }
 
@@ -247,7 +256,7 @@ export default function ProfilePage() {
 
   // Handle start conversation from booking
   const handleStartConversationFromBooking = async (booking: UserBooking) => {
-    if (!user || !booking.braider) {
+    if (!djangoUser || !booking.braider) {
       toast.error("Dados insuficientes para iniciar conversa")
       return
     }
@@ -313,7 +322,7 @@ export default function ProfilePage() {
                 size="lg"
                 editable={true}
                 onAvatarChange={handleAvatarChange}
-                userEmail={user?.email}
+                userEmail={djangoUser?.email}
               />
               <div>
                 <h1 className="text-4xl font-bold font-heading mb-2">
@@ -539,8 +548,55 @@ export default function ProfilePage() {
 
                 {/* Overview Tab */}
                 <TabsContent value="overview" className="space-y-6">
-                  {/* Orders Section */}
-                  <UserOrdersSummary orders={orders} loading={loadingOrders} />
+                  {/* Orders Section - TODO: Implement with Django data */}
+                  <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0">
+                    <CardHeader>
+                      <CardTitle className="text-xl font-bold font-heading text-gray-900 flex items-center gap-2">
+                        <ShoppingBag className="h-5 w-5 text-brand-600" />
+                        Meus Pedidos ({orders.length})
+                      </CardTitle>
+                      <CardDescription>
+                        Seus pedidos de produtos da plataforma
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {loadingOrders ? (
+                        <div className="text-center py-8">
+                          <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                          <p className="text-gray-600">Carregando pedidos...</p>
+                        </div>
+                      ) : orders.length === 0 ? (
+                        <div className="text-center py-12">
+                          <ShoppingBag className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                          <p className="text-gray-500 font-medium text-lg mb-2">Nenhum pedido encontrado</p>
+                          <p className="text-gray-400 text-sm mb-6">Você ainda não fez nenhum pedido</p>
+                          <Button asChild className="bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white rounded-full">
+                            <Link href="/products">
+                              <ShoppingBag className="h-4 w-4 mr-2" />
+                              Explorar Produtos
+                            </Link>
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {orders.map((order) => (
+                            <div key={order.id} className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="font-semibold">Pedido #{order.id}</p>
+                                  <p className="text-sm text-gray-600">{new Date(order.created_at).toLocaleDateString('pt-BR')}</p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="font-bold text-green-600">€{order.total.toFixed(2)}</p>
+                                  <Badge variant="outline">{order.status}</Badge>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 </TabsContent>
 
                 {/* Bookings Tab */}
@@ -697,11 +753,26 @@ export default function ProfilePage() {
 
                 {/* Messages Tab */}
                 <TabsContent value="messages" className="space-y-6">
-                  <RealtimeChat 
+                  <Card className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl border-0">
+                    <CardHeader>
+                      <CardTitle className="text-xl font-bold font-heading text-gray-900 flex items-center gap-2">
+                        <MessageSquare className="h-5 w-5" />
+                        Mensagens (Em Manutenção)
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-center py-12">
+                        <MessageSquare className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                        <p className="text-gray-500 font-medium text-lg mb-2">Sistema de mensagens temporariamente desabilitado</p>
+                        <p className="text-gray-400 text-sm">Estamos fazendo melhorias no sistema. Voltará em breve!</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  {/* <RealtimeChat 
                     colorTheme="sage"
                     showHeader={false}
                     className="h-auto lg:h-[calc(100vh-400px)] lg:min-h-[500px]"
-                  />
+                  /> */}
                 </TabsContent>
 
               </Tabs>

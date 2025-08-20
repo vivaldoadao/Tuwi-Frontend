@@ -4,6 +4,9 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useAuth } from '@/context/auth-context'
 
+// WEBSOCKET TEMPORARIAMENTE DESABILITADO
+const WEBSOCKET_DISABLED = true
+
 // Types
 interface ChatMessage {
   id: string
@@ -57,6 +60,26 @@ export const useWebSocket = (): UseWebSocketReturn => {
   const [isConnected, setIsConnected] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Se WebSocket estiver desabilitado, retornar valores padrão
+  if (WEBSOCKET_DISABLED) {
+    return {
+      isConnected: false,
+      isConnecting: false,
+      error: null,
+      joinConversation: () => {},
+      sendMessage: () => {},
+      sendTyping: () => {},
+      markAsRead: () => {},
+      onNewMessage: () => {},
+      onMessageSent: () => {},
+      onUserTyping: () => {},
+      onMessageRead: () => {},
+      onUserJoined: () => {},
+      onUserLeft: () => {},
+      disconnect: () => {}
+    }
+  }
   
   const socketRef = useRef<Socket | null>(null)
   const eventCallbacks = useRef<Map<string, Function[]>>(new Map())

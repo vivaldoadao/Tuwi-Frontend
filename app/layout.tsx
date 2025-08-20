@@ -1,10 +1,9 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
-import { SessionProvider } from "next-auth/react"
 import "./globals.css"
 import { CartProvider } from "@/context/cart-context"
-import { AuthProvider } from "@/context/auth-context"
+import { AuthProvider } from "@/context/django-auth-context"
 import { FavoritesProvider } from "@/context/favorites-context"
 import { NotificationsProviderV2 } from "@/context/notifications-context-v2"
 import { ToastContainer } from "@/components/toast-container"
@@ -27,21 +26,19 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={inter.className}>
-        <SessionProvider>
-          <AuthProvider>
-            <PresenceProvider>
-              <NotificationsProviderV2>
-                <CartProvider>
-                  <FavoritesProvider>
-                    {children}
-                    <ToastContainer />
-                    <Toaster position="top-right" />
-                  </FavoritesProvider>
-                </CartProvider>
-              </NotificationsProviderV2>
-            </PresenceProvider>
-          </AuthProvider>
-        </SessionProvider>
+        <AuthProvider>
+          <PresenceProvider>
+            <NotificationsProviderV2>
+              <CartProvider>
+                <FavoritesProvider>
+                  {children}
+                  <ToastContainer />
+                  <Toaster position="top-right" />
+                </FavoritesProvider>
+              </CartProvider>
+            </NotificationsProviderV2>
+          </PresenceProvider>
+        </AuthProvider>
       </body>
     </html>
   )

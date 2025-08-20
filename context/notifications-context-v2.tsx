@@ -4,6 +4,9 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { useWebSocketNotifications } from "@/hooks/useWebSocketNotifications"
 import { useAuth } from "@/context/auth-context"
 
+// NOTIFICAÇÕES TEMPORARIAMENTE DESABILITADAS PARA TESTES
+const NOTIFICATIONS_DISABLED = true
+
 export type NotificationType = 'info' | 'success' | 'warning' | 'error' | 'order' | 'message' | 'booking' | 'system'
 
 export interface Notification {
@@ -73,6 +76,39 @@ interface NotificationsContextType {
 const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined)
 
 export function NotificationsProviderV2({ children }: { children: React.ReactNode }) {
+  // Se notificações estiverem desabilitadas, retornar provider vazio
+  if (NOTIFICATIONS_DISABLED) {
+    const defaultContext: NotificationsContextType = {
+      notifications: [],
+      toasts: [],
+      unreadCount: 0,
+      loading: false,
+      error: null,
+      notificationSettings: {
+        enableToasts: true,
+        enableSound: true,
+        enableDesktop: false,
+        autoMarkAsRead: false
+      },
+      addNotification: () => {},
+      markAsRead: () => {},
+      markAllAsRead: () => {},
+      removeNotification: () => {},
+      clearAllNotifications: () => {},
+      addToast: () => {},
+      removeToast: () => {},
+      updateSettings: () => {},
+      loadNotifications: async () => {},
+      isConnected: false
+    }
+    
+    return (
+      <NotificationsContext.Provider value={defaultContext}>
+        {children}
+      </NotificationsContext.Provider>
+    )
+  }
+
   const { user } = useAuth()
   const {
     isConnected,
