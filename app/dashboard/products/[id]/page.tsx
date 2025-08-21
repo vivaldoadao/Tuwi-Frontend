@@ -11,8 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { ProductForm } from "@/components/product-form"
 import { formatEuro } from "@/lib/currency"
-import { getProductByIdSecure, toggleProductStatusSecure, deleteProductSecure } from "@/lib/api-client"
-import { type ProductAdmin } from "@/lib/data-supabase"
+import { getProductByIdDjango, toggleProductStatusDjango, deleteProductDjango, type ProductAdmin } from "@/lib/django"
 import { toast } from "react-hot-toast"
 import {
   ArrowLeft,
@@ -60,13 +59,9 @@ export default function AdminProductDetailPage({ params }: ProductDetailPageProp
     const fetchProduct = async () => {
       setLoading(true)
       try {
-        const { product: fetchedProduct, error } = await getProductByIdSecure(id)
+        const fetchedProduct = await getProductByIdDjango(id)
         
-        if (fetchedProduct) {
-          setProduct(fetchedProduct)
-        } else {
-          toast.error(error || 'Produto não encontrado')
-        }
+        setProduct(fetchedProduct)
       } catch (error) {
         console.error('Error fetching product:', error)
         toast.error('Erro ao carregar produto')
@@ -83,12 +78,12 @@ export default function AdminProductDetailPage({ params }: ProductDetailPageProp
     
     setActionLoading(true)
     try {
-      const { success, error, isActive } = await toggleProductStatusSecure(product.id)
+      const { success, message, isActive } = await toggleProductStatusDjango(product.id)
       if (success) {
         setProduct(prev => prev ? { ...prev, isActive: isActive || false } : null)
-        toast.success(isActive ? 'Produto ativado com sucesso' : 'Produto desativado com sucesso')
+        toast.success(message)
       } else {
-        toast.error(error || 'Erro ao alterar status do produto')
+        toast.error(message || 'Erro ao alterar status do produto')
       }
     } catch (error) {
       console.error('Error toggling product status:', error)
@@ -107,12 +102,12 @@ export default function AdminProductDetailPage({ params }: ProductDetailPageProp
 
     setActionLoading(true)
     try {
-      const { success, error } = await deleteProductSecure(product.id)
+      const { success, message } = await deleteProductDjango(product.id)
       if (success) {
-        toast.success('Produto excluído com sucesso')
+        toast.success(message || 'Produto excluído com sucesso')
         router.push('/dashboard/products')
       } else {
-        toast.error(error || 'Erro ao excluir produto')
+        toast.error(message || 'Erro ao excluir produto')
       }
     } catch (error) {
       console.error('Error deleting product:', error)

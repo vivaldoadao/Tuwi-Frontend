@@ -21,9 +21,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { getProductCategories, uploadMultipleProductImages, type ProductAdmin } from "@/lib/data-supabase"
-import { createProductSecure, updateProductSecure } from "@/lib/api-client"
-import { ImageUpload } from "@/components/image-upload"
+import { 
+  getProductCategoriesDetailedDjango, 
+  createProductDjango, 
+  updateProductDjango,
+  type ProductAdmin,
+  type DjangoCategory 
+} from "@/lib/django"
+import { uploadMultipleProductImages } from "@/lib/django/products"
+import { ProductImageEditor } from "@/components/product-image-editor"
 import { toast } from "react-hot-toast"
 import { Plus, Edit, Loader2, Package } from "lucide-react"
 
@@ -37,7 +43,7 @@ interface ProductFormProps {
 export function ProductForm({ product, onProductSaved, trigger, mode = 'create' }: ProductFormProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [categories, setCategories] = useState<string[]>([])
+  const [categories, setCategories] = useState<DjangoCategory[]>([])
   const [formData, setFormData] = useState({
     name: product?.name || '',
     description: product?.description || '',
@@ -52,7 +58,7 @@ export function ProductForm({ product, onProductSaved, trigger, mode = 'create' 
     setOpen(newOpen)
     if (newOpen) {
       // Load categories when dialog opens
-      const categoriesResult = await getProductCategories()
+      const categoriesResult = await getProductCategoriesDetailedDjango()
       setCategories(categoriesResult)
     }
   }
@@ -61,37 +67,73 @@ export function ProductForm({ product, onProductSaved, trigger, mode = 'create' 
     e.preventDefault()
     setLoading(true)
 
+    console.log('[ProductForm] Starting submit with', imageFiles.length, 'image files')
+    imageFiles.forEach((file, index) => {
+      console.log(`[ProductForm] Image ${index + 1}:`, file.name, `(${(file.size / 1024 / 1024).toFixed(2)}MB)`)
+    })
+
     try {
       let imageUrls: string[] = []
+      let createdProductId: string | undefined
       
-      // Upload images if there are any
-      if (imageFiles.length > 0) {
-        const uploadResult = await uploadMultipleProductImages(imageFiles)
+      // Upload images if there are any - for create mode, we'll upload after creating the product
+      if (mode === 'edit' && imageFiles.length > 0) {
+        const uploadResult = await uploadMultipleProductImages(imageFiles, product?.id)
         
         if (uploadResult.success && uploadResult.urls) {
           imageUrls = uploadResult.urls
+          toast.success(`${uploadResult.urls.length} imagem(ns) enviada(s) com sucesso!`)
         }
         
         if (uploadResult.errors && uploadResult.errors.length > 0) {
-          uploadResult.errors.forEach(error => toast.error(error))
+          uploadResult.errors.forEach((error: any) => toast.error(error))
         }
       }
 
       if (mode === 'create') {
-        const createResult = await createProductSecure({
+        // Find category ID if name is provided
+        let categoryId = formData.category
+        if (formData.category && !formData.category.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+          // It's a category name, find the ID
+          const category = categories.find(cat => cat.name === formData.category)
+          categoryId = category?.id || formData.category
+        }
+        
+        const result = await createProductDjango({
           name: formData.name,
           description: formData.description,
-          longDescription: formData.longDescription,
           price: formData.price,
-          category: formData.category,
-          stockQuantity: formData.stockQuantity,
-          images: imageUrls,
-          imageUrl: imageUrls[0] || '', // Use first image as main imageUrl
-          isActive: true // Default to active
+          category: categoryId,
+          stock_quantity: formData.stockQuantity,
+          is_active: true
         })
 
-        if (createResult.success) {
-          toast.success('Produto criado com sucesso!')
+        console.log('[ProductForm] Product creation result:', result)
+        
+        if (result.success) {
+          toast.success(result.message)
+          
+          // Get the created product ID for image upload
+          console.log('[ProductForm] Product created successfully, checking for ID:', result.product?.id)
+          if (result.product?.id) {
+            createdProductId = result.product.id
+            
+            // Upload images after creating the product
+            console.log('[ProductForm] Attempting to upload images for new product:', createdProductId, 'with', imageFiles.length, 'files')
+            if (imageFiles.length > 0) {
+              const uploadResult = await uploadMultipleProductImages(imageFiles, createdProductId)
+              
+              if (uploadResult.success && uploadResult.urls) {
+                toast.success(`Produto criado e ${uploadResult.urls.length} imagem(ns) enviada(s) com sucesso!`)
+              } else if (uploadResult.errors && uploadResult.errors.length > 0) {
+                uploadResult.errors.forEach((error: any) => toast.error(error))
+                toast.error('Produto criado, mas houve erro no upload das imagens')
+              }
+            }
+          } else {
+            console.log('[ProductForm] Product created but no ID found in result')
+          }
+          
           setOpen(false)
           // Reset form
           setFormData({
@@ -107,25 +149,30 @@ export function ProductForm({ product, onProductSaved, trigger, mode = 'create' 
           if (onProductSaved) {
             onProductSaved()
           }
-        } else {
-          toast.error(createResult.message || 'Erro ao criar produto')
         }
-      } else if (product) {
-        const updateData = {
-          ...formData,
-          ...(imageUrls.length > 0 && { images: imageUrls })
+      } else if (product?.slug) {
+        // Find category ID if name is provided (same logic as create)
+        let categoryId = formData.category
+        if (formData.category && !formData.category.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+          // It's a category name, find the ID
+          const category = categories.find(cat => cat.name === formData.category)
+          categoryId = category?.id || formData.category
         }
         
-        const updateResult = await updateProductSecure(product.id, updateData)
+        const result = await updateProductDjango(product.slug, {
+          name: formData.name,
+          short_description: formData.description,
+          price: formData.price.toString(),
+          category: categoryId,
+          stock_quantity: formData.stockQuantity,
+        })
 
-        if (updateResult.success) {
-          toast.success('Produto atualizado com sucesso!')
+        if (result.success) {
+          toast.success(result.message)
           setOpen(false)
           if (onProductSaved) {
             onProductSaved()
           }
-        } else {
-          toast.error(updateResult.message || 'Erro ao atualizar produto')
         }
       }
     } catch (error) {
@@ -200,11 +247,10 @@ export function ProductForm({ product, onProductSaved, trigger, mode = 'create' 
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
                     </SelectItem>
                   ))}
-                  <SelectItem value="Outros">Outros</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -275,9 +321,10 @@ export function ProductForm({ product, onProductSaved, trigger, mode = 'create' 
             </div>
 
             {/* Image Upload */}
-            <ImageUpload
-              files={imageFiles}
-              onFilesChange={setImageFiles}
+            <ProductImageEditor
+              productId={product?.id}
+              newFiles={imageFiles}
+              onNewFilesChange={setImageFiles}
               maxImages={5}
             />
           </div>

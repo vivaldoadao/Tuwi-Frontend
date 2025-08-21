@@ -4,8 +4,14 @@ import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ProductsTable } from "@/components/products-table"
-import { getProductCategories, type ProductAdmin } from "@/lib/data-supabase"
-import { getAllProductsAdminSecureClient } from "@/lib/api-client"
+import { CategoryManager } from "@/components/category-manager"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { 
+  getAllProductsAdminDjango, 
+  getProductCategoriesDjango,
+  getDashboardMetrics,
+  type ProductAdmin 
+} from "@/lib/django"
 import { 
   Package, 
   AlertTriangle, 
@@ -13,24 +19,36 @@ import {
   XCircle, 
   TrendingUp,
   ShoppingCart,
-  DollarSign
+  DollarSign,
+  Tag
 } from "lucide-react"
 
 export default function DashboardProductsPage() {
   const [products, setProducts] = useState<ProductAdmin[]>([])
   const [loading, setLoading] = useState(true)
   const [categories, setCategories] = useState<string[]>([])
+  const [metrics, setMetrics] = useState({
+    totalProducts: 0,
+    activeProducts: 0,
+    inactiveProducts: 0,
+    lowStockProducts: 0,
+    outOfStockProducts: 0,
+    totalValue: 0,
+    avgPrice: 0
+  })
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true)
       try {
-        const [productsResult, categoriesResult] = await Promise.all([
-          getAllProductsAdminSecureClient(1, 1000), // Get all products for stats
-          getProductCategories()
+        const [productsResult, categoriesResult, metricsResult] = await Promise.all([
+          getAllProductsAdminDjango(1, 1000), // Get all products for stats
+          getProductCategoriesDjango(),
+          getDashboardMetrics()
         ])
         setProducts(productsResult.products)
         setCategories(categoriesResult)
+        setMetrics(metricsResult)
       } catch (error) {
         console.error('Error fetching products data:', error)
       } finally {
@@ -40,14 +58,16 @@ export default function DashboardProductsPage() {
     fetchData()
   }, [])
 
-  // Calculate metrics
-  const totalProducts = products.length
-  const activeProducts = products.filter(p => p.isActive).length
-  const inactiveProducts = products.filter(p => !p.isActive).length
-  const lowStockProducts = products.filter(p => p.stockQuantity <= 5).length
-  const outOfStockProducts = products.filter(p => p.stockQuantity === 0).length
-  const totalValue = products.reduce((sum, p) => sum + (p.price * p.stockQuantity), 0)
-  const avgPrice = totalProducts > 0 ? products.reduce((sum, p) => sum + p.price, 0) / totalProducts : 0
+  // Use metrics from Django API instead of calculating from frontend
+  const { 
+    totalProducts, 
+    activeProducts, 
+    inactiveProducts, 
+    lowStockProducts, 
+    outOfStockProducts, 
+    totalValue, 
+    avgPrice 
+  } = metrics
 
   return (
     <div className="space-y-8">
@@ -93,7 +113,7 @@ export default function DashboardProductsPage() {
               <div className="text-white/80 text-sm">Categorias</div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 text-center">
-              <div className="text-2xl font-bold">€ {loading ? '...' : totalValue.toFixed(0)}</div>
+              <div className="text-2xl font-bold">€ {loading ? '...' : Math.round(totalValue).toLocaleString()}</div>
               <div className="text-white/80 text-sm">Valor Total</div>
             </div>
           </div>
@@ -168,15 +188,32 @@ export default function DashboardProductsPage() {
             </div>
             <div className="space-y-2">
               <p className="text-sm font-medium text-gray-600">Preço Médio</p>
-              <p className="text-3xl font-bold text-gray-900">€ {loading ? '...' : avgPrice.toFixed(0)}</p>
+              <p className="text-3xl font-bold text-gray-900">€ {loading ? '...' : Math.round(avgPrice)}</p>
               <p className="text-sm text-blue-600 font-medium">por produto</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Products Table */}
-      <ProductsTable />
+      {/* Products and Categories Management */}
+      <Tabs defaultValue="products" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="products" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Produtos
+          </TabsTrigger>
+          <TabsTrigger value="categories" className="flex items-center gap-2">
+            <Tag className="h-4 w-4" />
+            Categorias
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="products" className="mt-6">
+          <ProductsTable />
+        </TabsContent>
+        <TabsContent value="categories" className="mt-6">
+          <CategoryManager />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

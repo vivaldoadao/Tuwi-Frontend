@@ -42,9 +42,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
-import { getProductCategories, type ProductAdmin } from "@/lib/data-supabase"
-import { getAllProductsAdminSecureClient, toggleProductStatusSecure, deleteProductSecure } from "@/lib/api-client"
+import { 
+  getAllProductsAdminDjango, 
+  getProductCategoriesDjango, 
+  toggleProductStatusDjango, 
+  deleteProductDjango,
+  type ProductAdmin 
+} from "@/lib/django"
 import { ProductForm } from "@/components/product-form"
+import { DeleteProductModal } from "@/components/delete-product-modal"
 import { formatEuro } from "@/lib/currency"
 import { toast } from "react-hot-toast"
 import Image from "next/image"
@@ -60,13 +66,15 @@ export function ProductsTable() {
   const [categoryFilter, setCategoryFilter] = React.useState("all")
   const [actionLoading, setActionLoading] = React.useState<string | null>(null)
   const [categories, setCategories] = React.useState<string[]>([])
+  const [deleteModalOpen, setDeleteModalOpen] = React.useState(false)
+  const [productToDelete, setProductToDelete] = React.useState<ProductAdmin | null>(null)
   
   const productsPerPage = 10
 
   const fetchProducts = React.useCallback(async (page: number = 1, search?: string, category?: string) => {
     setLoading(true)
     try {
-      const { products: fetchedProducts, total, hasMore: moreProducts } = await getAllProductsAdminSecureClient(
+      const { products: fetchedProducts, total, hasMore: moreProducts } = await getAllProductsAdminDjango(
         page, 
         productsPerPage, 
         search,
@@ -86,9 +94,14 @@ export function ProductsTable() {
 
   React.useEffect(() => {
     const fetchData = async () => {
-      const categoriesResult = await getProductCategories()
-      setCategories(categoriesResult)
-      fetchProducts(1, searchQuery, categoryFilter)
+      try {
+        const categoriesResult = await getProductCategoriesDjango()
+        setCategories(categoriesResult)
+        fetchProducts(1, searchQuery, categoryFilter)
+      } catch (error) {
+        console.error('Error fetching categories:', error)
+        toast.error('Erro ao carregar categorias')
+      }
     }
     fetchData()
   }, [fetchProducts, searchQuery, categoryFilter])
@@ -118,12 +131,12 @@ export function ProductsTable() {
   const handleToggleStatus = async (productId: string) => {
     setActionLoading(productId)
     try {
-      const { success, error, isActive } = await toggleProductStatusSecure(productId)
+      const { success, isActive, message } = await toggleProductStatusDjango(productId)
       if (success) {
-        toast.success(isActive ? 'Produto ativado com sucesso' : 'Produto desativado com sucesso')
+        toast.success(message || (isActive ? 'Produto ativado com sucesso' : 'Produto desativado com sucesso'))
         fetchProducts(currentPage, searchQuery, categoryFilter)
       } else {
-        toast.error(error || 'Erro ao alterar status do produto')
+        toast.error(message || 'Erro ao alterar status do produto')
       }
     } catch (error) {
       console.error('Error toggling product status:', error)
@@ -133,19 +146,20 @@ export function ProductsTable() {
     }
   }
 
-  const handleDeleteProduct = async (productId: string) => {
-    if (!confirm('Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita.')) {
-      return
-    }
+  const handleOpenDeleteModal = (product: ProductAdmin) => {
+    setProductToDelete(product)
+    setDeleteModalOpen(true)
+  }
 
+  const handleDeleteProduct = async (productId: string) => {
     setActionLoading(productId)
     try {
-      const { success, error } = await deleteProductSecure(productId)
+      const { success, message } = await deleteProductDjango(productId)
       if (success) {
-        toast.success('Produto excluído com sucesso')
+        toast.success(message || 'Produto excluído com sucesso')
         fetchProducts(currentPage, searchQuery, categoryFilter)
       } else {
-        toast.error(error || 'Erro ao excluir produto')
+        toast.error(message || 'Erro ao excluir produto')
       }
     } catch (error) {
       console.error('Error deleting product:', error)
@@ -366,7 +380,7 @@ export function ProductsTable() {
                           <DropdownMenuSeparator />
                           
                           <DropdownMenuItem 
-                            onClick={() => handleDeleteProduct(product.id)}
+                            onClick={() => handleOpenDeleteModal(product)}
                             className="text-red-600"
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
@@ -431,6 +445,15 @@ export function ProductsTable() {
           </div>
         )}
       </CardContent>
+
+      {/* Delete Product Modal */}
+      <DeleteProductModal
+        product={productToDelete}
+        open={deleteModalOpen}
+        onOpenChange={setDeleteModalOpen}
+        onConfirmDelete={handleDeleteProduct}
+        loading={actionLoading === productToDelete?.id}
+      />
     </Card>
   )
 }
